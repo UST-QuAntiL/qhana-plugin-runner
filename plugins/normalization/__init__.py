@@ -12,11 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import math
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from http import HTTPStatus
-from json import dumps
+from pathlib import Path
 from tempfile import SpooledTemporaryFile
-from typing import Any, Dict, List, Mapping, Optional, Sequence
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
+from urllib.parse import urlparse
+
+from celery.utils.log import get_task_logger
 
 import marshmallow as ma
 from marshmallow import validates_schema
@@ -44,10 +47,7 @@ from qhana_plugin_runner.api.util import (
 )
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.plugin_utils.attributes import (
-    NUMERIC_TYPES,
-    parse_attribute_metadata,
-)
+from qhana_plugin_runner.plugin_utils.attributes import NUMERIC_TYPES, AttributeMetadata
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     ensure_dict,
     load_entities,
@@ -77,7 +77,6 @@ The input range can be determined automatically for each attribute or supplied m
 NORMALIZATION_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
-    template_folder="templates",
     description=_description,
 )
 
@@ -100,11 +99,19 @@ class InputParameters:
     entities_url: str
     attribute_metadata_url: Optional[str]
     attributes: List[str]
-    input_range_auto: bool
     input_range_min: Optional[float]
     input_range_max: Optional[float]
     output_range_min: float
     output_range_max: float
+
+
+class NullableFloat(ma.fields.Float):
+    """Float field that treats an empty string form value as None."""
+
+    def deserialize(self, value, attr=None, data=None, **kwargs):
+        if value == "":
+            value = None
+        return super().deserialize(value, attr, data, **kwargs)
 
 
 class InputParametersSchema(FrontendFormBaseSchema):
@@ -122,13 +129,14 @@ class InputParametersSchema(FrontendFormBaseSchema):
     attribute_metadata_url = FileUrl(
         required=False,
         allow_none=True,
-        load_default=None,
         data_input_type="entity/attribute-metadata",
         data_content_types=["application/json", "application/X-lines+json", "text/csv"],
         metadata={
             "label": "Attribute Metadata URL (optional)",
-            "description": "Optional metadata used to verify that selected attributes are numeric.",
+            "description": "Optional metadata used to verify that selected attributes are numeric. If not provided, the metadata will be fetched from the X-Attribute-Metadata header of the entities file, if present.",
             "input_type": "text",
+            "related_to": "entities_url",
+            "relation": "post",
         },
     )
     attributes = ma.fields.String(
@@ -140,38 +148,26 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "input_type": "textarea",
         },
     )
-    input_range_auto = ma.fields.Boolean(
-        required=False,
-        load_default=True,
-        metadata={
-            "label": "Determine input range automatically",
-            "description": "Use the minimum and maximum values found in the input data (per attribute).",
-            "input_type": "checkbox",
-        },
-    )
-    input_range_min = ma.fields.Float(
+    input_range_min = NullableFloat(
         required=False,
         allow_none=True,
-        load_default=None,
         metadata={
             "label": "Input range minimum",
-            "description": "Manual minimum applied to every selected attribute.",
+            "description": "Manual minimum applied to every attribute. If empty, the minimum of each attribute is used.",
             "input_type": "number",
         },
     )
-    input_range_max = ma.fields.Float(
+    input_range_max = NullableFloat(
         required=False,
         allow_none=True,
-        load_default=None,
         metadata={
             "label": "Input range maximum",
-            "description": "Manual maximum applied to every selected attribute.",
+            "description": "Manual maximum applied to every attribute. If empty, the maximum of each attribute is used.",
             "input_type": "number",
         },
     )
     output_range_min = ma.fields.Float(
-        required=False,
-        load_default=0.0,
+        required=True,
         metadata={
             "label": "Output range minimum",
             "description": "Target minimum applied to every selected attribute. Common choices are [0..1], [-1..1] and [0..100].",
@@ -179,8 +175,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         },
     )
     output_range_max = ma.fields.Float(
-        required=False,
-        load_default=1.0,
+        required=True,
         metadata={
             "label": "Output range maximum",
             "description": "Target maximum applied to every selected attribute. Common choices are [0..1], [-1..1] and [0..100].",
@@ -191,57 +186,31 @@ class InputParametersSchema(FrontendFormBaseSchema):
     @validates_schema
     def validate_parameters(self, data, **kwargs):
         errors = {}
-        try:
-            attributes = parse_attribute_names(data.get("attributes", ""))
-        except ValueError as error:
-            errors["attributes"] = [str(error)]
-            attributes = []
-        if not attributes and "attributes" not in errors:
-            errors["attributes"] = ["At least one attribute is required."]
 
-        if not data.get("input_range_auto", True):
-            if data.get("input_range_min") is None:
-                errors.setdefault("input_range_min", []).append(
-                    "A minimum is required when automatic range detection is disabled."
-                )
-            if data.get("input_range_max") is None:
-                errors.setdefault("input_range_max", []).append(
-                    "A maximum is required when automatic range detection is disabled."
-                )
-            if (
-                data.get("input_range_min") is not None
-                and data.get("input_range_max") is not None
-                and (
-                    not math.isfinite(data["input_range_min"])
-                    or not math.isfinite(data["input_range_max"])
-                    or data["input_range_min"] >= data["input_range_max"]
-                )
-            ):
+        input_minimum = data.get("input_range_min")
+        input_maximum = data.get("input_range_max")
+
+        if input_minimum is not None and input_maximum is not None:
+            if not math.isfinite(input_minimum) or not math.isfinite(input_maximum):
+                errors["input_range_max"] = [
+                    "The input minimum and maximum must be finite numbers."
+                ]
+            elif input_minimum >= input_maximum:
                 errors["input_range_max"] = [
                     "The input maximum must be greater than the input minimum."
                 ]
 
         output_minimum = data.get("output_range_min")
         output_maximum = data.get("output_range_max")
-        if output_minimum is None:
-            errors.setdefault("output_range_min", []).append(
-                "An output minimum is required."
-            )
-        if output_maximum is None:
-            errors.setdefault("output_range_max", []).append(
-                "An output maximum is required."
-            )
-        if (
-            output_minimum is not None
-            and output_maximum is not None
-            and (
-                not math.isfinite(output_minimum)
-                or not math.isfinite(output_maximum)
-                or output_minimum >= output_maximum
-            )
-        ):
+        if output_minimum is None or output_maximum is None:
+            errors["output_range_max"] = ["An output minimum and maximum is required."]
+        elif not math.isfinite(output_minimum) or not math.isfinite(output_maximum):
             errors["output_range_max"] = [
-                "The output maximum must be greater than the output minimum."
+                "The output minimum and maximum must be finite numbers."
+            ]
+        elif output_minimum >= output_maximum:
+            errors["output_range_max"] = [
+                "The output maximum must be greater than the output minimum and."
             ]
 
         if errors:
@@ -323,9 +292,7 @@ class MicroFrontend(MethodView):
     @NORMALIZATION_BLP.require_jwt("jwt", optional=True)
     def get(self, errors):
         """Return the micro frontend."""
-        # Do not show validation errors when the form is opened without input.
-        initial_errors = {} if not request.args else errors
-        return self.render(request.args, initial_errors, False)
+        return self.render(request.args, errors, False)
 
     @NORMALIZATION_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the Normalization plugin."
@@ -344,14 +311,20 @@ class MicroFrontend(MethodView):
 
     def render(self, data: Mapping, errors: dict, valid: bool):
         schema = InputParametersSchema()
+        fields = schema.fields
+        default_values = {
+            fields["output_range_min"].data_key: 0.0,
+            fields["output_range_max"].data_key: 1.0,
+        }
+        default_values.update(data)
         return Response(
             render_template(
-                "normalization.html",
+                "simple_template.html",
                 name=Normalization.instance.name,
                 version=Normalization.instance.version,
                 schema=schema,
                 valid=valid,
-                values=data,
+                values=default_values,
                 errors=errors,
                 process=url_for(f"{NORMALIZATION_BLP.name}.ProcessView"),
             )
@@ -368,7 +341,8 @@ class ProcessView(MethodView):
     def post(self, arguments):
         """Start the calculation task."""
         db_task = ProcessingTask(
-            task_name=calculation_task.name, parameters=dumps(arguments)
+            task_name=calculation_task.name,
+            parameters=InputParametersSchema().dumps(arguments),
         )
         db_task.save(commit=True)
 
@@ -387,12 +361,39 @@ class ProcessView(MethodView):
         )
 
 
-def parse_attribute_names(value: str) -> List[str]:
-    """Parse a newline-separated list of unique entity attribute names."""
-    names = [line.strip() for line in value.splitlines() if line.strip()]
-    if len(names) != len(set(names)):
-        raise ValueError("The attribute list must not contain duplicates.")
-    return names
+TASK_LOGGER = get_task_logger(__name__)
+
+
+def _load_entities(
+    entities_url: str, attribute_metadata_url: Optional[str] = None
+) -> Tuple[List[dict], Dict[str, Any], str]:
+    """Load entities and attribute metadata from the given URLs."""
+    with open_url(entities_url) as entities_data:
+        mimetype = get_mimetype(entities_data)
+        attribute_metadata: dict[str, Any] = {}
+
+        if attribute_metadata_url is None:
+            attribute_metadata_url = entities_data.headers.get("X-Attribute-Metadata")
+
+        if attribute_metadata_url is not None:
+            with open_url(attribute_metadata_url) as attribute_metadata_file:
+                attribute_metadata = {
+                    attr_meta["ID"]: AttributeMetadata.from_dict(attr_meta)
+                    for attr_meta in ensure_dict(
+                        load_entities(
+                            attribute_metadata_file,
+                            get_mimetype(attribute_metadata_file),
+                        )
+                    )
+                }
+
+        entities = list(
+            ensure_dict(load_entities(entities_data, mimetype), attribute_metadata)
+        )
+        if not entities:
+            raise ValueError("The input entity file must not be empty.")
+
+    return entities, attribute_metadata, mimetype
 
 
 def _parse_numeric_value(entity_id: Any, attribute: str, value: Any) -> float:
@@ -416,45 +417,31 @@ def _parse_numeric_value(entity_id: Any, attribute: str, value: Any) -> float:
 def normalize_entities(
     entities: Sequence[Mapping[str, Any]],
     params: InputParameters,
-    attribute_metadata: Optional[Mapping[str, Any]] = None,
+    attribute_metadata: Optional[Mapping[str, AttributeMetadata]] = None,
 ) -> List[Dict[str, Any]]:
     """Normalize selected scalar numeric attributes while preserving entities."""
-    if not entities:
-        raise ValueError("The input entity file must not be empty.")
-    if not params.attributes:
-        raise ValueError("At least one attribute must be selected.")
-    if not params.input_range_auto and (
-        params.input_range_min is None
-        or params.input_range_max is None
-        or not math.isfinite(params.input_range_min)
-        or not math.isfinite(params.input_range_max)
-        or params.input_range_min >= params.input_range_max
-    ):
-        raise ValueError(
-            "The manual input range must have a minimum smaller than its maximum."
-        )
-    if (
-        not math.isfinite(params.output_range_min)
-        or not math.isfinite(params.output_range_max)
-        or params.output_range_min >= params.output_range_max
-    ):
-        raise ValueError("The output range must have a minimum smaller than its maximum.")
-
+    selected_attributes = params.attributes.splitlines()
+    print(selected_attributes)
+    print(params.attributes)
+    output_min = params.output_range_min
+    output_max = params.output_range_max
+    output_range = output_max - output_min
     if attribute_metadata is not None:
-        for attribute in params.attributes:
-            metadata = attribute_metadata.get(attribute)
-            if metadata is None or metadata.attribute_type.lower() not in NUMERIC_TYPES:
+        for attribute in selected_attributes:
+            metadata: AttributeMetadata | None = attribute_metadata.get(attribute)
+            print(metadata)
+            if metadata is None or metadata.description not in NUMERIC_TYPES:
                 raise ValueError(
                     f"Attribute '{attribute}' is not declared as numeric metadata."
                 )
             if metadata.multiple:
                 raise ValueError(f"Attribute '{attribute}' must contain scalar values.")
 
-    columns: Dict[str, List[float]] = {attribute: [] for attribute in params.attributes}
+    columns: Dict[str, List[float]] = {attribute: [] for attribute in selected_attributes}
     for entity in entities:
         if "ID" not in entity:
             raise ValueError("Every entity must contain an ID attribute.")
-        for attribute in params.attributes:
+        for attribute in selected_attributes:
             if attribute not in entity:
                 raise ValueError(
                     f"Entity '{entity['ID']}' has no value for attribute '{attribute}'."
@@ -463,26 +450,28 @@ def normalize_entities(
                 _parse_numeric_value(entity["ID"], attribute, entity[attribute])
             )
 
-    ranges = {}
+    input_ranges = {}
     for attribute, values in columns.items():
-        if params.input_range_auto:
-            minimum, maximum = min(values), max(values)
-        else:
-            minimum, maximum = params.input_range_min, params.input_range_max
-        if minimum == maximum:
-            raise ValueError(f"Attribute '{attribute}' has a constant input range.")
-        ranges[attribute] = (minimum, maximum)
+        input_min = params.input_range_min
+        if input_min is None:
+            input_min = min(values)
+        input_max = params.input_range_max
+        if input_max is None:
+            input_max = max(values)
+        input_ranges[attribute] = (input_min, input_max)
 
     normalized = []
     for index, entity in enumerate(entities):
         result = dict(entity)
-        for attribute in params.attributes:
-            input_minimum, input_maximum = ranges[attribute]
+        for attribute in selected_attributes:
+            input_min, input_max = input_ranges[attribute]
             value = columns[attribute][index]
-            result[attribute] = params.output_range_min + (
-                (value - input_minimum)
-                * (params.output_range_max - params.output_range_min)
-                / (input_maximum - input_minimum)
+            scaled = output_min + (
+                (value - input_min) * output_range / (input_max - input_min)
+            )
+            # Values outside a manual input range must not leave the output range.
+            result[attribute] = min(
+                max(scaled, params.output_range_min), params.output_range_max
             )
         normalized.append(result)
     return normalized
@@ -490,26 +479,23 @@ def normalize_entities(
 
 @CELERY.task(name=f"{Normalization.instance.identifier}.calculation_task", bind=True)
 def calculation_task(self, db_id: int) -> str:
+    TASK_LOGGER.info("Starting numeric value normalization task with db_id=%s", db_id)
     task_data = ProcessingTask.get_by_id(db_id)
+
+    if task_data is None:
+        msg = f"Could not load task data with id {db_id} to read parameters!"
+        TASK_LOGGER.error(msg)
+        raise KeyError(msg)
+
     params: InputParameters = InputParametersSchema().loads(task_data.parameters)
-
-    with open_url(params.entities_url) as response:
-        input_mimetype = get_mimetype(response)
-        entities = list(ensure_dict(load_entities(response, input_mimetype)))
-
-    metadata = None
-    metadata_url = params.attribute_metadata_url
-    if metadata_url:
-        with open_url(metadata_url) as response:
-            metadata_entities = ensure_dict(
-                load_entities(response, get_mimetype(response))
-            )
-            metadata = parse_attribute_metadata(metadata_entities)
+    entities, attribute_metadata, mimetype = _load_entities(
+        params.entities_url, params.attribute_metadata_url
+    )
 
     normalized = normalize_entities(
         entities=entities,
         params=params,
-        attribute_metadata=metadata,
+        attribute_metadata=attribute_metadata,
     )
 
     output_attributes = list(entities[0].keys())
@@ -517,21 +503,17 @@ def calculation_task(self, db_id: int) -> str:
         save_entities(
             entities=normalized,
             file_=output,
-            mimetype=input_mimetype,
-            attributes=output_attributes if input_mimetype == "text/csv" else None,
+            mimetype=mimetype,
+            attributes=output_attributes if mimetype == "text/csv" else None,
         )
         output.seek(0)
-        extension = {
-            "application/json": ".json",
-            "application/X-lines+json": ".jsonl",
-            "text/csv": ".csv",
-        }.get(input_mimetype, ".data")
+        extension = Path(urlparse(params.entities_url).path).suffix
         STORE.persist_task_result(
             db_id,
             output,
             f"normalized_entities{extension}",
             "entity/list",
-            input_mimetype,
+            mimetype,
         )
 
     return "Numeric values normalized successfully."
