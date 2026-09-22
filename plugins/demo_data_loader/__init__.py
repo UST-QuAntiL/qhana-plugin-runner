@@ -205,7 +205,7 @@ class DemoDataLoader(QHAnaPluginBase):
         "vectors and numeric attributes, so that the 'Feature Engineering Pipeline' plugin can "
         "be demonstrated without an external database."
     )
-    tags = ["data-loading", "demo"]
+    tags = ["data-loading", "demo", "feature-engineering"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
@@ -263,21 +263,21 @@ def load_demo_data_task(self, db_id: int) -> str:
     STORE.persist_task_result(
         db_id,
         (dataset_dir / "entities.json").read_bytes(),
-        "entities.json",
+        f"{dataset}_entities.json",
         "entity/list",
         "application/json",
     )
     STORE.persist_task_result(
         db_id,
         (dataset_dir / "attribute_metadata.json").read_bytes(),
-        "attribute_metadata.json",
+        f"{dataset}_attribute_metadata.json",
         "entity/attribute-metadata",
         "application/json",
     )
     STORE.persist_task_result(
         db_id,
         build_taxonomies_zip(dataset_dir),
-        "taxonomies.zip",
+        f"{dataset}_taxonomies.zip",
         "graph/taxonomy",
         "application/zip",
     )
