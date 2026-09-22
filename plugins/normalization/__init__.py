@@ -59,7 +59,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "numeric-value-normalization"
-__version__ = "v0.1.0"
+__version__ = "v0.1.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
 _description = r"""
 Normalizes selected numeric entity attributes from an input range to an output range.
@@ -103,6 +103,8 @@ class InputParameters:
     input_range_max: Optional[float]
     output_range_min: float
     output_range_max: float
+    use_clipping: bool
+    allow_missing_values: bool
 
 
 class NullableFloat(ma.fields.Float):
@@ -180,6 +182,25 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Output range maximum",
             "description": "Target maximum applied to every selected attribute. Common choices are [0..1], [-1..1] and [0..100].",
             "input_type": "number",
+        },
+    )
+    use_clipping = ma.fields.Boolean(
+        required=False,
+        load_default=True,
+        metadata={
+            "label": "Use Clipping",
+            "description": "If enabled, values outside the input range will be clipped to the output range. Otherwise, an error is raised.",
+            "input_type": "checkbox",
+        },
+    )
+    allow_missing_values = ma.fields.Boolean(
+        required=False,
+        load_default=False,
+        metadata={
+            "label": "Allow missing values",
+            "description": "If enabled, entities with missing values for selected attributes will be normalized to `null`. Otherwise, an error is raised. "
+            "Always throws an error if the attribute is missing in an entity.",
+            "input_type": "checkbox",
         },
     )
 
@@ -315,6 +336,7 @@ class MicroFrontend(MethodView):
         default_values = {
             fields["output_range_min"].data_key: 0.0,
             fields["output_range_max"].data_key: 1.0,
+            fields["use_clipping"].data_key: True,
         }
         default_values.update(data)
         return Response(
@@ -437,27 +459,42 @@ def normalize_entities(
             if metadata.multiple:
                 raise ValueError(f"Attribute '{attribute}' must contain scalar values.")
 
-    columns: Dict[str, List[float]] = {attribute: [] for attribute in selected_attributes}
+    columns: Dict[str, List[Optional[float]]] = {
+        attribute: [] for attribute in selected_attributes
+    }
     for entity in entities:
         if "ID" not in entity:
             raise ValueError("Every entity must contain an ID attribute.")
         for attribute in selected_attributes:
             if attribute not in entity:
                 raise ValueError(
-                    f"Entity '{entity['ID']}' has no value for attribute '{attribute}'."
+                    f"Entity '{entity['ID']}' misses attribute '{attribute}'."
                 )
+            value = entity[attribute]
+            if value is None:
+                if not params.allow_missing_values:
+                    raise ValueError(
+                        f"Entity '{entity['ID']}' has no value for attribute '{attribute}'."
+                    )
+                columns[attribute].append(None)
+                continue
             columns[attribute].append(
-                _parse_numeric_value(entity["ID"], attribute, entity[attribute])
+                _parse_numeric_value(entity["ID"], attribute, value)
             )
 
     input_ranges = {}
     for attribute, values in columns.items():
+        numeric_values = [value for value in values if value is not None]
+        if not numeric_values:
+            raise ValueError(
+                f"Attribute '{attribute}' has no numeric values to normalize."
+            )
         input_min = params.input_range_min
         if input_min is None:
-            input_min = min(values)
+            input_min = min(numeric_values)
         input_max = params.input_range_max
         if input_max is None:
-            input_max = max(values)
+            input_max = max(numeric_values)
         input_ranges[attribute] = (input_min, input_max)
 
     normalized = []
@@ -466,9 +503,21 @@ def normalize_entities(
         for attribute in selected_attributes:
             input_min, input_max = input_ranges[attribute]
             value = columns[attribute][index]
+            if value is None:
+                result[attribute] = None
+                continue
             scaled = output_min + (
                 (value - input_min) * output_range / (input_max - input_min)
             )
+            if not params.use_clipping and (scaled < output_min or scaled > output_max):
+                msg = (
+                    f"Entity '{entity['ID']}' has a value for attribute '{attribute}' "
+                    f"that is outside the input range [{input_min}, {input_max}] "
+                    f"and would be mapped to {scaled}, which is outside the output range "
+                    f"[{output_min}, {output_max}]."
+                )
+                TASK_LOGGER.error(msg)
+                raise ValueError(msg)
             # Values outside a manual input range must not leave the output range.
             result[attribute] = min(
                 max(scaled, params.output_range_min), params.output_range_max
