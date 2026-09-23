@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Low-Code Modeler</title>
+    <meta name="description" content="Model quantum algorithms" />
+    <meta name="theme-color" content="#ffffff" />
+    <script type="module" crossorigin src="./assets/index-4dc00634.js"></script>
+<script defer src="/static/microfrontend.js"></script><script src="workarounds.js"></script>
+<link rel="stylesheet" type="text/css" href="/static/forms.css" media="screen"/>
+<style>
+  :root {
+      background: white;
+  }
+
+  #root {
+      --text: black;
+      --text-primary: black;
+      --primary: black;
+      color: var(--text);
+  }
+
+  .content {
+      width: 100%;
+      height: calc(100vh - 1rem);
+      padding-block: 0.5rem;
+      position: relative;
+      background-color: white;
+      color: black;
+  }
+
+  .diagram-list {
+      max-height: 50vh;
+      overflow-y: auto;
+      scrollbar-gutter: stable;
+      margin-block-end: 1rem;
+  }
+
+  .diagram-item {
+      width: 100%;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      align-items: center;
+      justify-content: space-between;
+  }
+
+  .diagram-item:not(:nth-child(1)) {
+      border-top: 1px solid var(--border-color, gray);
+  }
+
+  .diagram-title {
+      font-weight: 600;
+      font-size: 120%;
+      margin-block: 0.1em;
+  }
+
+  .diagram-subtitle {
+      margin-block: 0.1em;
+  }
+
+  dialog {
+      margin: revert;
+  }
+
+</style>
+    <link rel="stylesheet" href="./assets/index-be3fad7c.css">
+  <link rel="manifest" href="./manifest.webmanifest"></head>
+  <body>
+    <div id="root"></div>
+<dialog class="card mat-mdc-card color-scheme-card" id="openDiagram" closedby="any" autofocus>
+  <h2>Open Diagram</h2>
+  <form method="dialog" class="qhana-form">
+    <div class="qhana-form-field">
+      <label class="qhana-form-label" for="openDiagraminput">Open Diagram from local filesystem:</label>
+      <div class="qhana-input-wrapper">
+	<input class="qhana-form-input" type="file" name="diagram" id="openDiagraminput" accept="bpmn" required>
+	<button class="qhana-form-submit" type="submit" value="openLocal">Open selected diagram</button>
+      </div>
+    </div>
+  </form>
+  <h3>Load Saved Diagram</h3>
+  <form method="dialog" id="openExisting" class="qhana-form">
+    <div class="diagram-list">
+    </div>
+  </form>
+  <form method="dialog" class="qhana-form">
+    <button class="cancel-dialog qhana-form-submit" type="submit" value="cancel">Close dialog</button>
+  </form>
+</dialog>
+
+<script>
+  let currentRestoreFlow = null;
+
+  document.addEventListener("lcm-save", (event) => {
+      event.preventDefault();
+      const flowWithMetadata = event.detail;
+      console.log("recieved:", flowWithMetadata);
+      fetch(
+	  "../models/",
+	  {
+	      method: "post",
+	      body: JSON.stringify(flowWithMetadata),
+	      headers: {
+		  "Content-Type": "application/json"
+	      },
+	  }
+      );
+  });
+
+  document.addEventListener("lcm-open", (event) => {
+      event.preventDefault();
+      currentRestoreFlow = event.detail.restoreFlow;
+      console.log("received restoreFlow function");
+      onFileOpenRequest();
+  });
+
+
+  function onFileOpenRequest() {
+      const dialogElement = document.querySelector("dialog#openDiagram");
+      const url = "../models/";
+      fetch(url).then(response => response.json()).then(result => {
+	  console.log("Received models from backend:", result);
+	  const container = document.querySelector("form#openExisting .diagram-list");
+
+	  const newChildren = result.map(model => {
+	      console.log("Processing model:", model);
+
+	      const metadata = model.metadata || model;
+	      const modelId = model.metadata ? model.metadata.id : model.model_id;                          
+	      const outer = document.createElement("div");
+	      outer.classList.add("diagram-item")
+	      const inner = document.createElement("div");
+	      const title = document.createElement("p");
+	      title.classList.add("diagram-title");
+	      title.textContent = `${metadata.name} – ${metadata.id}@${metadata.version}`;
+	      const subtitle = document.createElement("p");
+	      subtitle.classList.add("diagram-subtitle");
+	      const date = new Date(metadata.timestamp)
+	      subtitle.textContent = date.toLocaleString();
+	      const button = document.createElement("button");
+	      button.setAttribute("value", `load:${modelId}`);
+	      button.setAttribute("type", "submit");
+	      button.classList.add("qhana-form-submit");
+	      button.textContent = `Load ${metadata.name}`;
+	      inner.appendChild(title);
+	      inner.appendChild(subtitle);
+	      outer.appendChild(inner);
+	      outer.appendChild(button);
+	      return outer;
+	  });
+
+	  container.replaceChildren(...newChildren);
+      });
+      dialogElement.showModal();
+  }
+
+  function onOpenDialogClosed(event) {
+      const localDiagramInput = event.target.querySelector("input#openDiagraminput");
+      if (event.target.returnValue === "openLocal") {
+	  if (localDiagramInput.files.length === 1) {
+	      const file = localDiagramInput.files[0];
+	      const reader = new FileReader();
+	      reader.onload = function(e) {
+		  try {
+		      const modelData = JSON.parse(e.target.result);
+		      if (currentRestoreFlow) {
+			  currentRestoreFlow(modelData);
+		      }
+		  } catch (error) {
+		      console.error("Error parsing model file:", error);
+		  }
+	      };
+	      reader.readAsText(file);
+	  }
+      }
+      localDiagramInput.value = "";
+      if (event.target.returnValue === "cancel") {
+	  return;
+      }
+      if (event.target.returnValue.startsWith("load:")) {
+	  const model_id = event.target.returnValue.substring(5);
+	  const url = `../models/${model_id}/`
+	  fetch(url).then(response => {
+	      if (response.status === 200) {
+		  return response.json();
+	      } else {
+		  throw Error("Could not load model!");
+	      }
+	  }).then(modelData => {
+	      if (currentRestoreFlow) {
+		  currentRestoreFlow(modelData);
+	      }
+	  });
+      }
+  }
+
+  document.querySelector("dialog#openDiagram").addEventListener("close", onOpenDialogClosed);
+</script>
+    
+  </body>
+</html>
