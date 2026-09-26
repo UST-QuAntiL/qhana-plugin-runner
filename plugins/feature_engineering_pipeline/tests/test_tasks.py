@@ -62,6 +62,7 @@ pytestmark = pytest.mark.usefixtures("celery_worker")
 START_TASKS = {
     WU_PALMER_PLUGIN: "start_wu_palmer",
     MAPPING_PLUGIN: "start_mapping",
+    ONE_HOT_PLUGIN: "start_one_hot",
     NUMERIC_MAPPING_PIPELINE: "start_numeric_distances",
     FEATURE_VECTOR: "build_numeric_feature_vector",
 }
@@ -78,6 +79,7 @@ DISPATCHED_TASKS = (
             "start_transformers",
             "start_aggregator",
             "start_mds",
+            "finalize_one_hot",
             "finalize_pipeline",
             "finalize_vector_concat",
             "finalize_pca",
@@ -213,6 +215,7 @@ def test_preprocessing_finds_the_numeric_attributes(monkeypatch):
     [
         ({"a": WU_PALMER_PLUGIN}, {}, [WU_PALMER_PLUGIN], 5),
         ({"a": MAPPING_PLUGIN}, {}, [MAPPING_PLUGIN], 4),
+        ({"a": ONE_HOT_PLUGIN}, {}, [ONE_HOT_PLUGIN], 2),
         (
             {"a": WU_PALMER_PLUGIN, "b": MAPPING_PLUGIN},
             {},
@@ -444,7 +447,7 @@ def test_routing_task_rejects_a_pipeline_that_does_not_fit_the_attribute(
         run_task(start_routing_task, db_id=db_task.id)
 
 
-def test_routing_task_reports_unsupported_and_skipped_attributes(monkeypatch):
+def test_routing_task_reports_the_queued_and_skipped_attributes(monkeypatch):
     monkeypatch.setattr(
         "feature_engineering_pipeline.tasks_pipeline_steps.start_wu_palmer.apply_async",
         lambda *args, **kwargs: None,
@@ -456,7 +459,7 @@ def test_routing_task_reports_unsupported_and_skipped_attributes(monkeypatch):
     run_task(start_routing_task, db_id=db_task.id)
 
     task_log = reload(db_task).task_log
-    assert "One-Hot encoding not yet supported" in task_log
+    assert "one-hot encoding pipeline for attributes: ['hot']" in task_log
     assert "None selected attributes skipped: ['skip']" in task_log
 
 
@@ -616,6 +619,7 @@ def test_watchdog_reports_overtaking_a_slow_webhook_handler(server, inline):
         (MAPPING_PLUGIN, MAPPING_PLUGIN, "start_aggregator"),
         (MAPPING_PLUGIN, AGGREGATOR_PLUGIN, "start_mds"),
         (MAPPING_PLUGIN, MDS_PLUGIN, "finalize_pipeline"),
+        (ONE_HOT_PLUGIN, ONE_HOT_PLUGIN, "finalize_one_hot"),
         (NUMERIC_MAPPING_PIPELINE, MDS_PLUGIN, "finalize_pipeline"),
         (FINALIZE_PIPELINE, VECTOR_CONCAT_PLUGIN, "finalize_vector_concat"),
         (FINALIZE_PIPELINE, PCA_PLUGIN, "finalize_pca"),
@@ -677,6 +681,21 @@ def test_full_run_through_both_pipelines(server, inline):
     }
     db_task = reload(db_task)
     assert db_task.progress_value == db_task.progress_target == 8
+    assert db_task.data["pipeline_queue"] == []
+
+
+def test_full_run_through_the_one_hot_pipeline(server, inline):
+    """The encoding plugin is the only step, its result is the feature vector."""
+    db_task = make_router_task(selections={"attr3": ONE_HOT_PLUGIN})
+
+    run_inline(start_routing_task, db_task.id)
+    complete_sub_task(db_task, ONE_HOT_PLUGIN)
+
+    assert inline.errors == []
+    assert inline.results == ["All Pipelines Completed Successfully!"]
+    assert stored_file_names(db_task) == {f"{ONE_HOT_PLUGIN}_vectors.csv"}
+    db_task = reload(db_task)
+    assert db_task.progress_value == db_task.progress_target == 2
     assert db_task.data["pipeline_queue"] == []
 
 

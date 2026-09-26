@@ -342,10 +342,12 @@ def run_pipeline_step(
         )
 
 
-def should_store_mds_output(params: InputParameters) -> bool:
+def should_store_pipeline_vectors(params: InputParameters) -> bool:
     """
-    Returns true if the MDS output should be stored or
-    the output should be concatenated and the intermediate results shall be included.
+    Returns true if the feature vectors of a single pipeline are stored as a task result.
+
+    Without concatenation the per-pipeline vectors are the only result of the run. With
+    concatenation they are stored only if intermediate results are included in the output.
     """
     if params.concat_output:
         return params.include_intermediate_results_in_output

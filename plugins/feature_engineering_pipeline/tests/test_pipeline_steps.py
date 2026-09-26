@@ -40,6 +40,7 @@ from feature_engineering_pipeline.schemas import (
     MAPPING_PLUGIN,
     MDS_PLUGIN,
     NUMERIC_MAPPING_PIPELINE,
+    ONE_HOT_PLUGIN,
     PCA_PLUGIN,
     TRANSFORMERS_PLUGIN,
     VECTOR_CONCAT_PLUGIN,
@@ -49,6 +50,7 @@ from feature_engineering_pipeline.tasks_pipeline_steps import (
     OUTPUT_FORMATS,
     PCA_DEFAULTS,
     build_numeric_feature_vector,
+    finalize_one_hot,
     finalize_pca,
     finalize_pipeline,
     finalize_vector_concat,
@@ -57,6 +59,7 @@ from feature_engineering_pipeline.tasks_pipeline_steps import (
     start_mapping,
     start_mds,
     start_numeric_distances,
+    start_one_hot,
     start_pca,
     start_transformers,
     start_vector_concat,
@@ -81,6 +84,7 @@ pytestmark = pytest.mark.usefixtures("celery_worker")
 PLUGIN_SCHEMAS = {
     WU_PALMER_PLUGIN: ("wu_palmer", "InputParametersSchema"),
     MAPPING_PLUGIN: ("mapping_distances.schemas", "InputParametersSchema"),
+    ONE_HOT_PLUGIN: ("one_hot_encoding", "InputParametersSchema"),
     TRANSFORMERS_PLUGIN: ("transformer.schemas", "InputParametersSchema"),
     AGGREGATOR_PLUGIN: ("aggregator.schemas", "InputParametersSchema"),
     MDS_PLUGIN: ("attribute_mds.schemas", "InputParametersSchema"),
@@ -118,6 +122,7 @@ def dispatched(monkeypatch) -> list:
     for name in (
         "start_wu_palmer",
         "start_mapping",
+        "start_one_hot",
         "start_numeric_distances",
         "build_numeric_feature_vector",
         "start_vector_concat",
@@ -224,6 +229,21 @@ def test_mapping_payload(server, steps):
         "distanceMetric": "cosine",
     }
     assert_payload_matches_plugin_schema(MAPPING_PLUGIN, payload)
+
+
+def test_one_hot_payload(server, steps):
+    db_task = make_router_task(selections={"attr3": ONE_HOT_PLUGIN})
+
+    run_task(start_one_hot, db_id=db_task.id)
+
+    payload = payload_for(steps, ONE_HOT_PLUGIN)
+    assert payload == {
+        "entitiesUrl": ENTITIES_URL,
+        "entitiesMetadataUrl": METADATA_URL,
+        "taxonomiesZipUrl": TAXONOMIES_URL,
+        "attributes": "attr3",
+    }
+    assert_payload_matches_plugin_schema(ONE_HOT_PLUGIN, payload)
 
 
 def test_payload_uses_the_settings_of_the_running_group(server, steps):
@@ -693,6 +713,39 @@ def test_finalize_pipeline_starts_the_next_pipeline(server, dispatched):
     assert reload(db_task).data["current_pipeline"] == MAPPING_PLUGIN
 
 
+def test_finalize_one_hot_stores_the_encoded_vectors(server, dispatched):
+    db_task = make_router_task(
+        selections={"attr3": ONE_HOT_PLUGIN}, data={"current_pipeline": ONE_HOT_PLUGIN}
+    )
+
+    run_task(
+        finalize_one_hot, db_id=db_task.id, source_url=server.task_url(ONE_HOT_PLUGIN)
+    )
+
+    stored = stored_files(db_task)[f"{ONE_HOT_PLUGIN}_vectors.csv"]
+    assert stored.file_type == "entity/vector"
+    assert stored.mimetype == "text/csv"
+
+
+def test_finalize_one_hot_collects_the_vector_urls_for_the_concatenation(
+    server, dispatched
+):
+    db_task = make_router_task(
+        selections={"attr3": ONE_HOT_PLUGIN},
+        concatOutput=True,
+        data={"current_pipeline": ONE_HOT_PLUGIN},
+    )
+
+    run_task(
+        finalize_one_hot, db_id=db_task.id, source_url=server.task_url(ONE_HOT_PLUGIN)
+    )
+
+    assert stored_files(db_task) == {}
+    assert reload(db_task).data["vector_zip_urls"] == [
+        server.output_url(ONE_HOT_PLUGIN, "entity/vector")
+    ]
+
+
 # --- PIPELINE ORCHESTRATION ---
 
 
@@ -765,13 +818,24 @@ def test_launch_next_pipeline_starts_the_numeric_pipelines(
     assert (start_task, [db_task.id]) in dispatched
 
 
+def test_launch_next_pipeline_starts_the_one_hot_pipeline(dispatched):
+    db_task = make_router_task(
+        data={"pipeline_queue": [pipeline_group(ONE_HOT_PLUGIN, ["attr3"])]}
+    )
+
+    launch_next_pipeline(db_task)
+
+    assert db_task.data["current_pipeline"] == ONE_HOT_PLUGIN
+    assert ("start_one_hot", [db_task.id]) in dispatched
+
+
 def test_launch_next_pipeline_rejects_a_pipeline_without_a_start_step(dispatched):
     """Without a start step no webhook can arrive, so the task would stall silently."""
     db_task = make_router_task(
-        data={"pipeline_queue": [pipeline_group("one_hot", ["attr1"])]}
+        data={"pipeline_queue": [pipeline_group("unknown_pipeline", ["attr1"])]}
     )
 
-    with pytest.raises(ValueError, match="No pipeline start step for 'one_hot'"):
+    with pytest.raises(ValueError, match="No pipeline start step for 'unknown_pipeline'"):
         launch_next_pipeline(db_task)
 
     assert dispatched == []
