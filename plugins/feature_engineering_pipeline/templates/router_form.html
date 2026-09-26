@@ -26,7 +26,7 @@ limitations under the License.
 <div class="qhana-microfrontend">
     {% call forms.render_form(target="microfrontend") %}
     {% for group in groups %}
-    {{ components.settings_section(group.title, group.schema, values=values, errors=errors, expanded=true) }}
+    {{ components.settings_section(group.title, group.schema, values=values, errors=errors, expanded=(group.key in expanded_groups)) }}
     {% endfor %}
     <div class="qhana-form-buttons">
         {{ forms.submit("validate", target="microfrontend") }}
