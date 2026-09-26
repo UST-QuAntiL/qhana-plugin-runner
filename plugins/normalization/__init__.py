@@ -388,11 +388,11 @@ TASK_LOGGER = get_task_logger(__name__)
 
 def _load_entities(
     entities_url: str, attribute_metadata_url: Optional[str] = None
-) -> Tuple[List[dict], Dict[str, Any], str]:
+) -> Tuple[List[Dict[str, Any]], Optional[Mapping[str, AttributeMetadata]], str]:
     """Load entities and attribute metadata from the given URLs."""
     with open_url(entities_url) as entities_data:
         mimetype = get_mimetype(entities_data)
-        attribute_metadata: dict[str, Any] = {}
+        attribute_metadata: dict[str, Any] = None
 
         if attribute_metadata_url is None:
             attribute_metadata_url = entities_data.headers.get("X-Attribute-Metadata")
@@ -443,15 +443,12 @@ def normalize_entities(
 ) -> List[Dict[str, Any]]:
     """Normalize selected scalar numeric attributes while preserving entities."""
     selected_attributes = params.attributes.splitlines()
-    print(selected_attributes)
-    print(params.attributes)
     output_min = params.output_range_min
     output_max = params.output_range_max
     output_range = output_max - output_min
-    if attribute_metadata is not None:
+    if attribute_metadata:
         for attribute in selected_attributes:
             metadata: AttributeMetadata | None = attribute_metadata.get(attribute)
-            print(metadata)
             if metadata is None or metadata.description not in NUMERIC_TYPES:
                 raise ValueError(
                     f"Attribute '{attribute}' is not declared as numeric metadata."
@@ -468,7 +465,7 @@ def normalize_entities(
         for attribute in selected_attributes:
             if attribute not in entity:
                 raise ValueError(
-                    f"Entity '{entity['ID']}' misses attribute '{attribute}'."
+                    f"Entity '{entity['ID']}' misses attribute '{attribute}'. It must be present and should be null if no value is available."
                 )
             value = entity[attribute]
             if value is None:
