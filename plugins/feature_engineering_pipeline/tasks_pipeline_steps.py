@@ -18,6 +18,9 @@ from marshmallow import EXCLUDE
 
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask, TaskFile
+from qhana_plugin_runner.plugin_utils.dimension_mapping import (
+    DIMENSION_MAPPING_DATA_TYPE,
+)
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     ensure_dict,
     load_entities,
@@ -675,6 +678,15 @@ def finalize_vector_concat(self, db_id: int, source_url: str):
                 file_type="entity/vector",
                 mimetype=mimetype,
             )
+            # The mapping describes the concatenated vector. The PCA output has
+            # principal components as dimensions, which the mapping cannot label.
+            save_dimension_mapping(
+                task_data=task_data,
+                retries=self.request.retries,
+                db_id=db_id,
+                outputs=outputs,
+                file_name="concatenated_vector_dimension_mapping.json",
+            )
         task_data.add_task_log_entry(
             "Starting PCA plugin to reduce the dimensions of the concatenated vector."
         )
@@ -691,9 +703,55 @@ def finalize_vector_concat(self, db_id: int, source_url: str):
         file_type="entity/vector",
         mimetype=mimetype,
     )
+    save_dimension_mapping(
+        task_data=task_data,
+        retries=self.request.retries,
+        db_id=db_id,
+        outputs=outputs,
+        file_name="final_concatenated_vector_dimension_mapping.json",
+    )
 
     save_task_result.delay(
         "All Pipelines Completed Successfully And Concatenated Vector Created!", db_id
+    )
+
+
+def save_dimension_mapping(
+    task_data: ProcessingTask,
+    retries: int,
+    db_id: int,
+    outputs: list,
+    file_name: str,
+):
+    """Persist the dimension mapping of a vector concat result.
+
+    The mapping records which input file every dimension of the concatenated
+    vector came from, so visualization plugins can label the dimensions with
+    the original attribute names. Vector concat versions without a mapping
+    output are tolerated: the mapping is then left out.
+
+    Args:
+        task_data (ProcessingTask): the router task, used for duplicate logging.
+        retries (int): the retry count of the calling task.
+        db_id (int): the database id of the router task.
+        outputs (list): the outputs of the finished vector concat task.
+        file_name (str): the name to store the mapping under.
+    """
+    mapping_url = next(
+        (o["href"] for o in outputs if o.get("dataType") == DIMENSION_MAPPING_DATA_TYPE),
+        None,
+    )
+    if mapping_url is None:
+        return
+
+    save_intermediate_results(
+        task_data=task_data,
+        retries=retries,
+        db_id=db_id,
+        file=open_url(mapping_url, timeout=REQUEST_TIMEOUT).content,
+        file_name=file_name,
+        file_type=DIMENSION_MAPPING_DATA_TYPE,
+        mimetype="application/json",
     )
 
 

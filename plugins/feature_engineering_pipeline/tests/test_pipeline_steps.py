@@ -768,6 +768,37 @@ def test_finalize_vector_concat_stores_the_final_vector(
     ) in dispatched
 
 
+def test_finalize_vector_concat_stores_the_dimension_mapping(server, dispatched):
+    db_task = make_router_task(concatOutput=True)
+
+    run_task(
+        finalize_vector_concat,
+        db_id=db_task.id,
+        source_url=server.task_url(VECTOR_CONCAT_PLUGIN),
+    )
+
+    stored = stored_files(db_task)["final_concatenated_vector_dimension_mapping.json"]
+    assert stored.file_type == "entity/dimension-mapping"
+    assert stored.mimetype == "application/json"
+
+
+def test_finalize_vector_concat_works_without_a_dimension_mapping(server, dispatched):
+    """Vector concat versions without a mapping output must still finalize."""
+    outputs = server.outputs(VECTOR_CONCAT_PLUGIN)
+    outputs[:] = [o for o in outputs if o["dataType"] != "entity/dimension-mapping"]
+    db_task = make_router_task(concatOutput=True)
+
+    run_task(
+        finalize_vector_concat,
+        db_id=db_task.id,
+        source_url=server.task_url(VECTOR_CONCAT_PLUGIN),
+    )
+
+    stored = stored_files(db_task)
+    assert "final_concatenated_vector.csv" in stored
+    assert "final_concatenated_vector_dimension_mapping.json" not in stored
+
+
 def test_finalize_vector_concat_starts_pca_when_requested(server, dispatched):
     db_task = make_router_task(concatOutput=True, reduceDimensions=True, pcaDimensions=1)
 
@@ -796,7 +827,9 @@ def test_finalize_vector_concat_keeps_the_unreduced_vector_on_request(server, di
         source_url=server.task_url(VECTOR_CONCAT_PLUGIN),
     )
 
-    assert "concatenated_vector.csv" in stored_files(db_task)
+    stored = stored_files(db_task)
+    assert "concatenated_vector.csv" in stored
+    assert "concatenated_vector_dimension_mapping.json" in stored
 
 
 def test_finalize_vector_concat_skips_pca_without_enough_dimensions(server, dispatched):

@@ -188,6 +188,13 @@ class PluginsView(MethodView):
                         ],
                         required=True,
                     ),
+                    # Dimension mapping of the vector concat output, labelling
+                    # its dimensions with the attributes they came from
+                    DataMetadata(
+                        data_type="entity/dimension-mapping",
+                        content_type=["application/json"],
+                        required=False,
+                    ),
                     # PCA output (optional final output after vector concat)
                     DataMetadata(
                         data_type="custom/plot",

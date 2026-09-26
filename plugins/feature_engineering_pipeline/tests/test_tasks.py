@@ -610,7 +610,10 @@ def test_full_run_with_numeric_attributes_and_concatenation(server, inline):
     assert inline.results == [
         "All Pipelines Completed Successfully And Concatenated Vector Created!"
     ]
-    assert stored_file_names(db_task) == {"final_concatenated_vector.csv"}
+    assert stored_file_names(db_task) == {
+        "final_concatenated_vector.csv",
+        "final_concatenated_vector_dimension_mapping.json",
+    }
 
     db_task = reload(db_task)
     mds_vectors = server.output_url(MDS_PLUGIN, "entity/vector")
@@ -637,7 +640,10 @@ def test_full_run_stops_after_the_concatenation_without_pca(server, inline):
     assert inline.results == [
         "All Pipelines Completed Successfully And Concatenated Vector Created!"
     ]
-    assert stored_file_names(db_task) == {"final_concatenated_vector.csv"}
+    assert stored_file_names(db_task) == {
+        "final_concatenated_vector.csv",
+        "final_concatenated_vector_dimension_mapping.json",
+    }
 
 
 def test_on_retry_logs_without_app_context():
