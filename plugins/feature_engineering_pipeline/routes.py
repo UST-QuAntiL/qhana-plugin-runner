@@ -275,12 +275,15 @@ class MicroFrontend(MethodView):
         default_values.update(data_dict)
         data_dict = default_values
 
+        expanded_groups = frozenset(("basic_data", VECTOR_CONCAT_PLUGIN))
+
         return Response(
             render_template(
                 "router_form.html",
                 name=FeatureEngineeringPipeline.instance.name,
                 version=FeatureEngineeringPipeline.instance.version,
                 groups=field_groups(INPUT_FIELD_GROUPS),
+                expanded_groups=expanded_groups,
                 values=data_dict,
                 valid=valid,
                 errors=errors,
