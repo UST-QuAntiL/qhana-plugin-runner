@@ -14,8 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 {% extends "simple_template.html" %}
+{% import "pipeline_settings_section.html" as components %}
 {% block head %}
 {{ super() }}
+{{ components.settings_section_styles() }}
 <style>
     .attribute-row {
         display: flex;
@@ -28,16 +30,10 @@ limitations under the License.
         min-width: 12rem;
     }
 
-    .numeric-attributes {
-        display: grid;
-        grid-template-columns: max-content max-content auto;
-        align-items: center;
-        column-gap: 1rem;
-        row-gap: 0.5rem;
-        width: fit-content;
-    }
-
-    .value-count {
+    .attribute-row .value-count {
+        min-width: 7rem;
+        margin-inline-start: auto;
+        text-align: end;
         font-size: 0.85em;
         opacity: 0.75;
         white-space: nowrap;
@@ -47,13 +43,20 @@ limitations under the License.
         margin-bottom: 0.5rem;
     }
 
-    .numeric-attribute {
-        display: contents;
+    .attribute-row .numeric-include {
+        display: flex;
+        align-items: center;
+        column-gap: 0.4rem;
+        cursor: pointer;
     }
 
-    .numeric-attribute input {
-        justify-self: start;
+    .attribute-row .numeric-include input {
         margin: 0;
+    }
+
+    .no-settings {
+        margin: 0.2rem 0 0.6rem 0;
+        opacity: 0.75;
     }
 
     .input-params {
@@ -67,6 +70,70 @@ limitations under the License.
     .input-params dd {
         margin: 0 0 0.5rem 0;
         word-break: break-all;
+    }
+
+    .attribute-block {
+        margin-bottom: 0.5rem;
+    }
+
+    .attribute-block>.attribute-row {
+        margin-bottom: 0;
+        padding: 0.4rem 0.8rem;
+        border: 1px solid transparent;
+    }
+
+    .attribute-row .qhana-form-input {
+        flex: 0 1 15rem;
+        margin-inline-start: auto;
+    }
+
+    .attribute-settings-button {
+        flex-shrink: 0;
+        padding-block: 0.3em;
+        padding-inline: 0.7em;
+        white-space: nowrap;
+        cursor: pointer;
+        color: inherit;
+        font: inherit;
+        border: 1px solid rgba(var(--line, 128, 128, 128), 0.5);
+        border-radius: 6px;
+        background-color: rgba(var(--line, 128, 128, 128), 0.08);
+    }
+
+    .attribute-settings-button:hover {
+        background-color: rgba(var(--line, 128, 128, 128), 0.16);
+    }
+
+    .attribute-settings-button::after {
+        content: " \25BE";
+    }
+
+    .attribute-settings-button[aria-expanded="true"] {
+        border-color: rgba(var(--line, 128, 128, 128), 0.7);
+        background-color: rgba(var(--line, 128, 128, 128), 0.24);
+    }
+
+    .attribute-settings-button[aria-expanded="true"]::after {
+        content: " \25B4";
+    }
+
+    .attribute-block:has(.attribute-settings:not([hidden]))>.attribute-row {
+        border-color: rgba(var(--line, 128, 128, 128), 0.4);
+        border-bottom-color: transparent;
+        border-radius: 8px 8px 0 0;
+        background-color: rgba(var(--line, 128, 128, 128), 0.12);
+    }
+
+    .attribute-settings {
+        border: 1px solid rgba(var(--line, 128, 128, 128), 0.4);
+        border-radius: 0 0 8px 8px;
+        padding: 0.8rem 0.8rem 0.4rem 0.8rem;
+        margin-bottom: 0.8rem;
+        background-color: rgba(var(--line, 128, 128, 128), 0.06);
+    }
+
+    .attribute-settings .settings-section:last-child {
+        margin-bottom: 0.4rem;
     }
 </style>
 {% endblock head %}
@@ -92,19 +159,33 @@ limitations under the License.
     {% if attributes %}
     <fieldset>
         <legend>Taxonomy Attributes</legend>
+        {# The settings fields are submitted as `pipeline_<attribute>__<setting>` and are prefilled with
+        the settings of the first step (see RoutingStepParametersSchema). #}
         {%- for attr in attributes -%}
         {%- set field_name = "pipeline_" + attr -%}
+        {%- set settings_id = field_name + "__settings" -%}
         {%- set recommended = recommendations.get(attr) -%}
-        <div class="attribute-row">
-            <label class="attribute-name" for="{{field_name}}">{{attr}}</label>
-            <select class="qhana-form-input" name="{{field_name}}" id="{{field_name}}" autocomplete="off">
-                {%- for key, display_name in pipeline_options.items() -%}
-                <option value="{{key}}" {% if key==values.get(field_name) %}selected{% endif %}>
-                    <!--If there exists a recomendation, indicate the recomended options-->
-                    {{display_name}} {% if recommended and key == recommended %}(Recommended){% endif %}
-                </option>
+        <div class="attribute-block">
+            <div class="attribute-row">
+                <label class="attribute-name" for="{{field_name}}">{{attr}}</label>
+                <select class="qhana-form-input" name="{{field_name}}" id="{{field_name}}" autocomplete="off">
+                    {%- for key, display_name in pipeline_options.items() -%}
+                    <option value="{{key}}" {% if key==values.get(field_name) %}selected{% endif %}>
+                        <!--If there exists a recomendation, indicate the recomended options-->
+                        {{display_name}} {% if recommended and key == recommended %}(Recommended){% endif %}
+                    </option>
+                    {%- endfor -%}
+                </select>
+                <button type="button" class="attribute-settings-button" aria-expanded="false"
+                    aria-controls="{{settings_id}}"><span aria-hidden="true">&#9881;</span> Settings</button>
+            </div>
+            <div class="attribute-settings" id="{{settings_id}}" hidden>
+                {%- for group in settings_groups -%}
+                {{ components.settings_section(group.title, group.schema, values=settings_values.get(attr,
+                input_params), errors=settings_errors.get(attr, {}), expanded=(group.key in
+                expanded_groups.get(attr, ())), id_prefix=field_name ~ "__", name_prefix=field_name ~ "__") }}
                 {%- endfor -%}
-            </select>
+            </div>
         </div>
         {%- endfor -%}
     </fieldset>
@@ -119,17 +200,38 @@ limitations under the License.
     {% if numeric_attributes %}
     <fieldset>
         <legend>Numeric Attributes</legend>
-        <div class="numeric-attributes">
-            {%- for attr in numeric_attributes -%}
-            {%- set field_name = "pipeline_" + attr -%}
-            <label class="numeric-attribute" for="{{field_name}}">
-                <span class="attribute-name">{{attr}}</span>
-                <span class="value-count">{% if attr in multi_valued_numeric %}multi-valued{% else %}single-valued{% endif %}</span>
-                <input type="checkbox" name="{{field_name}}" id="{{field_name}}" value="numeric"
-                    autocomplete="off" {% if values.get(field_name) == "numeric" %}checked{% endif %}>
-            </label>
-            {%- endfor -%}
+        {# A multi-valued attribute carries its own copy of the mapping and MDS settings,
+        submitted as `pipeline_<attribute>__<setting>` like the taxonomy attributes. #}
+        {%- for attr in numeric_attributes -%}
+        {%- set field_name = "pipeline_" + attr -%}
+        {%- set settings_id = field_name + "__settings" -%}
+        {%- set multi_valued = attr in multi_valued_numeric -%}
+        <div class="attribute-block">
+            <div class="attribute-row">
+                <label class="attribute-name" for="{{field_name}}">{{attr}}</label>
+                <span class="value-count">{% if multi_valued %}multi-valued{% else %}single-valued{% endif %}</span>
+                <label class="numeric-include">
+                    <input type="checkbox" name="{{field_name}}" id="{{field_name}}" value="numeric"
+                        autocomplete="off" {% if values.get(field_name) == "numeric" %}checked{% endif %}>
+                    Include
+                </label>
+                <button type="button" class="attribute-settings-button" aria-expanded="false"
+                    aria-controls="{{settings_id}}"><span aria-hidden="true">&#9881;</span> Settings</button>
+            </div>
+            <div class="attribute-settings" id="{{settings_id}}" hidden>
+                {%- if multi_valued -%}
+                {%- for group in numeric_settings_groups -%}
+                {{ components.settings_section(group.title, group.schema, values=settings_values.get(attr,
+                input_params), errors=settings_errors.get(attr, {}), expanded=(group.key in
+                expanded_groups.get(attr, ())), id_prefix=field_name ~ "__", name_prefix=field_name ~ "__") }}
+                {%- endfor -%}
+                {%- else -%}
+                <p class="no-settings">A single-valued attribute is appended to the feature vector
+                    without a plugin, so it has no settings yet.</p>
+                {%- endif -%}
+            </div>
         </div>
+        {%- endfor -%}
     </fieldset>
     {% else %}
     <p>No numeric attributes were found in the provided metadata.</p>
@@ -145,3 +247,24 @@ limitations under the License.
     {% endcall %}
 </div>
 {% endblock content %}
+
+{% block script %}
+{{ super() }}
+{{ components.settings_section_script() }}
+
+<script>
+    document.querySelectorAll(".attribute-block").forEach(block => {
+        const button = block.querySelector("button.attribute-settings-button");
+        const panel = block.querySelector(".attribute-settings");
+        if (button == null || panel == null) {
+            return;
+        }
+
+        button.addEventListener("click", () => {
+            panel.hidden = !panel.hidden;
+            button.setAttribute("aria-expanded", String(!panel.hidden));
+            window.requestAnimationFrame(reportContentHeight);
+        });
+    });
+</script>
+{% endblock script %}

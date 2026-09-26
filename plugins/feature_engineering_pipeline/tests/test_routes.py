@@ -221,7 +221,7 @@ def test_routing_task_counts_every_plugin_it_will_run(
     # the first pipeline of the queue is started right away
     assert [
         db_task.data["current_pipeline"],
-        *db_task.data["pipeline_queue"],
+        *(group["pipeline"] for group in db_task.data["pipeline_queue"]),
     ] == expected_pipelines
     assert db_task.progress_target == expected_target
     assert db_task.progress_value == 1

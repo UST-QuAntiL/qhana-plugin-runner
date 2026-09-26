@@ -47,6 +47,7 @@ from feature_engineering_pipeline.tests.data import (
     input_file_responses,
     make_router_task,
     mock_open_url,
+    pipeline_group,
 )
 from flask import current_app
 from requests.exceptions import Timeout
@@ -259,7 +260,7 @@ def test_routing_task_counts_every_plugin_it_will_run(
     # the first pipeline of the queue is started right away
     assert [
         db_task.data["current_pipeline"],
-        *db_task.data["pipeline_queue"],
+        *(group["pipeline"] for group in db_task.data["pipeline_queue"]),
     ] == expected_pipelines
     assert db_task.progress_target == expected_target
     assert db_task.progress_value == 1
@@ -284,8 +285,71 @@ def test_routing_task_groups_the_attributes_per_pipeline(monkeypatch):
     run_task(start_routing_task, db_id=db_task.id)
 
     data = reload(db_task).data
+    # the first group of the queue is already started, the rest is still queued
     assert data[f"{WU_PALMER_PLUGIN}_attributes"] == "g1\ng2"
-    assert data[f"{MAPPING_PLUGIN}_attributes"] == "m1"
+    assert [
+        (group["pipeline"], group["attributes"]) for group in data["pipeline_queue"]
+    ] == [(MAPPING_PLUGIN, ["m1"])]
+
+
+def test_routing_task_splits_a_pipeline_by_the_attribute_settings(monkeypatch):
+    """Attributes with different settings cannot share a plugin run."""
+    monkeypatch.setattr(
+        "feature_engineering_pipeline.tasks_pipeline_steps.start_wu_palmer.apply_async",
+        lambda *args, **kwargs: None,
+    )
+    db_task = make_router_task(
+        selections={
+            "g1": WU_PALMER_PLUGIN,
+            "g2": WU_PALMER_PLUGIN,
+            "g3": WU_PALMER_PLUGIN,
+        },
+        data={"attribute_settings": {"g2": {"transformer": "square_inverse"}}},
+    )
+
+    run_task(start_routing_task, db_id=db_task.id)
+
+    db_task = reload(db_task)
+    # the first group is started right away and leaves the queue
+    assert db_task.data["current_pipeline_label"] == f"{WU_PALMER_PLUGIN}_1"
+    assert db_task.data[f"{WU_PALMER_PLUGIN}_attributes"] == "g1\ng3"
+    assert db_task.data["pipeline_queue"] == [
+        {
+            "pipeline": WU_PALMER_PLUGIN,
+            "attributes": ["g2"],
+            "settings": {"transformer": "square_inverse"},
+            "label": f"{WU_PALMER_PLUGIN}_2",
+        }
+    ]
+    # every group runs Wu-Palmer, Transformers, Aggregator and MDS
+    assert db_task.progress_target == 9
+
+
+@pytest.mark.parametrize(
+    "settings",
+    [
+        pytest.param({"transformer": "linear_inverse"}, id="equal to the first step"),
+        pytest.param({"distanceMetric": "cosine"}, id="unused by the pipeline"),
+    ],
+)
+def test_routing_task_keeps_one_group_for_settings_without_effect(monkeypatch, settings):
+    monkeypatch.setattr(
+        "feature_engineering_pipeline.tasks_pipeline_steps.start_wu_palmer.apply_async",
+        lambda *args, **kwargs: None,
+    )
+    db_task = make_router_task(
+        selections={"g1": WU_PALMER_PLUGIN, "g2": WU_PALMER_PLUGIN},
+        transformer="linear_inverse",
+        data={"attribute_settings": {"g2": settings}},
+    )
+
+    run_task(start_routing_task, db_id=db_task.id)
+
+    db_task = reload(db_task)
+    assert db_task.data["pipeline_queue"] == []
+    assert db_task.data[f"{WU_PALMER_PLUGIN}_attributes"] == "g1\ng2"
+    assert db_task.data["current_settings"] == {}
+    assert db_task.data["current_pipeline_label"] == WU_PALMER_PLUGIN
 
 
 def test_routing_task_routes_numeric_attributes_by_their_metadata(monkeypatch):
@@ -301,13 +365,65 @@ def test_routing_task_routes_numeric_attributes_by_their_metadata(monkeypatch):
 
     db_task = reload(db_task)
     assert db_task.data[f"{NUMERIC_MAPPING_PIPELINE}_attributes"] == "beats"
-    assert db_task.data[f"{FEATURE_VECTOR}_attributes"] == "year"
+    assert [
+        (group["pipeline"], group["attributes"])
+        for group in db_task.data["pipeline_queue"]
+    ] == [(FEATURE_VECTOR, ["year"])]
     assert "numeric mapping pipeline for multi-valued numeric attributes: ['beats']" in (
         db_task.task_log
     )
     assert "feature vector for single-valued numeric attributes: ['year']" in (
         db_task.task_log
     )
+
+
+def test_routing_task_splits_the_numeric_mapping_by_the_attribute_settings(monkeypatch):
+    """A multi-valued numeric attribute carries the settings of its mapping pipeline."""
+    monkeypatch.setattr(
+        "feature_engineering_pipeline.tasks_pipeline_steps.start_numeric_distances.apply_async",
+        lambda *args, **kwargs: None,
+    )
+    db_task = make_router_task(
+        selections={"beats": INCLUDE_NUMERIC, "bars": INCLUDE_NUMERIC},
+        data={
+            "numeric_attributes": ["beats", "bars"],
+            "multi_valued_numeric_attributes": ["beats", "bars"],
+            "attribute_settings": {"bars": {"distanceMetric": "cosine"}},
+        },
+    )
+
+    run_task(start_routing_task, db_id=db_task.id)
+
+    db_task = reload(db_task)
+    assert db_task.data[f"{NUMERIC_MAPPING_PIPELINE}_attributes"] == "beats"
+    assert db_task.data["pipeline_queue"] == [
+        pipeline_group(
+            NUMERIC_MAPPING_PIPELINE,
+            ["bars"],
+            {"distanceMetric": "cosine"},
+            f"{NUMERIC_MAPPING_PIPELINE}_2",
+        )
+    ]
+    # both groups run the mapping, the aggregator and MDS
+    assert db_task.progress_target == 7
+
+
+def test_routing_task_ignores_settings_of_a_single_valued_attribute(monkeypatch):
+    """Nothing is configurable yet for an attribute that skips the plugins."""
+    monkeypatch.setattr(
+        "feature_engineering_pipeline.tasks_pipeline_steps.build_numeric_feature_vector.apply_async",
+        lambda *args, **kwargs: None,
+    )
+    db_task = make_router_task(
+        selections={"year": INCLUDE_NUMERIC},
+        data={"attribute_settings": {"year": {"mdsDimensions": 3}}},
+    )
+
+    run_task(start_routing_task, db_id=db_task.id)
+
+    db_task = reload(db_task)
+    assert db_task.data["pipeline_queue"] == []
+    assert db_task.data["current_settings"] == {}
 
 
 @pytest.mark.parametrize(

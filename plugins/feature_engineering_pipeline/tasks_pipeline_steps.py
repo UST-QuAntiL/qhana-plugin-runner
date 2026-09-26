@@ -14,7 +14,6 @@
 
 import requests
 from celery.utils.log import get_task_logger
-from marshmallow import EXCLUDE
 
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask, TaskFile
@@ -44,17 +43,18 @@ from .schemas import (
     VECTOR_CONCAT_PLUGIN,
     WU_PALMER_PLUGIN,
     InputParameters,
-    InputParametersSchema,
 )
 from .tasks_helpers import (
     REQUEST_TIMEOUT,
     PipelineTask,
     extract_output_url,
     has_enough_pca_dimensions,
-    should_store_mds_output,
+    load_params,
     persist_generated_file,
+    pipeline_label,
     run_pipeline_step,
     save_intermediate_results,
+    should_store_mds_output,
 )
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -102,9 +102,11 @@ def launch_next_pipeline(task_data: ProcessingTask):
     Orchestrates the execution of pending pipelines within the routing queue.
 
     Retrieves the pipeline queue from the task data, pops the next scheduled
-    pipeline, and triggers its corresponding Celery task (e.g., Wu-Palmer or Mapping).
-    If the queue is empty, it evaluates the user parameters to either trigger the
-    Vector Concatenation plugin or gracefully finalize the task.
+    pipeline group, and triggers its corresponding Celery task (e.g., Wu-Palmer or
+    Mapping). A group holds the attributes that run together, the settings they
+    override and the label of their result files. If the queue is empty, it evaluates
+    the user parameters to either trigger the Vector Concatenation plugin or
+    gracefully finalize the task.
 
     Args:
         task_data (ProcessingTask): The current task instance containing the pipeline
@@ -120,11 +122,14 @@ def launch_next_pipeline(task_data: ProcessingTask):
     if not queue:
         _log_duplicate_outputs(task_data)
 
+        # The steps that follow are not part of a pipeline group, so they run with
+        # the settings of the first step.
+        task_data.data.pop("current_settings", None)
+        task_data.data.pop("current_pipeline_label", None)
+
         # Optional vector concatenation if the user requested it.
         # Afterwards, the optional PCA plugin will be executed
-        params: InputParameters = InputParametersSchema(unknown=EXCLUDE).loads(
-            task_data.parameters
-        )
+        params: InputParameters = load_params(task_data)
         if params.concat_output:
             task_data.add_task_log_entry(
                 "Starting Vector concat plugin after all pipelines completed successfully."
@@ -138,10 +143,14 @@ def launch_next_pipeline(task_data: ProcessingTask):
         save_task_result.delay("All Pipelines Completed Successfully!", task_data.id)
         return
 
-    # Pop the next pipeline and update state
-    next_pipeline = queue.pop(0)
+    # Pop the next pipeline group and update state
+    group = queue.pop(0)
+    next_pipeline = group["pipeline"]
     task_data.data["pipeline_queue"] = queue
     task_data.data["current_pipeline"] = next_pipeline
+    task_data.data["current_pipeline_label"] = group.get("label", next_pipeline)
+    task_data.data["current_settings"] = group.get("settings", {})
+    task_data.data[f"{next_pipeline}_attributes"] = "\n".join(group["attributes"])
 
     # Reset progress when starting new pipeline
     for reused_step in (
@@ -216,9 +225,7 @@ def start_wu_palmer(self, db_id: int):
     """
 
     task_data = ProcessingTask.get_by_id(db_id)
-    params: InputParameters = InputParametersSchema(unknown=EXCLUDE).loads(
-        task_data.parameters
-    )
+    params: InputParameters = load_params(task_data)
     payload = {
         "entitiesUrl": params.entities_url,
         "entitiesMetadataUrl": params.entities_metadata_url,
@@ -256,9 +263,7 @@ def start_mapping(self, db_id: int):
     """
 
     task_data = ProcessingTask.get_by_id(db_id)
-    params: InputParameters = InputParametersSchema(unknown=EXCLUDE).loads(
-        task_data.parameters
-    )
+    params: InputParameters = load_params(task_data)
     payload = {
         "entitiesUrl": params.entities_url,
         "entitiesMetadataUrl": params.entities_metadata_url,
@@ -302,9 +307,7 @@ def start_transformers(self, db_id: int, source_url: str):
     task_data = ProcessingTask.get_by_id(db_id)
     outputs = requests.get(source_url, timeout=REQUEST_TIMEOUT).json().get("outputs", [])
     element_sims_url = extract_output_url(outputs, "relation/element-similarities")
-    params: InputParameters = InputParametersSchema(unknown=EXCLUDE).loads(
-        task_data.parameters
-    )
+    params: InputParameters = load_params(task_data)
 
     if params.include_intermediate_results_in_output:
         save_intermediate_results(
@@ -312,7 +315,7 @@ def start_transformers(self, db_id: int, source_url: str):
             retries=self.request.retries,
             db_id=db_id,
             file=open_url(element_sims_url).content,
-            file_name="wu_palmer_similarities.zip",
+            file_name=f"{pipeline_label(task_data)}_similarities.zip",
             file_type="relation/element-similarities",
         )
 
@@ -357,12 +360,10 @@ def start_aggregator(self, db_id: int, source_url: str):
     task_data = ProcessingTask.get_by_id(db_id)
     outputs = requests.get(source_url, timeout=REQUEST_TIMEOUT).json().get("outputs", [])
     element_dists_url = extract_output_url(outputs, "relation/element-distances")
-    params: InputParameters = InputParametersSchema(unknown=EXCLUDE).loads(
-        task_data.parameters
-    )
+    params: InputParameters = load_params(task_data)
 
     if params.include_intermediate_results_in_output:
-        prefix = task_data.data.get("current_pipeline", "unknown")
+        prefix = pipeline_label(task_data)
         save_intermediate_results(
             task_data=task_data,
             retries=self.request.retries,
@@ -412,12 +413,10 @@ def start_mds(self, db_id: int, source_url: str):
     task_data = ProcessingTask.get_by_id(db_id)
     outputs = requests.get(source_url, timeout=REQUEST_TIMEOUT).json().get("outputs", [])
     attr_dists_url = extract_output_url(outputs, "relation/attribute-distances")
-    params: InputParameters = InputParametersSchema(unknown=EXCLUDE).loads(
-        task_data.parameters or "{}"
-    )
+    params: InputParameters = load_params(task_data)
 
     if params.include_intermediate_results_in_output:
-        prefix = task_data.data.get("current_pipeline", "unknown")
+        prefix = pipeline_label(task_data)
         save_intermediate_results(
             task_data=task_data,
             retries=self.request.retries,
@@ -461,9 +460,7 @@ def start_numeric_distances(self, db_id: int):
     """
 
     task_data = ProcessingTask.get_by_id(db_id)
-    params: InputParameters = InputParametersSchema(unknown=EXCLUDE).loads(
-        task_data.parameters
-    )
+    params: InputParameters = load_params(task_data)
     payload = {
         "entitiesUrl": params.entities_url,
         "entitiesMetadataUrl": params.entities_metadata_url,
@@ -499,9 +496,7 @@ def build_numeric_feature_vector(self, db_id: int):
     """
 
     task_data = ProcessingTask.get_by_id(db_id)
-    params: InputParameters = InputParametersSchema(unknown=EXCLUDE).loads(
-        task_data.parameters or "{}"
-    )
+    params: InputParameters = load_params(task_data)
     attributes = task_data.data[f"{FEATURE_VECTOR}_attributes"].splitlines()
     with open_url(params.entities_url) as response:
         entities = list(ensure_dict(load_entities(response, get_mimetype(response))))
@@ -562,11 +557,9 @@ def finalize_pipeline(self, db_id: int, source_url: str):
     """
 
     task_data = ProcessingTask.get_by_id(db_id)
-    params: InputParameters = InputParametersSchema(unknown=EXCLUDE).loads(
-        task_data.parameters or "{}"
-    )
+    params: InputParameters = load_params(task_data)
 
-    current_pipeline_name = task_data.data.get("current_pipeline", "unknown")
+    current_pipeline_name = pipeline_label(task_data)
     TASK_LOGGER.info(f"DEBUGGING: Finishing the Pipeline '{current_pipeline_name}'")
 
     outputs = requests.get(source_url, timeout=REQUEST_TIMEOUT).json().get("outputs", [])
@@ -613,9 +606,7 @@ def start_vector_concat(self, db_id: int):
 
     task_data = ProcessingTask.get_by_id(db_id)
 
-    params: InputParameters = InputParametersSchema(unknown=EXCLUDE).loads(
-        task_data.parameters or "{}"
-    )
+    params: InputParameters = load_params(task_data)
     vector_zip_urls = task_data.data.get("vector_zip_urls", [])
 
     payload = {
@@ -653,9 +644,7 @@ def finalize_vector_concat(self, db_id: int, source_url: str):
 
     """
     task_data = ProcessingTask.get_by_id(db_id)
-    params: InputParameters = InputParametersSchema(unknown=EXCLUDE).loads(
-        task_data.parameters or "{}"
-    )
+    params: InputParameters = load_params(task_data)
     extension, mimetype = OUTPUT_FORMATS.get(params.output_format, OUTPUT_FORMATS["csv"])
 
     outputs = requests.get(source_url, timeout=REQUEST_TIMEOUT).json().get("outputs", [])
@@ -714,9 +703,7 @@ def start_pca(self, db_id: int, vector_url: str):
     """
 
     task_data = ProcessingTask.get_by_id(db_id)
-    params: InputParameters = InputParametersSchema(unknown=EXCLUDE).loads(
-        task_data.parameters or "{}"
-    )
+    params: InputParameters = load_params(task_data)
 
     payload = {
         **PCA_DEFAULTS,

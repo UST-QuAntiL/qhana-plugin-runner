@@ -200,7 +200,7 @@ def test_frontend_validation_reports_cross_field_error():
 
 def test_all_schema_fields_are_rendered():
     """A field missing from the groups would never show up in the form."""
-    rendered = {field for _, fields, _ in INPUT_FIELD_GROUPS for field in fields}
+    rendered = {field for _, _, fields in INPUT_FIELD_GROUPS for field in fields}
     assert rendered == set(InputParametersSchema().fields)
 
 
