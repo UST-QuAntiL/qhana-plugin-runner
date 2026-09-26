@@ -55,7 +55,7 @@ from .tasks_helpers import (
     pipeline_label,
     run_pipeline_step,
     save_intermediate_results,
-    should_store_mds_output,
+    should_store_pipeline_vectors,
 )
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -564,7 +564,7 @@ def build_numeric_feature_vector(self, db_id: int):
         entities_zip(members),
         file_name,
         "entity/vector",
-        as_result=should_store_mds_output(params),
+        as_result=should_store_pipeline_vectors(params),
     )
 
     if params.concat_output:
@@ -609,7 +609,7 @@ def finalize_pipeline(self, db_id: int, source_url: str):
     outputs = requests.get(source_url, timeout=REQUEST_TIMEOUT).json().get("outputs", [])
     final_dists_url = extract_output_url(outputs, "entity/vector")
 
-    if should_store_mds_output(params):
+    if should_store_pipeline_vectors(params):
         save_intermediate_results(
             task_data=task_data,
             retries=self.request.retries,
@@ -657,7 +657,7 @@ def finalize_one_hot(self, db_id: int, source_url: str):
     outputs = requests.get(source_url, timeout=REQUEST_TIMEOUT).json().get("outputs", [])
     vectors_url = extract_output_url(outputs, "entity/vector")
 
-    if should_store_mds_output(params):
+    if should_store_pipeline_vectors(params):
         save_intermediate_results(
             task_data=task_data,
             retries=self.request.retries,
