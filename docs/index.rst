@@ -23,7 +23,6 @@ Welcome to QHAna-Plugin-Runner's documentation!
     cli
     all-plugins
     wu-palmer-pipeline
-    feature-engineering-pipeline
     adr/index
     source/qhana_plugin_runner
     changelog
