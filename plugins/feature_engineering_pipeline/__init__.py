@@ -20,14 +20,14 @@ from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "feature-engineering-pipeline"
-__version__ = "v0.1.6"
+__version__ = "v0.1.9"
 _identifier = plugin_identifier(_plugin_name, __version__)
 _description = (  # TODO
     "Routes entities and separates tree from non-tree taxonomies. "
     "Takes Muse4Music data and provides different routing options for the entities and taxonomies."
 )
 
-ROUTER_BLP = SecurityBlueprint(
+FEATURE_ENGINEERING_PIPELINE_BLP = SecurityBlueprint(
     _identifier,
     __name__,
     description=_description,
@@ -35,7 +35,7 @@ ROUTER_BLP = SecurityBlueprint(
 )
 
 
-class Router(QHAnaPluginBase):
+class FeatureEngineeringPipeline(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
     description = _description
@@ -45,7 +45,7 @@ class Router(QHAnaPluginBase):
         super().__init__(app)
 
     def get_api_blueprint(self):
-        return ROUTER_BLP
+        return FEATURE_ENGINEERING_PIPELINE_BLP
 
 
 try:

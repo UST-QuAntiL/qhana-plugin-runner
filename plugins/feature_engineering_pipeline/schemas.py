@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import Enum
 import textwrap
+from enum import Enum
+from typing import Mapping
 
 import marshmallow as ma
 from marshmallow import post_load
@@ -31,6 +32,9 @@ MDS_PLUGIN = "mds"
 VECTOR_CONCAT_PLUGIN = "vector_concat"
 PCA_PLUGIN = "pca"
 
+FEATURE_VECTOR = "feature_vector"
+NUMERIC_MAPPING_PIPELINE = "numeric_mapping"
+
 FINALIZE_PIPELINE = "finalize"
 
 # Names of the plugins invoked by the routing pipeline. The runner serves
@@ -41,6 +45,7 @@ FINALIZE_PIPELINE = "finalize"
 PIPELINE_PLUGINS = {
     WU_PALMER_PLUGIN: "wu-palmer",
     MAPPING_PLUGIN: "mapping-distances",
+    ONE_HOT_PLUGIN: "one-hot-encoding",
     TRANSFORMERS_PLUGIN: "element_sim-to-element_dist-transformers",
     AGGREGATOR_PLUGIN: "attribute-distance-aggregator",
     MDS_PLUGIN: "attribute-distance-mds",
@@ -56,7 +61,15 @@ PIPELINE_OPTIONS = {
     MAPPING_PLUGIN: "Mapping",
 }
 
+# Value submitted by a checked numeric attribute checkbox in the routing step.
+# The server picks the pipeline from the attribute metadata.
+INCLUDE_NUMERIC = "numeric"
+
 PIPELINE_FIELD_PREFIX = "pipeline_"
+
+# Separates the attribute from the setting in the routing step field name
+# ``pipeline_<attribute>__<setting>``.
+SETTINGS_FIELD_SEPARATOR = "__"
 
 
 # This Enum class is copied from the mapping distances plugin.
@@ -165,57 +178,12 @@ class InputParameters:
         self.iterated_power = iterated_power
 
 
-class InputParametersSchema(FrontendFormBaseSchema):
-    # Base Inputs
-    entities_url = FileUrl(
-        required=True,
-        allow_none=False,
-        data_input_type="entity/list",
-        data_content_types=["text/csv", "application/json"],
-        metadata={
-            "label": "Entities URL",
-            "description": "URL to the entity list (e.g., subparts.csv).",
-            "input_type": "text",
-        },
-    )
-    entities_metadata_url = FileUrl(
-        required=True,
-        allow_none=False,
-        data_input_type="entity/attribute-metadata",
-        data_content_types=["application/json"],
-        metadata={
-            "label": "Entities Attribute Metadata URL",
-            "description": "URL to a file with the attribute metadata for the entities.",
-            "input_type": "text",
-            "related_to": "entities_url",
-            "relation": "post",  # TODO: remove (?)
-        },
-    )
-    taxonomies_zip_url = FileUrl(
-        required=True,
-        allow_none=False,
-        data_input_type="graph/taxonomy",
-        data_content_types=["application/zip"],
-        metadata={
-            "label": "Taxonomies URL",
-            "description": "URL to zip file with taxonomies.",
-            "input_type": "text",
-            "related_to": "entities_url",
-            "relation": "pre",
-        },
-    )
+class PipelineSettingsSchema(FrontendFormBaseSchema):
+    """Settings of the plugins a taxonomy attribute is routed through.
 
-    include_intermediate_results_in_output = ma.fields.Boolean(
-        required=False,
-        load_default=False,
-        metadata={
-            "label": "Include intermediate results",
-            "description": "If checked, the intermediate plugin results (e.g. Wu-Palmer) will be included in the output.",
-            "input_type": "checkbox",
-        },
-    )
-
-    # Pipeline Specific Inputs
+    The first step sets them for the whole run. The routing step renders the same
+    fields once per attribute, so an attribute can override them.
+    """
 
     root_is_part_of_hierarchy = ma.fields.Boolean(
         required=False,
@@ -319,6 +287,57 @@ class InputParametersSchema(FrontendFormBaseSchema):
                 "The replacement is computed from the known distances of the same attribute."
             ),
             "input_type": "select",
+        },
+    )
+
+
+class InputParametersSchema(PipelineSettingsSchema):
+    # Base Inputs
+    entities_url = FileUrl(
+        required=True,
+        allow_none=False,
+        data_input_type="entity/list",
+        data_content_types=["text/csv", "application/json"],
+        metadata={
+            "label": "Entities URL",
+            "description": "URL to the entity list (e.g., subparts.csv).",
+            "input_type": "text",
+        },
+    )
+    entities_metadata_url = FileUrl(
+        required=True,
+        allow_none=False,
+        data_input_type="entity/attribute-metadata",
+        data_content_types=["application/json"],
+        metadata={
+            "label": "Entities Attribute Metadata URL",
+            "description": "URL to a file with the attribute metadata for the entities.",
+            "input_type": "text",
+            "related_to": "entities_url",
+            "relation": "post",  # TODO: remove (?)
+        },
+    )
+    taxonomies_zip_url = FileUrl(
+        required=True,
+        allow_none=False,
+        data_input_type="graph/taxonomy",
+        data_content_types=["application/zip"],
+        metadata={
+            "label": "Taxonomies URL",
+            "description": "URL to zip file with taxonomies.",
+            "input_type": "text",
+            "related_to": "entities_url",
+            "relation": "pre",
+        },
+    )
+
+    include_intermediate_results_in_output = ma.fields.Boolean(
+        required=False,
+        load_default=False,
+        metadata={
+            "label": "Include intermediate results",
+            "description": "If checked, the intermediate plugin results (e.g. Wu-Palmer) will be included in the output.",
+            "input_type": "checkbox",
         },
     )
 
@@ -431,43 +450,167 @@ class InputParametersSchema(FrontendFormBaseSchema):
         return InputParameters(**data)
 
 
+PIPELINE_SETTINGS_GROUPS = (
+    (TRANSFORMERS_PLUGIN, "Transformer Settings", ("transformer",)),
+    (WU_PALMER_PLUGIN, "Wu-Palmer Settings", ("root_is_part_of_hierarchy",)),
+    (MAPPING_PLUGIN, "Mapping Settings", ("distance_metric",)),
+    (
+        MDS_PLUGIN,
+        "MDS Settings",
+        ("mds_dimensions", "metric", "n_init", "max_iter", "missing_data_handling"),
+    ),
+)
+
+_SETTINGS_GROUP_FIELDS = {key: fields for key, _, fields in PIPELINE_SETTINGS_GROUPS}
+
+NUMERIC_SETTINGS_GROUPS = tuple(
+    group
+    for group in PIPELINE_SETTINGS_GROUPS
+    if group[0] in (MAPPING_PLUGIN, MDS_PLUGIN)
+)
+
+_RECOMMENDED_SETTINGS_GROUPS = {
+    WU_PALMER_PLUGIN: (TRANSFORMERS_PLUGIN, WU_PALMER_PLUGIN),
+    MAPPING_PLUGIN: (MAPPING_PLUGIN,),
+}
+
+
+def expanded_settings_groups(recommended: str | None) -> frozenset[str]:
+    """Return the section keys that open by default for a recommendation."""
+    return frozenset((MDS_PLUGIN, *_RECOMMENDED_SETTINGS_GROUPS.get(recommended, ())))
+
+
+_SETTINGS_FIELDS = PipelineSettingsSchema().fields
+
+
+def _form_keys(*group_keys: str) -> tuple[str, ...]:
+    return tuple(
+        _SETTINGS_FIELDS[name].data_key
+        for key in group_keys
+        for name in _SETTINGS_GROUP_FIELDS[key]
+    )
+
+
+PIPELINE_SETTINGS_KEYS = {
+    WU_PALMER_PLUGIN: _form_keys(WU_PALMER_PLUGIN, TRANSFORMERS_PLUGIN, MDS_PLUGIN),
+    MAPPING_PLUGIN: _form_keys(MAPPING_PLUGIN, MDS_PLUGIN),
+    NUMERIC_MAPPING_PIPELINE: _form_keys(MAPPING_PLUGIN, MDS_PLUGIN),
+}
+
+SETTINGS_KEYS = frozenset(field.data_key for field in _SETTINGS_FIELDS.values())
+
+BOOLEAN_SETTINGS_KEYS = tuple(
+    field.data_key
+    for field in _SETTINGS_FIELDS.values()
+    if isinstance(field, ma.fields.Boolean)
+)
+
+
+def split_routing_fields(form: Mapping) -> tuple[dict[str, str], dict[str, dict]]:
+    """Split a routing step form into pipeline selections and per-attribute settings.
+
+    Returns the selections as ``{attribute: pipeline}`` and the raw settings as
+    ``{attribute: {form key: submitted value}}``. Fields that belong to neither are
+    ignored, ``RoutingStepParametersSchema`` rejects them beforehand.
+
+    Attribute names contain the separator themselves (``hc__grundton``), so a field
+    name is only read as a setting when it ends in a known setting. An attribute
+    whose name ends in one of them, such as ``x__metric``, is not supported.
+    """
+    selections: dict = {}
+    settings: dict = {}
+    for key, value in form.items():
+        if not key.startswith(PIPELINE_FIELD_PREFIX):
+            continue
+        name = key[len(PIPELINE_FIELD_PREFIX) :]
+        attribute, separator, setting = name.rpartition(SETTINGS_FIELD_SEPARATOR)
+        if separator and setting in SETTINGS_KEYS:
+            settings.setdefault(attribute, {})[setting] = value
+        else:
+            selections[name] = value
+    return selections, settings
+
+
+def _with_unchecked_boxes(raw: Mapping) -> dict:
+    # An unchecked checkbox is not submitted at all, so a boolean missing from a
+    # submitted block is a deselected one.
+    return {**{key: False for key in BOOLEAN_SETTINGS_KEYS}, **raw}
+
+
+def load_settings(raw: Mapping) -> dict:
+    """Validate one settings block and return it in form format.
+
+    A setting that is not submitted keeps the value of the first step, so the block
+    is loaded partially.
+
+    Raises:
+        ma.ValidationError: If a submitted setting is unknown or invalid.
+    """
+    schema = PipelineSettingsSchema(partial=True)
+    return dict(schema.dump(schema.load(_with_unchecked_boxes(raw))))
+
+
+def merge_settings(base: Mapping, raw: Mapping) -> dict:
+    """Apply a submitted settings block to the settings of the whole run."""
+    if not raw:
+        return dict(base)
+    return {**base, **_with_unchecked_boxes(raw)}
+
+
 class RoutingStepParametersSchema(FrontendFormBaseSchema):
     """Second step schema.
 
-    The form renders one dropdown per taxonomy attribute with the field name
-    ``pipeline_<attribute>``. The attributes are only known at runtime, so the
-    fields are accepted dynamically instead of being declared statically.
+    The form renders one dropdown per taxonomy attribute and one checkbox per
+    numeric attribute, both with the field name ``pipeline_<attribute>``. A taxonomy
+    attribute also carries its own copy of the pipeline settings, submitted as
+    ``pipeline_<attribute>__<setting>``. The attributes are only known at runtime, so
+    the fields are accepted dynamically instead of being declared statically.
     """
 
     @ma.validates_schema(pass_original=True)
     def validate_entries(self, data, original_data, **kwargs):
+        allowed_values = [*PIPELINE_OPTIONS, INCLUDE_NUMERIC]
         errors = {}
         for key in original_data:
             if not key.startswith(PIPELINE_FIELD_PREFIX):
                 errors[key] = [
                     f"Unexpected field '{key}', only "
-                    f"'{PIPELINE_FIELD_PREFIX}<attribute>' is allowed."
+                    f"'{PIPELINE_FIELD_PREFIX}<attribute>' and "
+                    f"'{PIPELINE_FIELD_PREFIX}<attribute>"
+                    f"{SETTINGS_FIELD_SEPARATOR}<setting>' are allowed."
                 ]
-                continue
-            value = original_data[key]
-            if value and value not in PIPELINE_OPTIONS.keys():
-                errors[key] = [f"'{value}' is not one of {list(PIPELINE_OPTIONS)}."]
+
+        selections, settings = split_routing_fields(original_data)
+        for attribute, value in selections.items():
+            if value and value not in allowed_values:
+                errors[f"{PIPELINE_FIELD_PREFIX}{attribute}"] = [
+                    f"'{value}' is not one of {allowed_values}."
+                ]
+        for attribute, raw in settings.items():
+            prefix = f"{PIPELINE_FIELD_PREFIX}{attribute}{SETTINGS_FIELD_SEPARATOR}"
+            for key, messages in (
+                PipelineSettingsSchema(partial=True).validate(raw).items()
+            ):
+                errors[prefix + key] = messages
+
         if errors:
             raise ma.ValidationError(errors)
 
         # The partial loads of the micro frontend legitimately see an empty form.
         if self.partial:
             return
-        if not any(value and value != NONE_PLUGIN for value in original_data.values()):
+        # A checked numeric attribute counts as a selection.
+        if not any(value and value != NONE_PLUGIN for value in selections.values()):
             raise ma.ValidationError(
-                "Select a pipeline for at least one attribute, "
+                "Select a pipeline or a numeric attribute for at least one attribute, "
                 "otherwise there is nothing to compute."
             )
 
     @ma.post_load(pass_original=True)
     def add_dynamic_entries(self, data, original_data, **kwargs):
-        # Each attribute maps to a single pipeline selection, so a flat
-        # ``items()`` is sufficient for plain dicts and request MultiDicts alike.
+        # Each attribute maps to a single pipeline selection and to at most one value
+        # per setting, so a flat ``items()`` is sufficient for plain dicts and request
+        # MultiDicts alike.
         for key, value in original_data.items():
             if key.startswith(PIPELINE_FIELD_PREFIX):
                 data[key] = value

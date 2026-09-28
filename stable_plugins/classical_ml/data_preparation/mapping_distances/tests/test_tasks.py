@@ -30,23 +30,20 @@ import json
 import math
 import sys
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional, Tuple, cast
 from zipfile import ZipFile
 
 import pytest
 from celery.app.task import Task
-from typing import cast
+from mapping_distances.tasks import calculation_task as _calculation_task_fn
 
+from qhana_plugin_runner.db import DB
+from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from stable_plugins.classical_ml.data_preparation.mapping_distances.schemas import (
     DistanceMetricEnum,
     InputParameters,
     InputParametersSchema,
 )
-from mapping_distances.tasks import (
-    calculation_task as _calculation_task_fn,
-)
-from qhana_plugin_runner.db import DB
-from qhana_plugin_runner.db.models.tasks import ProcessingTask
 
 # ``@CELERY.task`` returns a ``Task`` instance at runtime, but the decorator's
 # return type is inferred as the wrapped function. Cast once so static analysis
@@ -384,3 +381,151 @@ def test_calculation_task_flags_invalid_mapping_vectors(tmp_path):
     assert distances[("blue", "red")] == sys.float_info.max
     # The valid self-pair is computed normally.
     assert distances[("red", "red")] == pytest.approx(0.0)
+
+
+def _ref_metadata(attribute: str) -> dict:
+    """Metadata for a taxonomy attribute referencing ``<attribute>.json``."""
+    return {
+        "ID": attribute,
+        "type": attribute,
+        "title": "",
+        "description": "ref",
+        "multiple": False,
+        "ordered": False,
+        "separator": ";",
+        "refTarget": f"taxonomies.zip:{attribute}.json",
+    }
+
+
+def _numeric_metadata(
+    attribute: str, description: str = "number", multiple: bool = False
+) -> dict:
+    return {
+        "ID": attribute,
+        "type": attribute,
+        "title": "",
+        "description": description,
+        "multiple": multiple,
+        "ordered": multiple,
+        "separator": ";",
+        "refTarget": None,
+    }
+
+
+def _run_task(
+    tmp_path: Path,
+    entities: List[dict],
+    metadata: List[dict],
+    taxonomies: Optional[Dict[str, dict]] = None,
+) -> ProcessingTask:
+    params = InputParameters(
+        entities_url=_write_json(tmp_path / "entities.json", entities),
+        entities_metadata_url=_write_json(tmp_path / "metadata.json", metadata),
+        taxonomies_zip_url=_write_taxonomy_zip(
+            tmp_path / "taxonomies.zip", taxonomies or {}
+        ),
+        attributes="\n".join(attribute["ID"] for attribute in metadata),
+        distance_metric=DistanceMetricEnum.euclidean,
+    )
+    db_id = _enqueue_processing_task(params)
+
+    calculation_task.apply_async(kwargs={"db_id": db_id}).get(timeout=30)
+
+    DB.session.expire_all()
+    task = ProcessingTask.get_by_id(db_id)
+    assert task is not None
+    return task
+
+
+def _distances(task: ProcessingTask, file_name: str) -> Dict[Tuple[str, str], float]:
+    return {
+        (entry["source"], entry["target"]): entry["distance"]
+        for entry in _read_result_zip(task)[file_name]
+    }
+
+
+@pytest.mark.usefixtures("celery_worker")
+def test_calculation_task_taxonomy_mappings_length_mismatch_padded(tmp_path):
+    taxonomy = {
+        "entities": [
+            {"ID": "red", "mapping": [1.0, 2.0]},
+            {"ID": "blue", "mapping": [1.0, 2.0, 3.0]},
+            {"ID": "green", "mapping": [4.0]},
+        ]
+    }
+    entities = [
+        {"ID": "e1", "href": "", "color": "red"},
+        {"ID": "e2", "href": "", "color": "blue"},
+        {"ID": "e3", "href": "", "color": "green"},
+    ]
+
+    task = _run_task(tmp_path, entities, [_ref_metadata("color")], {"color": taxonomy})
+
+    distances = _distances(task, "color.json")
+    assert len(distances) == 9
+    assert distances[("red", "blue")] == pytest.approx(3.0)
+    assert distances[("red", "green")] == pytest.approx(math.sqrt(13))
+    assert distances[("green", "blue")] == pytest.approx(math.sqrt(22))
+    assert distances[("green", "green")] == pytest.approx(0.0)
+
+
+@pytest.mark.usefixtures("celery_worker")
+def test_calculation_task_numeric_elements_keyed_by_entity_id(tmp_path):
+    entities = [
+        {"ID": "e1", "href": "", "age": 10.0},
+        {"ID": "e2", "href": "", "age": 20.0},
+        {"ID": "e3", "href": "", "age": 10.0},
+    ]
+
+    task = _run_task(tmp_path, entities, [_numeric_metadata("age")])
+
+    distances = _distances(task, "age.json")
+    assert set(distances) == {
+        (first, second) for first in ("e1", "e2", "e3") for second in ("e1", "e2", "e3")
+    }
+    assert distances[("e1", "e3")] == pytest.approx(0.0)
+    assert distances[("e1", "e2")] == pytest.approx(10.0)
+
+
+@pytest.mark.usefixtures("celery_worker")
+def test_calculation_task_numeric_multi_valued_padded_and_missing_skipped(tmp_path):
+    entities = [
+        {"ID": "e1", "href": "", "scores": [1, 2]},
+        {"ID": "e2", "href": "", "scores": [1, 2, 3]},
+        {"ID": "e3", "href": "", "scores": [4]},
+        {"ID": "e4", "href": "", "scores": None},
+    ]
+    metadata = [_numeric_metadata("scores", "integer", multiple=True)]
+
+    task = _run_task(tmp_path, entities, metadata)
+
+    distances = _distances(task, "scores.json")
+    # e4 contributes no element, leaving a 3x3 matrix.
+    assert len(distances) == 9
+    assert not any("e4" in pair for pair in distances)
+    # e1 ([1, 2]) is compared as [1, 2, 0] and e3 ([4]) as [4, 0, 0].
+    assert distances[("e1", "e2")] == pytest.approx(3.0)
+    assert distances[("e1", "e3")] == pytest.approx(math.sqrt(13))
+    assert distances[("e3", "e2")] == pytest.approx(math.sqrt(22))
+    assert distances[("e3", "e3")] == pytest.approx(0.0)
+
+
+@pytest.mark.usefixtures("celery_worker")
+def test_calculation_task_mixed_taxonomy_and_numeric_attributes(tmp_path):
+    color_tax = {
+        "entities": [
+            {"ID": "red", "mapping": [1.0, 0.0]},
+            {"ID": "blue", "mapping": [0.0, 1.0]},
+        ]
+    }
+    entities = [
+        {"ID": "e1", "href": "", "color": "red", "age": 10.0},
+        {"ID": "e2", "href": "", "color": "blue", "age": 20.0},
+    ]
+    metadata = [_ref_metadata("color"), _numeric_metadata("age")]
+
+    task = _run_task(tmp_path, entities, metadata, {"color": color_tax})
+
+    assert set(_read_result_zip(task)) == {"color.json", "age.json"}
+    assert _distances(task, "color.json")[("red", "blue")] == pytest.approx(math.sqrt(2))
+    assert _distances(task, "age.json")[("e1", "e2")] == pytest.approx(10.0)

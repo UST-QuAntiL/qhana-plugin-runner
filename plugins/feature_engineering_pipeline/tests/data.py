@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Shared test data and stubs for the router plugin tests."""
+"""Shared test data and stubs for the feature engineering pipeline plugin tests."""
 
 import json
 from itertools import count
@@ -22,8 +22,12 @@ from typing import Dict, List, Optional
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from feature_engineering_pipeline.schemas import (
     AGGREGATOR_PLUGIN,
+    FEATURE_VECTOR,
+    INCLUDE_NUMERIC,
     MAPPING_PLUGIN,
     MDS_PLUGIN,
+    NUMERIC_MAPPING_PIPELINE,
+    ONE_HOT_PLUGIN,
     PCA_PLUGIN,
     PIPELINE_PLUGINS,
     TRANSFORMERS_PLUGIN,
@@ -88,6 +92,25 @@ def router_params(**overrides) -> InputParameters:
 
 DEFAULT_SELECTIONS = {"attr1": WU_PALMER_PLUGIN, "attr2": MAPPING_PLUGIN}
 
+# The numeric columns of ``ENTITIES_CSV`` as the preprocessing task records them.
+NUMERIC_ATTRIBUTES = ["year", "beats"]
+MULTI_VALUED_NUMERIC_ATTRIBUTES = ["beats"]
+
+
+def pipeline_group(
+    pipeline: str,
+    attributes: List[str],
+    settings: Optional[dict] = None,
+    label: Optional[str] = None,
+) -> dict:
+    """One entry of the pipeline queue, as ``start_routing_task`` writes it."""
+    return {
+        "pipeline": pipeline,
+        "attributes": list(attributes),
+        "settings": dict(settings or {}),
+        "label": label or pipeline,
+    }
+
 
 def make_router_task(
     *,
@@ -107,18 +130,32 @@ def make_router_task(
         parameters=json.dumps(router_payload(**payload_overrides)),
     )
     db_task.data["webhook_url"] = WEBHOOK_URL
+    db_task.data["base_url"] = f"{BASE_URL}/"
     db_task.data["plugin_urls"] = dict(PLUGIN_URLS)
     db_task.data["routing_selections"] = dict(selections)
+    db_task.data["numeric_attributes"] = list(NUMERIC_ATTRIBUTES)
+    db_task.data["multi_valued_numeric_attributes"] = list(
+        MULTI_VALUED_NUMERIC_ATTRIBUTES
+    )
 
-    queue: List[str] = []
-    for plugin in (WU_PALMER_PLUGIN, MAPPING_PLUGIN):
-        attributes = [attr for attr, opt in selections.items() if opt == plugin]
+    numeric = [attr for attr, opt in selections.items() if opt == INCLUDE_NUMERIC]
+    grouped = {
+        WU_PALMER_PLUGIN: [a for a, opt in selections.items() if opt == WU_PALMER_PLUGIN],
+        MAPPING_PLUGIN: [a for a, opt in selections.items() if opt == MAPPING_PLUGIN],
+        ONE_HOT_PLUGIN: [a for a, opt in selections.items() if opt == ONE_HOT_PLUGIN],
+        NUMERIC_MAPPING_PIPELINE: [
+            a for a in numeric if a in MULTI_VALUED_NUMERIC_ATTRIBUTES
+        ],
+        FEATURE_VECTOR: [a for a in numeric if a not in MULTI_VALUED_NUMERIC_ATTRIBUTES],
+    }
+    queue: List[dict] = []
+    for plugin, attributes in grouped.items():
         if attributes:
             db_task.data[f"{plugin}_attributes"] = "\n".join(attributes)
-            queue.append(plugin)
+            queue.append(pipeline_group(plugin, attributes))
 
     db_task.data["pipeline_queue"] = queue
-    db_task.data["current_pipeline"] = queue[0] if queue else None
+    db_task.data["current_pipeline"] = queue[0]["pipeline"] if queue else None
     db_task.progress_value = 1
 
     if data:
@@ -132,14 +169,26 @@ def make_router_task(
 
 # ``missing_tax`` references a taxonomy that is absent from the zip and
 # ``composer`` references a plain file, so both must be skipped by the
-# preprocessing task.
+# preprocessing task. ``year`` is a single-valued and ``beats`` a multi-valued
+# numeric attribute. ``beats`` has one missing value, ``year`` must have a value
+# for every entity.
 ENTITIES_CSV = (
-    "ID,href,genre,instrumentation,composer,missing_tax\n"
-    "e1,,g1,i1,c1,m1\n"
-    "e2,,g2,i2,c2,m2\n"
+    "ID,href,genre,instrumentation,composer,missing_tax,year,beats\n"
+    "e1,,g1,i1,c1,m1,1800,1;2;3\n"
+    "e2,,g2,i2,c2,m2,1850,4;5;6\n"
+    "e3,,g1,i2,c1,m1,1900,\n"
 )
 
 ATTRIBUTE_METADATA = [
+    {"ID": "year", "type": "year", "title": "Year", "description": "number"},
+    {
+        "ID": "beats",
+        "type": "beats",
+        "title": "Beats",
+        "description": "integer",
+        "multiple": True,
+        "separator": ";",
+    },
     {
         "ID": "genre",
         "type": "genre",
@@ -223,6 +272,7 @@ VECTOR_CSV = "ID,dim0,dim1,dim2\nent1,1.0,2.0,3.0\nent2,4.0,5.0,6.0\n"
 PLUGIN_OUTPUT_TYPES = {
     WU_PALMER_PLUGIN: ("relation/element-similarities",),
     MAPPING_PLUGIN: ("relation/element-distances",),
+    ONE_HOT_PLUGIN: ("entity/vector",),
     TRANSFORMERS_PLUGIN: ("relation/element-distances",),
     AGGREGATOR_PLUGIN: ("relation/attribute-distances",),
     MDS_PLUGIN: ("entity/vector",),
@@ -288,7 +338,11 @@ class PluginServer:
         if data_type in _PLAIN_OUTPUTS:
             content_type, text = _PLAIN_OUTPUTS[data_type]
             return MockResponse(href, content_type, text=text)
-        if data_type == "entity/vector" and plugin in (VECTOR_CONCAT_PLUGIN, PCA_PLUGIN):
+        if data_type == "entity/vector" and plugin in (
+            ONE_HOT_PLUGIN,
+            VECTOR_CONCAT_PLUGIN,
+            PCA_PLUGIN,
+        ):
             return MockResponse(href, "text/csv", text=VECTOR_CSV)
         return MockResponse.from_zip(href, {"attr1.json": "{}"})
 
