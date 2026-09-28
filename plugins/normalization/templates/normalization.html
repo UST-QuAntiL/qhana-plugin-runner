@@ -1,0 +1,47 @@
+{% extends "simple_template.html" %}
+
+{% block script %}
+{{ super() }}
+
+<script>
+    (function () {
+        const inputMin = document.querySelector("input#input_range_min");
+        const inputMax = document.querySelector("input#input_range_max");
+        const outputStart = document.querySelector("input#output_range_start");
+        const outputEnd = document.querySelector("input#output_range_end");
+
+        function number(input) {
+            if (input.value.trim() === "") {
+                return null;
+            }
+            const parsed = Number(input.value);
+            return Number.isFinite(parsed) ? parsed : null;
+        }
+
+        // mirrors OutputRangeBound and InputRangeBound so that submit is blocked before the request
+        function validate() {
+            const start = number(outputStart);
+            const end = number(outputEnd);
+            const outputMessage = (start !== null && start === end)
+                ? `The output range start and end must not be equal (both are ${start}).`
+                : "";
+            outputStart.setCustomValidity(outputMessage);
+            outputEnd.setCustomValidity(outputMessage);
+
+            const minimum = number(inputMin);
+            const maximum = number(inputMax);
+            const inputMessage = (minimum !== null && maximum !== null && minimum >= maximum)
+                ? `The input range maximum (${maximum}) must be greater than the input range minimum (${minimum}).`
+                : "";
+            inputMin.setCustomValidity(inputMessage);
+            inputMax.setCustomValidity(inputMessage);
+        }
+
+        [inputMin, inputMax, outputStart, outputEnd].forEach((input) => {
+            input.addEventListener("input", validate);
+            input.addEventListener("change", validate);
+        });
+        validate();
+    })();
+</script>
+{% endblock script %}
