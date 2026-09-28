@@ -202,7 +202,7 @@ class TaskView(MethodView):
 
     def convert_task_data(self, task_data: ProcessingTask):
         progress = None
-        if task_data.progress_value:
+        if task_data.progress_value is not None:
             progress = {
                 "value": task_data.progress_value,
                 "start": task_data.progress_start,

@@ -11,32 +11,37 @@
 {%- endmacro %}
 
 
+{#
+``id_prefix`` keeps the element ids unique when the same schema is rendered more than once on a page.
+``name_prefix`` does the same for the submitted field names.
+#}
 {% macro render_fields(schema, values=dict(), errors=dict(), extras=dict(), form_field_class="qhana-form-field",
-form_label_class="qhana-form-label", form_input_class="qhana-form-input") -%}
+form_label_class="qhana-form-label", form_input_class="qhana-form-input", id_prefix="", name_prefix="") -%}
 {% for key, field in schema.fields.items() %}
 {% set form_key=field.data_key %}
+{%- set field_id=id_prefix ~ key %}
 {% set error=errors.get(form_key) %}
 {% set input_type=get_input_type(field) %}
 <div class="{{form_field_class}}">
-  <label class="{{form_label_class}}" for="{{key}}">{{field.metadata.get("label", form_key)}}</label>
+  <label class="{{form_label_class}}" for="{{field_id}}">{{field.metadata.get("label", form_key)}}</label>
 
   <div class="qhana-input-wrapper">
     {% if input_type == 'textarea' %}
-    <textarea class="{{form_input_class}}" name="{{form_key}}" id="{{key}}" autocomplete="off" 
-      aria-describedby="{{key}}-description" {{ 'required' if field.required else '' }}>{{values.get(form_key, '')}}</textarea>
+    <textarea class="{{form_input_class}}" name="{{name_prefix ~ form_key}}" id="{{field_id}}" autocomplete="off"
+      aria-describedby="{{field_id}}-description" {{ 'required' if field.required else '' }}>{{values.get(form_key, '')}}</textarea>
     {% elif input_type == "select" %}
-    <select class="{{form_input_class}}" name="{{form_key}}" id="{{key}}" autocomplete="off">
+    <select class="{{form_input_class}}" name="{{name_prefix ~ form_key}}" id="{{field_id}}" autocomplete="off">
       {% for name, value in field.metadata.get("options", extras.get(key, {}).get("options", {}) if extras else {}).items() %}
       <option value="{{ name }}" {% if name==values.get(form_key) %}selected{% endif %}>{{ value }}</option>
       {% endfor %}
     </select>
     {% elif input_type == 'text_with_datalist' %}
-    <input class="{{form_input_class}}" type="text" name="{{form_key}}" id="{{key}}" autocomplete="off"
-      aria-describedby="{{key}}-description" {{ 'required' if field.required else '' }} {{ get_validation_attrs(field) }}
-      list="{{key}}-datalist" {{ field_value(input_type, values.get(form_key)) }}>
+    <input class="{{form_input_class}}" type="text" name="{{name_prefix ~ form_key}}" id="{{field_id}}" autocomplete="off"
+      aria-describedby="{{field_id}}-description" {{ 'required' if field.required else '' }} {{ get_validation_attrs(field) }}
+      list="{{field_id}}-datalist" {{ field_value(input_type, values.get(form_key)) }}>
     {% set datalist=get_datalist_from_schema(schema, key, extras) %}
     {% if datalist %}
-    <datalist id="{{key}}-datalist">
+    <datalist id="{{field_id}}-datalist">
       {% for value in datalist %}
       <option value="{{ value }}">
         {% endfor %}
@@ -44,14 +49,14 @@ form_label_class="qhana-form-label", form_input_class="qhana-form-input") -%}
     {% endif %}
     {% elif input_type %}
     {% set datalist=get_datalist_from_schema(schema, key, extras) %}
-    <input class="{{form_input_class}}" type="{{input_type}}" name="{{form_key}}" id="{{key}}" autocomplete="off"
-      aria-describedby="{{key}}-description" {{ 'data-input-type=data' if field.metadata.get('data_input_type') or
+    <input class="{{form_input_class}}" type="{{input_type}}" name="{{name_prefix ~ form_key}}" id="{{field_id}}" autocomplete="off"
+      aria-describedby="{{field_id}}-description" {{ 'data-input-type=data' if field.metadata.get('data_input_type') or
       field.metadata.get('data_content_types') else '' }} {{ 'data-input-type=plugin' if
       field.metadata.get('plugin_tags') or field.metadata.get('plugin_name') else '' }} {{ field_value(input_type,
       values.get(form_key)) }} {{ 'required' if field.required else '' }} {{ get_validation_attrs(field) }}
-      {% if datalist %}list="{{key}}-datalist"{% endif %}>
+      {% if datalist %}list="{{field_id}}-datalist"{% endif %}>
       {%- if datalist -%}
-      <datalist id="{{key}}-datalist">
+      <datalist id="{{field_id}}-datalist">
         {% for value in datalist %}
         <option value="{{ value }}">
           {% endfor %}
@@ -63,14 +68,14 @@ form_label_class="qhana-form-label", form_input_class="qhana-form-input") -%}
 
 
     {% if field.metadata.get('data_input_type') or field.metadata.get('data_content_types') %}
-    <button class="qhana-choose-file-button" data-input-id="{{key}}" role="button" hidden
+    <button class="qhana-choose-file-button" data-input-id="{{field_id}}" role="button" hidden
       {{ field_attr('data-input', field.metadata.get('data_input_type')) }}
       {{ field_attr('data-content-type', space_delimited_list(field.metadata.get('data_content_types'))) }}>
       choose file
     </button>
     {% endif %}
     {% if field.metadata.get('related_to') and field.metadata.get('relation') %}
-    <button class="qhana-choose-file-button related" data-input-id="{{key}}" data-related-input-id="{{field.metadata['related_to']}}"
+    <button class="qhana-choose-file-button related" data-input-id="{{field_id}}" data-related-input-id="{{id_prefix ~ field.metadata['related_to']}}"
       data-relation="{{field.metadata['relation']}}" role="button" disabled hidden
       {{ field_attr('data-include-self', field.metadata.get('related_include_self')) }}
       {{ field_attr('data-input', field.metadata.get('data_input_type')) }}
@@ -79,7 +84,7 @@ form_label_class="qhana-form-label", form_input_class="qhana-form-input") -%}
     </button>
     {% endif %}
     {% if field.metadata.get('plugin_tags') or field.metadata.get('plugin_name') %}
-    <button class="qhana-choose-plugin-button" data-input-id="{{key}}" hidden {{ field_attr('data-plugin-tags',
+    <button class="qhana-choose-plugin-button" data-input-id="{{field_id}}" hidden {{ field_attr('data-plugin-tags',
       space_delimited_list(field.metadata.get('plugin_tags', []))) }} {{ field_attr('data-plugin-name',
       field.metadata.get('plugin_name')) }} {{ field_attr('data-plugin-version', field.metadata.get('plugin_version'))
       }}>
@@ -88,7 +93,7 @@ form_label_class="qhana-form-label", form_input_class="qhana-form-input") -%}
     {% endif %}
   </div>
 
-  <div id="{{key}}-description" class="qhana-input-description">
+  <div id="{{field_id}}-description" class="qhana-input-description">
     {% if error %}
     <p class="qhana-error-message" aria-live="assertive">
       {% for message in error %}
@@ -98,14 +103,14 @@ form_label_class="qhana-form-label", form_input_class="qhana-form-input") -%}
     {% endif %}
 
     {% if field.metadata.get('data_input_type') or field.metadata.get('data_content_types') %}
-    <p class="selected-file-hint" data-input-id="{{key}}" aria-live="off" hidden>
-      Selected File: <span class="selected-file-name" data-input-id="{{key}}"></span>
-      <button class="qhana-show-preview-button" data-input-id="{{key}}" role="button" hidden>show preview</button>
+    <p class="selected-file-hint" data-input-id="{{field_id}}" aria-live="off" hidden>
+      Selected File: <span class="selected-file-name" data-input-id="{{field_id}}"></span>
+      <button class="qhana-show-preview-button" data-input-id="{{field_id}}" role="button" hidden>show preview</button>
     </p>
     {% endif %}
     {% if field.metadata.get('plugin_tags') or field.metadata.get('plugin_name') %}
-    <p class="selected-plugin-hint" data-input-id="{{key}}" aria-live="off" hidden>
-      Selected Plugin: <span class="selected-plugin-name" data-input-id="{{key}}"></span>
+    <p class="selected-plugin-hint" data-input-id="{{field_id}}" aria-live="off" hidden>
+      Selected Plugin: <span class="selected-plugin-name" data-input-id="{{field_id}}"></span>
     </p>
     {% endif %}
 
