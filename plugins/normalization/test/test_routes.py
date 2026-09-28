@@ -26,8 +26,8 @@ ENTITIES_URL = "http://example.com/entities.json"
 VALID_FORM = {
     "entitiesUrl": ENTITIES_URL,
     "attributes": "x",
-    "outputRangeMin": 0.0,
-    "outputRangeMax": 1.0,
+    "outputRangeStart": 0.0,
+    "outputRangeEnd": 1.0,
 }
 
 
@@ -50,7 +50,7 @@ def test_microfrontend_renders_client_side_range_validation(client):
 def test_microfrontend_reports_equal_output_bounds_per_field(client):
     resp = client.post(
         url_for(f"{NORMALIZATION_BLP.name}.MicroFrontend"),
-        data={**VALID_FORM, "outputRangeMin": 1.0, "outputRangeMax": 1.0},
+        data={**VALID_FORM, "outputRangeStart": 1.0, "outputRangeEnd": 1.0},
     )
 
     assert resp.status_code == HTTPStatus.OK
@@ -65,11 +65,11 @@ def test_process_still_rejects_equal_output_bounds(client):
     """The schema stays the safety net for direct API calls."""
     resp = client.post(
         url_for(f"{NORMALIZATION_BLP.name}.ProcessView"),
-        data={**VALID_FORM, "outputRangeMin": 1.0, "outputRangeMax": 1.0},
+        data={**VALID_FORM, "outputRangeStart": 1.0, "outputRangeEnd": 1.0},
     )
 
     assert resp.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
     message = "The output range start and end must not be equal (both are 1.0)."
     errors = resp.get_json()["errors"]["form"]
-    assert errors["outputRangeMin"] == [message]
-    assert errors["outputRangeMax"] == [message]
+    assert errors["outputRangeStart"] == [message]
+    assert errors["outputRangeEnd"] == [message]

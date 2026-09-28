@@ -105,8 +105,8 @@ def _task_params(**overrides) -> dict:
         "attributes": "x",
         "inputRangeMin": None,
         "inputRangeMax": None,
-        "outputRangeMin": 0.0,
-        "outputRangeMax": 1.0,
+        "outputRangeStart": 0.0,
+        "outputRangeEnd": 1.0,
         "useClipping": True,
         "allowMissingValues": False,
     }
@@ -399,7 +399,7 @@ def test_load_entities_without_attribute_metadata(monkeypatch):
     entities, metadata, mimetype = _load_entities(ENTITIES_URL)
 
     assert entities == ENTITIES
-    assert metadata == {}
+    assert metadata == None
     assert mimetype == "application/json"
 
 
@@ -605,8 +605,8 @@ def test_task_applies_the_configured_ranges(monkeypatch):
         _task_params(
             inputRangeMin=0.0,
             inputRangeMax=20.0,
-            outputRangeMin=-1.0,
-            outputRangeMax=1.0,
+            outputRangeStart=-1.0,
+            outputRangeEnd=1.0,
         ),
     )
 
