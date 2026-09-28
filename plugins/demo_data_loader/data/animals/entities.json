@@ -1,7 +1,6 @@
 [
     {
         "ID": "cow",
-        "name": "Cow",
         "taxonomicClass": "t_class_ruminant",
         "diet": [
             "t_diet_grass",
@@ -20,7 +19,6 @@
     },
     {
         "ID": "pig",
-        "name": "Pig",
         "taxonomicClass": "t_class_suid",
         "diet": [
             "t_diet_grass",
@@ -39,7 +37,6 @@
     },
     {
         "ID": "sheep",
-        "name": "Sheep",
         "taxonomicClass": "t_class_ruminant",
         "diet": [
             "t_diet_grass",
@@ -59,7 +56,6 @@
     },
     {
         "ID": "goat",
-        "name": "Goat",
         "taxonomicClass": "t_class_ruminant",
         "diet": [
             "t_diet_grass",
@@ -79,7 +75,6 @@
     },
     {
         "ID": "lion",
-        "name": "Lion",
         "taxonomicClass": "t_class_bigcat",
         "diet": [
             "t_diet_meat"
@@ -97,7 +92,6 @@
     },
     {
         "ID": "tiger",
-        "name": "Tiger",
         "taxonomicClass": "t_class_bigcat",
         "diet": [
             "t_diet_meat"
@@ -114,7 +108,6 @@
     },
     {
         "ID": "wolf",
-        "name": "Wolf",
         "taxonomicClass": "t_class_canine",
         "diet": [
             "t_diet_meat"
@@ -132,7 +125,6 @@
     },
     {
         "ID": "fox",
-        "name": "Fox",
         "taxonomicClass": "t_class_canine",
         "diet": [
             "t_diet_meat",
@@ -153,7 +145,6 @@
     },
     {
         "ID": "eagle",
-        "name": "Eagle",
         "taxonomicClass": "t_class_bird_of_prey",
         "diet": [
             "t_diet_meat",
@@ -172,7 +163,6 @@
     },
     {
         "ID": "owl",
-        "name": "Owl",
         "taxonomicClass": "t_class_bird_of_prey",
         "diet": [
             "t_diet_meat",
@@ -191,7 +181,6 @@
     },
     {
         "ID": "parrot",
-        "name": "Parrot",
         "taxonomicClass": "t_class_parrot",
         "diet": [
             "t_diet_seeds",
@@ -209,7 +198,6 @@
     },
     {
         "ID": "sparrow",
-        "name": "Sparrow",
         "taxonomicClass": "t_class_songbird",
         "diet": [
             "t_diet_seeds",
@@ -228,7 +216,6 @@
     },
     {
         "ID": "dolphin",
-        "name": "Dolphin",
         "taxonomicClass": "t_class_marine_mammal",
         "diet": [
             "t_diet_fish"
@@ -246,7 +233,6 @@
     },
     {
         "ID": "shark",
-        "name": "Shark",
         "taxonomicClass": "t_class_cartilaginous_fish",
         "diet": [
             "t_diet_fish",
@@ -265,7 +251,6 @@
     },
     {
         "ID": "tuna",
-        "name": "Tuna",
         "taxonomicClass": "t_class_bony_fish",
         "diet": [
             "t_diet_fish",
@@ -283,7 +268,6 @@
     },
     {
         "ID": "octopus",
-        "name": "Octopus",
         "taxonomicClass": "t_class_mollusc",
         "diet": [
             "t_diet_crustaceans",
