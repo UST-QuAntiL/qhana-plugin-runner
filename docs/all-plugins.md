@@ -246,6 +246,21 @@
   - feature-engineering
 
     preprocessing
+* - [Qiskit Executor (@v0.1.1)](#qiskit-executor)
+
+    qiskit-executor@v0-1-1
+  - processing
+  - circuit-executor
+
+    qasm
+
+    qasm-2
+
+    qasm-3
+
+    qc-executor
+
+    qiskit
 * - [Qiskit Quantum Kernel Estimation (@v0.2.2)](#qiskit-quantum-kernel-estimation)
 
     qiskit-quantum-kernel-estimation@v0-2-2
@@ -647,7 +662,7 @@
 
 ## Overview
 
-**Used tags:** `ML`, `MUSE`, `MUSE4Music`, `QML`, `bpmn`, `braket_local`, `camunda`, `camunda-engine`, `circuit`, `circuit-demo`, `circuit-executor`, `cirq`, `classical`, `classification`, `cluster`, `clustering`, `confusion-matrix`, `conversion`, `csv`, `data-annotation`, `data-cleaning`, `data-loading`, `data-preparation`, `data-synthesizing`, `demo`, `distance-calculation`, `duckdb`, `embedding`, `encoding`, `feature-engineering`, `feature-extraction`, `filter`, `gradient`, `hello-world`, `histogram`, `join`, `json`, `kernel`, `low-code-modeler`, `manual`, `mapping`, `mariadb`, `minimizer`, `mqt`, `multistep`, `music`, `mysql`, `neural-network`, `nisq-analyzer`, `non-default`, `objective-function`, `one-hot-encoding`, `optimization`, `pennylane`, `postgresql`, `preprocessing`, `pytket_qulacsBackend`, `qasm`, `qasm-2`, `qasm-3`, `qc-simulator`, `qiskit`, `quantme`, `quantum`, `rest`, `routing`, `sample`, `scatter`, `similarity-calculation`, `sql`, `supervised-learning`, `utility`, `vector`, `visualization`, `workflow`, `zxcalculus`
+**Used tags:** `ML`, `MUSE`, `MUSE4Music`, `QML`, `bpmn`, `braket_local`, `camunda`, `camunda-engine`, `circuit`, `circuit-demo`, `circuit-executor`, `cirq`, `classical`, `classification`, `cluster`, `clustering`, `confusion-matrix`, `conversion`, `csv`, `data-annotation`, `data-cleaning`, `data-loading`, `data-preparation`, `data-synthesizing`, `demo`, `distance-calculation`, `duckdb`, `embedding`, `encoding`, `feature-engineering`, `feature-extraction`, `filter`, `gradient`, `hello-world`, `histogram`, `join`, `json`, `kernel`, `low-code-modeler`, `manual`, `mapping`, `mariadb`, `minimizer`, `mqt`, `multistep`, `music`, `mysql`, `neural-network`, `nisq-analyzer`, `non-default`, `objective-function`, `one-hot-encoding`, `optimization`, `pennylane`, `postgresql`, `preprocessing`, `pytket_qulacsBackend`, `qasm`, `qasm-2`, `qasm-3`, `qc-executor`, `qc-simulator`, `qiskit`, `quantme`, `quantum`, `rest`, `routing`, `sample`, `scatter`, `similarity-calculation`, `sql`, `supervised-learning`, `utility`, `vector`, `visualization`, `workflow`, `zxcalculus`
 
 Every type below links to its entry in the list of [allowed data types and content types](data-formats/allowed-types.md).
 
@@ -1273,6 +1288,31 @@ The entity points should be saved in the [entity/vector](https://qhana-plugin-ru
 |custom/plot|text/html|╳|
 |custom/pca-metadata|application/json|✓|
 |entity/vector|text/csv|✓|
+
+
+(qiskit-executor)=
+### Qiskit Executor (@v0.1.1)
+
+processing – circuit-executor, qasm, qasm-2, qasm-3, qc-executor, qiskit\
+*Path:* {file}`plugins/qiskit_executor/__init__.py`
+
+Allows execution of quantum circuits using IBM Quantum backends.
+
+**Inputs:**
+
+| Data Type | Content Type | Required |
+|-----------|--------------| :------: |
+|executable/circuit|text/x-qasm|✓|
+|provenance/execution-options|text/csv, application/json, application/X-lines+json|╳|
+
+
+**Outputs:**
+
+| Data Type | Content Type | Always |
+|-----------|--------------| :----: |
+|entity/vector|application/json|✓|
+|provenance/trace|application/json|✓|
+|provenance/execution-options|application/json|✓|
 
 
 (qiskit-quantum-kernel-estimation)=
