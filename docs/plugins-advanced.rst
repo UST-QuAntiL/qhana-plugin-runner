@@ -76,7 +76,7 @@ That is to say that plugins that should be usable by other plugins must be desig
 Starting a Processing Plugin
 """"""""""""""""""""""""""""
 
-Starting a procesing plugin can require arbitrary user inputs.
+Starting a processing plugin can require arbitrary user inputs.
 Such inputs are hard to impossible to automate reliably.
 To avoid this there are two strategies:
 
@@ -145,7 +145,8 @@ The ``subscribe`` function takes the following key arguments:
 * ``webhook_url``: The webhook URL in your calling plugin that will receive the event notifications.
 * ``events``: A list of event types to subscribe to (or ``"all"``).
 * ``check_for_updates``: Defaults to ``True``. If enabled, it spawns an asynchronous ``monitor_result`` task that polls the sub-plugin. If an update is detected, it triggers the webhook manually.
-* ``monitor_webhook_url``: An alternative webhook URL used specifically by the watchdog. This is useful for appending query parameters (e.g., ``?via=watchdog``) to track whether an event was delivered by the primary HTTP subscription or recovered by the watchdog.
+* ``monitor_webhook_url``: An alternative webhook URL used specifically by the watchdog. 
+  This is useful for appending query parameters (e.g., ``?via=watchdog``) to track whether an event was delivered by the primary HTTP subscription or recovered by the watchdog.
 
 .. note:: The :ref:`feature-engineering-pipeline` plugin demonstrates how to use this subscription mechanism for multiple plugins in practice.
 
@@ -185,7 +186,7 @@ In case of an event, the webhook will be called as a post request with the follo
 For any additional information, the plugin receiving the webhook notification must fetch the current task result resource.
 
 Once the subscription is established, the calling plugin can add all steps of the called plugin to its own steps list.
-This makes sure that the user will get to complete any unforseen step in both plugins.
+This makes sure that the user will get to complete any unforeseen step in both plugins.
 
 .. warning:: Plugins that manually set the task state or update steps must make sure to also send the correct signals.
     Otherwise, the plugin runner is not able to notify the subscribed webhooks of the event!
@@ -212,17 +213,22 @@ When a calling plugin receives webhook events from multiple sub-plugins, it must
 
 * **Asynchronous Processing:** Webhook endpoints should acknowledge receipt immediately (e.g., HTTP 200) and offload the pipeline progression logic to an asynchronous background task.
 * **Synchronization Guards:** Network retries or simultaneous polling fallbacks can cause the webhook handler to receive duplicate completion events for the exact same task. 
-Plugins should implement a database-level lock (such as a ``PluginState`` registry updated with the current worker's ID) tied to the ``source_url`` to ensure only a single process progresses the pipeline.
+  Plugins should implement a database-level lock (such as a ``PluginState`` registry updated with the current worker's ID) tied to the ``source_url`` to ensure only a single process progresses the pipeline.
 * **Source Verification:** The background webhook handler must verify the incoming ``source_url`` against the expected active sub-task URLs currently saved in the plugin's state. 
-If the URL is unrecognized or already cleared, the event should be safely ignored.
+  If the URL is unrecognized or already cleared, the event should be safely ignored.
 
-.. note:: The :ref:`feature-engineering-pipeline` plugin demonstrates how to handle mutliple webhook calls.
-    Approach: First update the database, then check if the current worker is the one that did the update.
+.. note:: The :ref:`feature-engineering-pipeline` plugin demonstrates how to handle multiple webhook calls.
+    
+    Approach: First update the database, then check if the current worker is the one, that did the update.
+
     .. code-block:: python
+
         # Last accessed: 2026.09.28
         def handle_webhook_task(self, db_id: int, source_url: str, via: str):
+            # ...
             if not source_url or source_url not in known_urls:
-              return "Unrecognized webhook source"
+                return "Unrecognized webhook source"
+            # ...
             lock_key = f"router_sync_lock_{source_url}"
             plugin_id = FEATURE_ENGINEERING_PIPELINE_BLP.name
             my_celery_id = self.request.id
@@ -256,9 +262,22 @@ Relying exclusively on webhooks can lead to stalled pipelines if a network error
 
 * **Dual-Tracking Mechanism:** While subscribing to webhooks is the primary and most efficient notification method, caller plugins should simultaneously arm a polling watchdog as a safety net.
 * **Event Provenance:** To differentiate between a standard webhook delivery and a watchdog recovery, append a query parameter like ``via=watchdog`` to the fallback monitor URL. 
-This allows the plugin to log when a primary webhook was missed and seamlessly recover the lost event.
+  This allows the plugin to log when a primary webhook was missed and recover the lost event.
+
+  .. code-block:: python
+
+    # Example
+    webhook_url = task_data.data["webhook_url"].replace("localhost", "127.0.0.1")
+    monitor_url = webhook_url + ("&" if "?" in webhook_url else "?") + "via=watchdog"
 * **Commit Before Subscribing:** When initiating a sub-plugin, the caller must extract the new task URL from the ``Location`` header and save it to the database before attempting to register the webhook subscription. 
-This prevents a race condition where a fast-completing sub-plugin fires a webhook before the caller plugin knows the expected URL.
+  This prevents a race condition where a fast-completing sub-plugin fires a webhook before the caller plugin knows the expected URL.   
+  
+  .. code-block:: python
+
+    # Example
+    response = requests.post(plugin_url, data=payload, allow_redirects=False, timeout=REQUEST_TIMEOUT)
+    task_url = urljoin(plugin_url, response.headers["Location"])
+    task_data.data["active_subtask_url"] = task_url
 
 .. note:: The :ref:`feature-engineering-pipeline` plugin demonstrates how to implement a polling watchdog.
 
@@ -270,8 +289,11 @@ Plugins that manage multi-step or dynamic processing pipelines must explicitly t
 
 * **Execution Queues:** Complex orchestration requires compiling a sequential execution queue and recording the currently active step in the task data before initiating any sub-plugins.
 * **Idempotent Retries:** Network timeouts during sub-plugin initialization should trigger automatic retries. 
-To prevent spawning duplicate sub-tasks, the caller must check if a tracking URL for that specific step has already been stored before issuing a new POST request.
+  To prevent spawning duplicate sub-tasks, the caller must check if a tracking URL for that specific step has already been stored before issuing a new POST request.
 * **Targeted Progression:** Upon a successful webhook validation, the state machine should evaluate the ``current_pipeline`` state and the specific ``source_url`` to determine exactly which subsequent plugin step to trigger.
+  
+.. note:: The :ref:`feature-engineering-pipeline` plugin demonstrates how to handle a multi-step pipeline with a state machine and execution queue.
+
 
 Using Additional Links
 """"""""""""""""""""""
@@ -291,5 +313,5 @@ These links are specified in the plugin metadata (see :ref:`plugins:plugin metad
 
 The second kind of links can use task specific state for their computation.
 For example, the :doc:`objective function plugins </plugin-types/objective-function>` expose such a link to allow calculating the loss value multiple times during the task execution.
-These links should be specified in the ``links`` attribute of the task result reource (see :ref:`plugins:processing plugin results`).
+These links should be specified in the ``links`` attribute of the task result resource (see :ref:`plugins:processing plugin results`).
 
