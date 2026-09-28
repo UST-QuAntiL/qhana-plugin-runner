@@ -100,7 +100,12 @@ All the plugin has to do is provide a link with the ``subscription`` type in the
 
 .. note:: The plugin runner automatically implements this subscription mechanism for all plugins.
 
-A plugin can then subscribe with a webhook to receive update events by issuing a post request to that link with the following JSON payload:
+There are two ways a calling plugin can subscribe to these updates: by issuing a direct HTTP request or by using the built-in Python utility function.
+
+Method 1: Manual HTTP Subscription
+''''''''''''''''''''''''''''''''''
+
+A calling plugin (or external service) can subscribe to receive update events by issuing a POST request to the ``subscription`` link with the following JSON payload:
 
 .. code-block:: json
 
@@ -109,6 +114,43 @@ A plugin can then subscribe with a webhook to receive update events by issuing a
         "event": "status",
         "webhookHref": "http://plugin.example.com/webhook/1234"
     }
+
+The plugin runner's task API processes this command and registers a ``TaskUpdateSubscription`` in the database. To prevent redundant network calls, the API automatically ignores duplicate subscription requests for the same event type and webhook URL. 
+
+To stop receiving notifications, the caller can send the same payload but with ``"command": "unsubscribe"``.
+
+Method 2: Using the Interop Utility Function (Python)
+'''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+For plugins built within the plugin runner ecosystem, you can abstract away the HTTP communication by using the ``subscribe`` function provided in the ``qhana_plugin_runner.plugin_utils.interop`` package. 
+
+This utility automatically fetches the task result, extracts the subscription link, sends the HTTP POST request, and can optionally configure a Celery-based polling watchdog (``monitor_result``) to prevent lost events.
+More information on the watchdog mechanism can be found in :ref:`watchdog-mechanism-ref`.
+
+.. code-block:: python
+
+    from qhana_plugin_runner.plugin_utils.interop import subscribe
+
+    subscribed = subscribe(
+        result_url=task_url,
+        webhook_url="http://plugin.example.com/webhook/1234",
+        events=["status"],
+        check_for_updates=True,
+        monitor_webhook_url="http://plugin.example.com/webhook/1234?via=watchdog"
+    )
+
+The ``subscribe`` function takes the following key arguments:
+
+* ``result_url``: The URL of the sub-task's result resource.
+* ``webhook_url``: The webhook URL in your calling plugin that will receive the event notifications.
+* ``events``: A list of event types to subscribe to (or ``"all"``).
+* ``check_for_updates``: Defaults to ``True``. If enabled, it spawns an asynchronous ``monitor_result`` task that polls the sub-plugin. If an update is detected, it triggers the webhook manually.
+* ``monitor_webhook_url``: An alternative webhook URL used specifically by the watchdog. This is useful for appending query parameters (e.g., ``?via=watchdog``) to track whether an event was delivered by the primary HTTP subscription or recovered by the watchdog.
+
+.. note:: The :ref:`feature-engineering-pipeline` plugin demonstrates how to use this subscription mechanism for multiple plugins in practice.
+
+Supported Event Types and Webhook Payload
+'''''''''''''''''''''''''''''''''''''''''
 
 Currently the plugin runner implements the following event types:
 
@@ -162,8 +204,74 @@ This makes sure that the user will get to complete any unforseen step in both pl
         app = current_app._get_current_object()
         TASK_STATUS_CHANGED.send(app, task_id=task_data.id)
 
-.. note:: The plugin runner contains utility functions to subscribe to plugins in the ``qhana_plugin_runner.plugin_utils.interop`` package.
 
+Robust Webhook Processing and Synchronization
+"""""""""""""""""""""""""""""""""""""""""""""
+
+When a calling plugin receives webhook events from multiple sub-plugins, it must be designed to handle duplicate or concurrent notifications gracefully to prevent race conditions.
+
+* **Asynchronous Processing:** Webhook endpoints should acknowledge receipt immediately (e.g., HTTP 200) and offload the pipeline progression logic to an asynchronous background task.
+* **Synchronization Guards:** Network retries or simultaneous polling fallbacks can cause the webhook handler to receive duplicate completion events for the exact same task. 
+Plugins should implement a database-level lock (such as a ``PluginState`` registry updated with the current worker's ID) tied to the ``source_url`` to ensure only a single process progresses the pipeline.
+* **Source Verification:** The background webhook handler must verify the incoming ``source_url`` against the expected active sub-task URLs currently saved in the plugin's state. 
+If the URL is unrecognized or already cleared, the event should be safely ignored.
+
+.. note:: The :ref:`feature-engineering-pipeline` plugin demonstrates how to handle mutliple webhook calls.
+    Approach: First update the database, then check if the current worker is the one that did the update.
+    .. code-block:: python
+        # Last accessed: 2026.09.28
+        def handle_webhook_task(self, db_id: int, source_url: str, via: str):
+            if not source_url or source_url not in known_urls:
+              return "Unrecognized webhook source"
+            lock_key = f"router_sync_lock_{source_url}"
+            plugin_id = FEATURE_ENGINEERING_PIPELINE_BLP.name
+            my_celery_id = self.request.id
+
+            try:
+                DB.session.execute(insert(PluginState).values(plugin_id=plugin_id, key=lock_key, value=0))
+                DB.session.commit()
+            except Exception as e:
+                DB.session.rollback()
+
+            DB.session.execute(
+                update(PluginState)
+                .where(PluginState.plugin_id == plugin_id)
+                .where(PluginState.key == lock_key)
+                .where(PluginState.value == 0)
+                .values(value=my_celery_id)
+            )
+            DB.session.commit()
+
+            current_value = PluginState.get_value(plugin_id=plugin_id, key=lock_key)
+
+            if current_value != my_celery_id:
+                return "Sub-task already progressed"
+
+
+.. _watchdog-mechanism-ref:
+Implementing a Polling Watchdog (Fallback Mechanism)
+""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+Relying exclusively on webhooks can lead to stalled pipelines if a network error occurs or an event is dropped.
+
+* **Dual-Tracking Mechanism:** While subscribing to webhooks is the primary and most efficient notification method, caller plugins should simultaneously arm a polling watchdog as a safety net.
+* **Event Provenance:** To differentiate between a standard webhook delivery and a watchdog recovery, append a query parameter like ``via=watchdog`` to the fallback monitor URL. 
+This allows the plugin to log when a primary webhook was missed and seamlessly recover the lost event.
+* **Commit Before Subscribing:** When initiating a sub-plugin, the caller must extract the new task URL from the ``Location`` header and save it to the database before attempting to register the webhook subscription. 
+This prevents a race condition where a fast-completing sub-plugin fires a webhook before the caller plugin knows the expected URL.
+
+.. note:: The :ref:`feature-engineering-pipeline` plugin demonstrates how to implement a polling watchdog.
+
+
+State Machine and Pipeline Queues
+"""""""""""""""""""""""""""""""""
+
+Plugins that manage multi-step or dynamic processing pipelines must explicitly track their execution state to route webhook events to the correct next step.
+
+* **Execution Queues:** Complex orchestration requires compiling a sequential execution queue and recording the currently active step in the task data before initiating any sub-plugins.
+* **Idempotent Retries:** Network timeouts during sub-plugin initialization should trigger automatic retries. 
+To prevent spawning duplicate sub-tasks, the caller must check if a tracking URL for that specific step has already been stored before issuing a new POST request.
+* **Targeted Progression:** Upon a successful webhook validation, the state machine should evaluate the ``current_pipeline`` state and the specific ``source_url`` to determine exactly which subsequent plugin step to trigger.
 
 Using Additional Links
 """"""""""""""""""""""
