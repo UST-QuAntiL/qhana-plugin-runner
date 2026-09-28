@@ -39,6 +39,18 @@ limitations under the License.
         white-space: nowrap;
     }
 
+    .pipeline-descriptions {
+        margin-bottom: 1rem;
+    }
+
+    .pipeline-descriptions dt {
+        font-weight: bold;
+    }
+
+    .pipeline-descriptions dd {
+        margin: 0 0 0.5rem 0;
+    }
+
     .numeric-description {
         margin-bottom: 0.5rem;
     }
@@ -155,6 +167,36 @@ limitations under the License.
     {% endif %}
 
     <p>Assign each taxonomy attribute to a pipeline path:</p>
+
+    <fieldset class="pipeline-descriptions">
+        <legend>Pipeline descriptions</legend>
+        <dl>
+            <dt>None</dt>
+            <dd>Skip this attribute. It is not processed and does not contribute values to the output feature vector.</dd>
+
+            <dt>Wu-Palmer</dt>
+            <dd>
+                Keeps the taxonomy attribute values unchanged and calculates pairwise Wu-Palmer similarities
+                from their positions in the taxonomy hierarchy. The similarities are converted to distances,
+                aggregated to entity distances, and embedded with MDS into the configured number of
+                feature-vector dimensions.
+            </dd>
+
+            <dt>One-Hot</dt>
+            <dd>
+                Encodes the taxonomy values directly as binary feature-vector dimensions.
+                No similarity or distance calculation, aggregation, or MDS is performed.
+            </dd>
+
+            <dt>Mapping</dt>
+            <dd>
+                Calculates distances between the mapped taxonomy values using the configured distance metric.
+                The distances are aggregated to entity distances and embedded with MDS into the configured
+                number of feature-vector dimensions.
+            </dd>
+        </dl>
+    </fieldset>
+
     {% call forms.render_form(target="microfrontend") %}
     {% if attributes %}
     <fieldset>
@@ -179,11 +221,18 @@ limitations under the License.
                 <button type="button" class="attribute-settings-button" aria-expanded="false"
                     aria-controls="{{settings_id}}"><span aria-hidden="true">&#9881;</span> Settings</button>
             </div>
+
             <div class="attribute-settings" id="{{settings_id}}" hidden>
                 {%- for group in settings_groups -%}
-                {{ components.settings_section(group.title, group.schema, values=settings_values.get(attr,
-                input_params), errors=settings_errors.get(attr, {}), expanded=(group.key in
-                expanded_groups.get(attr, ())), id_prefix=field_name ~ "__", name_prefix=field_name ~ "__") }}
+                {{ components.settings_section(
+                    group.title,
+                    group.schema,
+                    values=settings_values.get(attr, input_params),
+                    errors=settings_errors.get(attr, {}),
+                    expanded=(group.key in expanded_groups.get(attr, ())),
+                    id_prefix=field_name ~ "__",
+                    name_prefix=field_name ~ "__"
+                ) }}
                 {%- endfor -%}
             </div>
         </div>
@@ -193,10 +242,13 @@ limitations under the License.
     <p>No taxonomy attributes were found in the provided metadata.</p>
     {% endif %}
 
-    <p class="numeric-description">Select the numeric attributes to include. A single-valued
-        attribute is normalized and appended directly to the output feature vector. A multi-valued
-        attribute is turned into a feature vector by the distances mapping, the attribute distance
-        aggregator and MDS.</p>
+    <p class="numeric-description">
+        Select the numeric attributes to include. A single-valued attribute is appended directly as one
+        feature-vector dimension. A multi-valued attribute is processed like the Mapping pipeline:
+        distances are calculated, aggregated to entity distances, and embedded with MDS into the configured
+        number of feature-vector dimensions.
+    </p>
+
     {% if numeric_attributes %}
     <fieldset>
         <legend>Numeric Attributes</legend>
@@ -206,28 +258,43 @@ limitations under the License.
         {%- set field_name = "pipeline_" + attr -%}
         {%- set settings_id = field_name + "__settings" -%}
         {%- set multi_valued = attr in multi_valued_numeric -%}
+
         <div class="attribute-block">
             <div class="attribute-row">
                 <label class="attribute-name" for="{{field_name}}">{{attr}}</label>
-                <span class="value-count">{% if multi_valued %}multi-valued{% else %}single-valued{% endif %}</span>
+
+                <span class="value-count">
+                    {% if multi_valued %}multi-valued{% else %}single-valued{% endif %}
+                </span>
+
                 <label class="numeric-include">
                     <input type="checkbox" name="{{field_name}}" id="{{field_name}}" value="numeric"
                         autocomplete="off" {% if values.get(field_name) == "numeric" %}checked{% endif %}>
                     Include
                 </label>
+
                 <button type="button" class="attribute-settings-button" aria-expanded="false"
                     aria-controls="{{settings_id}}"><span aria-hidden="true">&#9881;</span> Settings</button>
             </div>
+
             <div class="attribute-settings" id="{{settings_id}}" hidden>
                 {%- if multi_valued -%}
                 {%- for group in numeric_settings_groups -%}
-                {{ components.settings_section(group.title, group.schema, values=settings_values.get(attr,
-                input_params), errors=settings_errors.get(attr, {}), expanded=(group.key in
-                expanded_groups.get(attr, ())), id_prefix=field_name ~ "__", name_prefix=field_name ~ "__") }}
+                {{ components.settings_section(
+                    group.title,
+                    group.schema,
+                    values=settings_values.get(attr, input_params),
+                    errors=settings_errors.get(attr, {}),
+                    expanded=(group.key in expanded_groups.get(attr, ())),
+                    id_prefix=field_name ~ "__",
+                    name_prefix=field_name ~ "__"
+                ) }}
                 {%- endfor -%}
                 {%- else -%}
-                <p class="no-settings">A single-valued attribute is appended to the feature vector
-                    without a plugin, so it has no settings yet.</p>
+                <p class="no-settings">
+                    A single-valued attribute is appended to the feature vector without a plugin,
+                    so it has no settings yet.
+                </p>
                 {%- endif -%}
             </div>
         </div>
@@ -240,10 +307,12 @@ limitations under the License.
     <div class="qhana-form-buttons">
         {{ forms.submit("validate", target="microfrontend")}}
         {{ forms.submit("submit", action=process)}}
+
         {% if not errors and valid %}
         <span class="qhana-input-description"> Validation successful!</span>
         {% endif %}
     </div>
+
     {% endcall %}
 </div>
 {% endblock content %}
@@ -256,6 +325,7 @@ limitations under the License.
     document.querySelectorAll(".attribute-block").forEach(block => {
         const button = block.querySelector("button.attribute-settings-button");
         const panel = block.querySelector(".attribute-settings");
+
         if (button == null || panel == null) {
             return;
         }
