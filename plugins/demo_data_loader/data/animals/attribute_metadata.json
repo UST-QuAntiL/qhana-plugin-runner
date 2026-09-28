@@ -1,0 +1,68 @@
+[
+    {
+        "ID": "taxonomicClass",
+        "type": "taxonomicClass",
+        "title": "Taxonomic class",
+        "description": "ref",
+        "multiple": false,
+        "ordered": false,
+        "separator": ";",
+        "refTarget": "taxonomies.zip:t_class.json",
+        "schema": null
+    },
+    {
+        "ID": "diet",
+        "type": "diet",
+        "title": "Diet",
+        "description": "ref",
+        "multiple": true,
+        "ordered": false,
+        "separator": ";",
+        "refTarget": "taxonomies.zip:t_diet.json",
+        "schema": null
+    },
+    {
+        "ID": "habitat",
+        "type": "habitat",
+        "title": "Habitat",
+        "description": "ref",
+        "multiple": true,
+        "ordered": false,
+        "separator": ";",
+        "refTarget": "taxonomies.zip:t_habitat.json",
+        "schema": null
+    },
+    {
+        "ID": "activityTime",
+        "type": "activityTime",
+        "title": "Time of activity",
+        "description": "ref",
+        "multiple": false,
+        "ordered": false,
+        "separator": ";",
+        "refTarget": "taxonomies.zip:t_activity.json",
+        "schema": null
+    },
+    {
+        "ID": "weightKg",
+        "type": "weightKg",
+        "title": "Weight in kg",
+        "description": "number",
+        "multiple": false,
+        "ordered": false,
+        "separator": ";",
+        "refTarget": null,
+        "schema": null
+    },
+    {
+        "ID": "temperatureRangeC",
+        "type": "temperatureRangeC",
+        "title": "Tolerated temperature range in degrees Celsius",
+        "description": "number",
+        "multiple": true,
+        "ordered": true,
+        "separator": ";",
+        "refTarget": null,
+        "schema": null
+    }
+]

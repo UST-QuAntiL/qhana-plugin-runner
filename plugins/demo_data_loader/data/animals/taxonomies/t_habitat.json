@@ -1,0 +1,159 @@
+{
+    "GRAPH_ID": "t_habitat",
+    "type": "tree",
+    "ref-target": "taxonomies.zip",
+    "entities": [
+        {
+            "ID": "t_habitat_root",
+            "tax_item_name": "Habitat",
+            "description": "average temperature in degrees Celsius, relative humidity",
+            "mapping": [
+                15.0,
+                0.5
+            ],
+            "mapping_raw": "15 0.5"
+        },
+        {
+            "ID": "t_habitat_farmland",
+            "tax_item_name": "Farmland",
+            "description": "",
+            "mapping": [
+                20.0,
+                0.4
+            ],
+            "mapping_raw": "20 0.4"
+        },
+        {
+            "ID": "t_habitat_grassland",
+            "tax_item_name": "Grassland",
+            "description": "",
+            "mapping": [
+                22.0,
+                0.35
+            ],
+            "mapping_raw": "22 0.35"
+        },
+        {
+            "ID": "t_habitat_savanna",
+            "tax_item_name": "Savanna",
+            "description": "",
+            "mapping": [
+                30.0,
+                0.2
+            ],
+            "mapping_raw": "30 0.2"
+        },
+        {
+            "ID": "t_habitat_temperate_forest",
+            "tax_item_name": "Temperate forest",
+            "description": "",
+            "mapping": [
+                12.0,
+                0.65
+            ],
+            "mapping_raw": "12 0.65"
+        },
+        {
+            "ID": "t_habitat_tropical_forest",
+            "tax_item_name": "Tropical forest",
+            "description": "",
+            "mapping": [
+                27.0,
+                0.85
+            ],
+            "mapping_raw": "27 0.85"
+        },
+        {
+            "ID": "t_habitat_mountain",
+            "tax_item_name": "Mountain",
+            "description": "",
+            "mapping": [
+                5.0,
+                0.5
+            ],
+            "mapping_raw": "5 0.5"
+        },
+        {
+            "ID": "t_habitat_urban",
+            "tax_item_name": "Urban",
+            "description": "",
+            "mapping": [
+                18.0,
+                0.45
+            ],
+            "mapping_raw": "18 0.45"
+        },
+        {
+            "ID": "t_habitat_coast",
+            "tax_item_name": "Coast",
+            "description": "",
+            "mapping": [
+                16.0,
+                0.95
+            ],
+            "mapping_raw": "16 0.95"
+        },
+        {
+            "ID": "t_habitat_open_ocean",
+            "tax_item_name": "Open ocean",
+            "description": "",
+            "mapping": [
+                14.0,
+                1.0
+            ],
+            "mapping_raw": "14 1.0"
+        },
+        {
+            "ID": "t_habitat_coral_reef",
+            "tax_item_name": "Coral reef",
+            "description": "",
+            "mapping": [
+                26.0,
+                1.0
+            ],
+            "mapping_raw": "26 1.0"
+        }
+    ],
+    "relations": [
+        {
+            "source": "t_habitat_root",
+            "target": "t_habitat_farmland"
+        },
+        {
+            "source": "t_habitat_root",
+            "target": "t_habitat_grassland"
+        },
+        {
+            "source": "t_habitat_root",
+            "target": "t_habitat_savanna"
+        },
+        {
+            "source": "t_habitat_root",
+            "target": "t_habitat_temperate_forest"
+        },
+        {
+            "source": "t_habitat_root",
+            "target": "t_habitat_tropical_forest"
+        },
+        {
+            "source": "t_habitat_root",
+            "target": "t_habitat_mountain"
+        },
+        {
+            "source": "t_habitat_root",
+            "target": "t_habitat_urban"
+        },
+        {
+            "source": "t_habitat_root",
+            "target": "t_habitat_coast"
+        },
+        {
+            "source": "t_habitat_root",
+            "target": "t_habitat_open_ocean"
+        },
+        {
+            "source": "t_habitat_root",
+            "target": "t_habitat_coral_reef"
+        }
+    ]
+}

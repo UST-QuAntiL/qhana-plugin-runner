@@ -28,9 +28,9 @@
     qasm-3
 
     qc-simulator
-* - [Attribute Distance Aggregator (@v0.1.1)](#attribute-distance-aggregator)
+* - [Attribute Distance Aggregator (@v0.2.0)](#attribute-distance-aggregator)
 
-    attribute-distance-aggregator@v0-1-1
+    attribute-distance-aggregator@v0-2-0
   - processing
   - distance-calculation
 
@@ -94,6 +94,13 @@
   - data-loading
 
     data-synthesizing
+* - [Demo data loader (@v0.1.0)](#demo-data-loader)
+
+    demo-data-loader@v0-1-0
+  - dataloader
+  - data-loading
+
+    demo
 * - [Deploy Workflow (@v0.1.1)](#deploy-workflow)
 
     deploy-workflow@v0-1-1
@@ -121,6 +128,13 @@
     preprocessing
 
     sample
+* - [Feature Engineering Pipeline (@v0.1.7)](#feature-engineering-pipeline)
+
+    feature-engineering-pipeline@v0-1-7
+  - processing
+  - preprocessing
+
+    routing
 * - [Histogram Visualization (@v1.0.3)](#histogram-visualization)
 
     histogram-visualization@v1-0-3
@@ -232,9 +246,9 @@
   - data-cleaning
 
     preprocessing
-* - [Principle Component Analysis (PCA) (@v0.2.2)](#pca)
+* - [Principle Component Analysis (PCA) (@v0.2.3)](#pca)
 
-    pca@v0-2-2
+    pca@v0-2-3
   - processing
   - feature-engineering
 
@@ -345,13 +359,6 @@
     rest-connector@v0-1-0
   - interaction
   - rest
-* - [Router (@v0.1.5)](#router)
-
-    router@v0-1-5
-  - processing
-  - preprocessing
-
-    routing
 * - [SQL Editor (@v0.1.1)](#sql-editor)
 
     sql-editor@v0-1-1
@@ -414,9 +421,9 @@
   - preprocessing
 
     similarity-calculation
-* - [Taxanomy mapping to distances (@v0.1.0)](#mapping-distances)
+* - [Taxanomy mapping to distances (@v0.3.0)](#mapping-distances)
 
-    mapping-distances@v0-1-0
+    mapping-distances@v0-3-0
   - processing
   - distance-calculation
 
@@ -428,9 +435,9 @@
   - preprocessing
 
     similarity-calculation
-* - [Vector concationation plugin (@v0.1.3)](#vector-concat)
+* - [Vector concationation plugin (@v0.1.4)](#vector-concat)
 
-    vector-concat@v0-1-3
+    vector-concat@v0-1-4
   - processing
   - preprocessing
 
@@ -670,7 +677,7 @@ Every type below links to its entry in the list of [allowed data types and conte
 **Output formats:** [`*`](#ct-wildcard), [`application/X-lines+json`](#ct-application-x-lines-json), [`application/json`](#ct-application-json), [`application/qasm`](#ct-application-qasm), [`application/zip`](#ct-application-zip), [`image/svg+xml`](#ct-image-svg-xml), [`text/csv`](#ct-text-csv), [`text/html`](#ct-text-html), [`text/plain`](#ct-text-plain), [`text/x-qasm`](#ct-text-x-qasm)
 
 **Input datatypes:** [`*`](#dt-wildcard), [`entity/*`](#dt-entity-wildcard), [`entity/attribute-metadata`](#dt-entity-attribute-metadata), [`entity/label`](#dt-entity-label), [`entity/list`](#dt-entity-list), [`entity/matrix`](#dt-entity-matrix), [`entity/shaped_vector`](#dt-entity-shaped-vector), [`entity/vector`](#dt-entity-vector), [`executable/circuit`](#dt-executable-circuit), [`graph/taxonomy`](#dt-graph-taxonomy), [`provenance/execution-options`](#dt-provenance-execution-options), [`relation/attribute-distances`](#dt-relation-attribute-distances), [`relation/attribute-similarities`](#dt-relation-attribute-similarities), [`relation/element-distances`](#dt-relation-element-distances), [`relation/element-similarities`](#dt-relation-element-similarities), [`relation/entity-distances`](#dt-relation-entity-distances)\
-**Output datatypes:** [`*`](#dt-wildcard), [`circuit`](#dt-circuit), [`custom/clusters`](#dt-custom-clusters), [`custom/hello-world-output`](#dt-custom-hello-world-output), [`custom/kernel-matrix`](#dt-custom-kernel-matrix), [`custom/nisq-analyzer-result`](#dt-custom-nisq-analyzer-result), [`custom/pca-metadata`](#dt-custom-pca-metadata), [`custom/plot`](#dt-custom-plot), [`entity/*`](#dt-entity-wildcard), [`entity/attribute-metadata`](#dt-entity-attribute-metadata), [`entity/label`](#dt-entity-label), [`entity/list`](#dt-entity-list), [`entity/vector`](#dt-entity-vector), [`executable/circuit`](#dt-executable-circuit), [`graph/taxonomy`](#dt-graph-taxonomy), [`image/html`](#dt-image-html), [`plot`](#dt-plot), [`provenance/execution-options`](#dt-provenance-execution-options), [`provenance/trace`](#dt-provenance-trace), [`qnn-weights`](#dt-qnn-weights), [`relation/attribute-distances`](#dt-relation-attribute-distances), [`relation/attribute-similarities`](#dt-relation-attribute-similarities), [`relation/element-distances`](#dt-relation-element-distances), [`relation/element-similarities`](#dt-relation-element-similarities), [`relation/entity-distances`](#dt-relation-entity-distances), [`representative-circuit`](#dt-representative-circuit), [`table/html`](#dt-table-html), [`txt`](#dt-txt), [`vqc-metadata`](#dt-vqc-metadata)
+**Output datatypes:** [`*`](#dt-wildcard), [`circuit`](#dt-circuit), [`custom/clusters`](#dt-custom-clusters), [`custom/hello-world-output`](#dt-custom-hello-world-output), [`custom/kernel-matrix`](#dt-custom-kernel-matrix), [`custom/nisq-analyzer-result`](#dt-custom-nisq-analyzer-result), [`custom/pca-metadata`](#dt-custom-pca-metadata), [`custom/plot`](#dt-custom-plot), [`entity/*`](#dt-entity-wildcard), [`entity/attribute-metadata`](#dt-entity-attribute-metadata), [`entity/dimension-mapping`](#dt-entity-dimension-mapping), [`entity/label`](#dt-entity-label), [`entity/list`](#dt-entity-list), [`entity/vector`](#dt-entity-vector), [`executable/circuit`](#dt-executable-circuit), [`graph/taxonomy`](#dt-graph-taxonomy), [`image/html`](#dt-image-html), [`plot`](#dt-plot), [`provenance/execution-options`](#dt-provenance-execution-options), [`provenance/trace`](#dt-provenance-trace), [`qnn-weights`](#dt-qnn-weights), [`relation/attribute-distances`](#dt-relation-attribute-distances), [`relation/attribute-similarities`](#dt-relation-attribute-similarities), [`relation/element-distances`](#dt-relation-element-distances), [`relation/element-similarities`](#dt-relation-element-similarities), [`relation/entity-distances`](#dt-relation-entity-distances), [`representative-circuit`](#dt-representative-circuit), [`table/html`](#dt-table-html), [`txt`](#dt-txt), [`vqc-metadata`](#dt-vqc-metadata)
 
 ## Plugins
 
@@ -723,12 +730,22 @@ Allows execution of quantum circuits using a simulator packaged with braket_loca
 
 
 (attribute-distance-aggregator)=
-### Attribute Distance Aggregator (@v0.1.1)
+### Attribute Distance Aggregator (@v0.2.0)
 
 processing – distance-calculation, preprocessing\
 *Path:* {file}`plugins/aggregator/__init__.py`
 
 Aggregates element distances to attribute distances for a list of entities.
+\
+For a taxonomy attribute the elements of an entity are its attribute values, and the
+attribute distance is the Sym Max Mean of the element distances between the two entities.
+\
+A numeric attribute (attribute metadata description `number`, `integer`, `int`, `float`
+or `double`) has one element per entity, keyed by the entity ID, as produced by the
+mapping distances plugin. Sym Max Mean over the two single elements returns their
+element distance unchanged.
+\
+A pair where one entity has no element for the attribute gets the distance `null`.
 
 **Inputs:**
 
@@ -897,6 +914,23 @@ A plugin to create datasets.
 |entity/label|application/json|✓|
 
 
+(demo-data-loader)=
+### Demo data loader (@v0.1.0)
+
+dataloader – data-loading, demo\
+*Path:* {file}`plugins/demo_data_loader/__init__.py`
+
+Loads a small, self contained demo dataset. Provides entities, attribute metadata and taxonomies that cover tree taxonomies, taxonomies with mapping vectors and numeric attributes, so that the 'Feature Engineering Pipeline' plugin can be demonstrated without an external database.
+
+**Outputs:**
+
+| Data Type | Content Type | Always |
+|-----------|--------------| :----: |
+|entity/list|application/json|✓|
+|entity/attribute-metadata|application/json|✓|
+|graph/taxonomy|application/zip|✓|
+
+
 (deploy-workflow)=
 ### Deploy Workflow (@v0.1.1)
 
@@ -947,6 +981,37 @@ Loads and filters entities from a file that contains a list of entities.
 | Data Type | Content Type | Always |
 |-----------|--------------| :----: |
 |entity/list|application/json, text/csv|✓|
+
+
+(feature-engineering-pipeline)=
+### Feature Engineering Pipeline (@v0.1.7)
+
+processing – preprocessing, routing\
+*Path:* {file}`plugins/feature_engineering_pipeline/__init__.py`
+
+Routes entities and separates tree from non-tree taxonomies. Takes Muse4Music data and provides different routing options for the entities and taxonomies.
+
+**Inputs:**
+
+| Data Type | Content Type | Required |
+|-----------|--------------| :------: |
+|entity/list|application/json, application/X-lines+json, text/csv|✓|
+|entity/attribute-metadata|application/json, application/X-lines+json, text/csv|✓|
+|graph/taxonomy|application/zip|✓|
+
+
+**Outputs:**
+
+| Data Type | Content Type | Always |
+|-----------|--------------| :----: |
+|relation/element-similarities|application/zip|✓|
+|relation/element-distances|application/zip|✓|
+|relation/attribute-distances|application/zip|✓|
+|entity/vector|application/zip|✓|
+|entity/vector|text/csv, application/json, application/X-lines+json|✓|
+|custom/plot|text/html|╳|
+|custom/pca-metadata|application/json|✓|
+|entity/vector|text/csv|✓|
 
 
 (histogram-visualization)=
@@ -1223,7 +1288,7 @@ Uses pandas preprocessing methods, to preprocess csv files.
 
 
 (pca)=
-### Principle Component Analysis (PCA) (@v0.2.2)
+### Principle Component Analysis (PCA) (@v0.2.3)
 
 processing – feature-engineering, preprocessing\
 *Path:* {file}`stable_plugins/classical_ml/scikit_ml/pca/__init__.py`
@@ -1525,34 +1590,6 @@ interaction – rest\
 
 Integrate REST APIs as plugins.
 
-(router)=
-### Router (@v0.1.5)
-
-processing – preprocessing, routing\
-*Path:* {file}`plugins/feature_engineering_pipeline/__init__.py`
-
-Routes entities and separates tree from non-tree taxonomies. Takes Muse4Music data and provides different routing options for the entities and taxonomies.
-
-**Inputs:**
-
-| Data Type | Content Type | Required |
-|-----------|--------------| :------: |
-|entity/list|application/json, application/X-lines+json, text/csv|✓|
-|entity/attribute-metadata|application/json, application/X-lines+json, text/csv|✓|
-|graph/taxonomy|application/zip|✓|
-
-
-**Outputs:**
-
-| Data Type | Content Type | Always |
-|-----------|--------------| :----: |
-|relation/element-similarities|application/zip|✓|
-|relation/element-distances|application/zip|✓|
-|relation/attribute-distances|application/zip|✓|
-|entity/vector|application/zip|✓|
-|entity/vector|text/csv, application/json, application/X-lines+json|✓|
-
-
 (sql-editor)=
 ### SQL Editor (@v0.1.1)
 
@@ -1684,21 +1721,28 @@ Compares attributes and returns similarity values.
 
 
 (mapping-distances)=
-### Taxanomy mapping to distances (@v0.1.0)
+### Taxanomy mapping to distances (@v0.3.0)
 
 processing – distance-calculation, preprocessing\
 *Path:* {file}`stable_plugins/classical_ml/data_preparation/mapping_distances/__init__.py`
 
-A plugin to create pairwise element distances for taxanomy mappings.
+A plugin to create pairwise element distances for taxanomy mappings and numeric attributes.
 \
-Returns the distance between all attribute mappings that are in the entity dataset according to a selected distance metric.  
-Returns the max float value if the vectors are empty, i.e. no mapping is assigned.  
-Throws an error if the mapping vectors do not have the same size.  
+Returns the distance between all attribute mappings that are in the entity dataset according to a selected distance metric.
+Returns the max float value if the vectors are empty, i.e. no mapping is assigned.
+Throws an error if the taxonomy mapping vectors do not have the same size.
+\
+Numeric attributes (attribute metadata description `number`, `integer`, `int`, `float` or `double`) need no taxonomy.
+The value (or list of values) of an entity is one element and is used directly as its mapping vector.
+Such an element is identified by the entity ID, not by a taxonomy element name.
+A multi-valued numeric attribute gives one vector per entity, with one dimension per value.
+Vectors with fewer values than the longest vector are padded with zeros.
+Entities without a valid numeric value are skipped.
 \
 Different available metrics:
-**Euclidean Distance:** Length of vector (L2 norm) between two vectors: $||a-b|| = \sqrt{\sum\limits_{i} (a_i - b_i)^2}$  
-**Manhattan Distance:** Sum of distances on each vector axis: $\sum\limits_{i} |a_i - b_i|$  
-**Chebyshev Distance:** Maximum distance on one axis: $\max(|a_1 - b_1|, \dots, |a_n - b_n|)$  
+**Euclidean Distance:** Length of vector (L2 norm) between two vectors: $||a-b|| = \sqrt{\sum\limits_{i} (a_i - b_i)^2}$\
+**Manhattan Distance:** Sum of distances on each vector axis: $\sum\limits_{i} |a_i - b_i|$\
+**Chebyshev Distance:** Maximum distance on one axis: $\max(|a_1 - b_1|, \dots, |a_n - b_n|)$\
 **Cosine Distance:** 1 - angle between two vectors (value in [0, 2]): $1 - \cos(\theta) = 1 - \frac{a \cdot b}{||a||\cdot||b||}$
 
 **Inputs:**
@@ -1740,7 +1784,7 @@ Compares elements and returns similarity values.
 
 
 (vector-concat)=
-### Vector concationation plugin (@v0.1.3)
+### Vector concationation plugin (@v0.1.4)
 
 processing – preprocessing, vector\
 *Path:* {file}`plugins/vector_concat/__init__.py`
@@ -1759,6 +1803,7 @@ Concatinate multiple entity/vector files into one
 | Data Type | Content Type | Always |
 |-----------|--------------| :----: |
 |entity/vector|text/csv, application/json, application/X-lines+json|✓|
+|entity/dimension-mapping|application/json|✓|
 
 
 (workflow-editor)=

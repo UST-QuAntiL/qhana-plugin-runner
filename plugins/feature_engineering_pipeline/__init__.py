@@ -39,7 +39,7 @@ class FeatureEngineeringPipeline(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
     description = _description
-    tags = ["preprocessing", "routing"]
+    tags = ["preprocessing", "routing", "feature-engineering"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
