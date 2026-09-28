@@ -88,8 +88,8 @@ def _params(**overrides) -> InputParameters:
         "attributes": "x",
         "input_range_min": None,
         "input_range_max": None,
-        "output_range_min": 0.0,
-        "output_range_max": 1.0,
+        "output_range_start": 0.0,
+        "output_range_end": 1.0,
         "use_clipping": True,
         "allow_missing_values": False,
     }
@@ -191,7 +191,7 @@ def test_normalize_uses_an_independent_range_per_attribute():
 
 
 def test_normalize_to_symmetric_output_range():
-    params = _params(output_range_min=-1.0, output_range_max=1.0)
+    params = _params(output_range_start=-1.0, output_range_end=1.0)
 
     result = normalize_entities(ENTITIES, params)
 
@@ -199,11 +199,54 @@ def test_normalize_to_symmetric_output_range():
 
 
 def test_normalize_to_percent_output_range():
-    params = _params(output_range_min=0.0, output_range_max=100.0)
+    params = _params(output_range_start=0.0, output_range_end=100.0)
 
     result = normalize_entities(ENTITIES, params)
 
     assert [entity["x"] for entity in result] == [0.0, 50.0, 100.0]
+
+
+def test_normalize_to_inverted_output_range():
+    params = _params(output_range_start=1.0, output_range_end=0.0)
+
+    result = normalize_entities(ENTITIES, params)
+
+    assert [entity["x"] for entity in result] == [1.0, 0.5, 0.0]
+
+
+def test_normalize_to_inverted_symmetric_output_range():
+    params = _params(output_range_start=1.0, output_range_end=-1.0)
+
+    result = normalize_entities(ENTITIES, params)
+
+    assert [entity["x"] for entity in result] == [1.0, 0.0, -1.0]
+
+
+def test_inverted_output_range_clips_to_both_bounds():
+    params = _params(
+        input_range_min=2.0,
+        input_range_max=8.0,  # Entity value is 0, 5, 10 -> 10 is clipped to min bound
+        output_range_start=1.0,
+        output_range_end=0.0,
+        use_clipping=True,
+    )
+
+    result = normalize_entities(ENTITIES, params)
+
+    assert [entity["x"] for entity in result] == [1.0, 0.5, 0.0]
+
+
+def test_inverted_output_range_raises_without_clipping():
+    params = _params(
+        input_range_min=2.0,
+        input_range_max=8.0,
+        output_range_start=1.0,
+        output_range_end=0.0,
+        use_clipping=False,
+    )
+
+    with pytest.raises(ValueError, match="outside the input range"):
+        normalize_entities(ENTITIES, params)
 
 
 def test_normalize_with_manual_input_range():

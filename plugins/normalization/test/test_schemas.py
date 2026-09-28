@@ -64,8 +64,8 @@ def test_full_payload_is_loaded_into_input_parameters():
     assert params.attributes == "x\ny"
     assert params.input_range_min == -5.0
     assert params.input_range_max == 5.0
-    assert params.output_range_min == -1.0
-    assert params.output_range_max == 1.0
+    assert params.output_range_start == -1.0
+    assert params.output_range_end == 1.0
     assert params.use_clipping is False
     assert params.allow_missing_values is True
 
@@ -111,8 +111,8 @@ def test_numbers_submitted_as_strings_are_parsed():
 
     assert params.input_range_min == -2.5
     assert params.input_range_max == 2.5
-    assert params.output_range_min == 0.0
-    assert params.output_range_max == 100.0
+    assert params.output_range_start == 0.0
+    assert params.output_range_end == 100.0
 
 
 # --- Test required fields ---
@@ -178,38 +178,69 @@ def test_output_range_bounds_are_required(field):
     assert exc.value.messages == {field: ["Missing data for required field."]}
 
 
-def test_partially_submitted_form_without_output_range_is_rejected():
-    """The micro frontend validates partial input, there the fields may be absent."""
+@pytest.mark.parametrize(
+    "missing",
+    [["outputRangeMin"], ["outputRangeMax"], ["outputRangeMin", "outputRangeMax"]],
+)
+def test_partially_submitted_form_without_output_range_is_rejected(missing):
+    """The micro frontend validates partial input, there required is not enforced."""
     payload = _payload()
-    del payload["outputRangeMin"]
-    del payload["outputRangeMax"]
+    for field in missing:
+        del payload[field]
 
-    with pytest.raises(ValidationError) as exc:
-        InputParametersSchema(partial=True).load(payload)
-
-    assert exc.value.messages == {
-        "output_range_max": ["An output minimum and maximum is required."]
+    assert InputParametersSchema(partial=True).validate(payload) == {
+        field: ["An output range start and end is required."] for field in missing
     }
 
 
 # --- Test validation ---
 
 
-@pytest.mark.parametrize(
-    ("minimum", "maximum"),
-    [(1.0, 0.0), (0.0, 0.0), (1.0, -1.0), (-1.0, -2.0)],
-)
-def test_output_maximum_must_be_greater_than_minimum(minimum, maximum):
+@pytest.mark.parametrize(("start", "end"), [(0.0, 0.0), (1.0, 1.0), (-2.5, -2.5)])
+def test_output_range_bounds_must_not_be_equal(start, end):
     with pytest.raises(ValidationError) as exc:
-        InputParametersSchema().load(
-            _payload(outputRangeMin=minimum, outputRangeMax=maximum)
-        )
+        InputParametersSchema().load(_payload(outputRangeMin=start, outputRangeMax=end))
 
+    message = f"The output range start and end must not be equal (both are {start})."
     assert exc.value.messages == {
-        "output_range_max": [
-            "The output maximum must be greater than the output minimum and."
-        ]
+        "outputRangeMin": [message],
+        "outputRangeMax": [message],
     }
+
+
+@pytest.mark.parametrize("field", ["outputRangeMin", "outputRangeMax"])
+def test_empty_output_range_bound_is_rejected(field):
+    with pytest.raises(ValidationError) as exc:
+        InputParametersSchema().load(_payload(**{field: ""}))
+
+    assert exc.value.messages == {field: ["An output range start and end is required."]}
+
+
+def test_range_errors_are_reported_next_to_unrelated_field_errors():
+    """Field level checks are not skipped when another field is invalid."""
+    errors = InputParametersSchema(partial=True).validate(
+        _payload(entitiesUrl="", outputRangeMin=1.0, outputRangeMax=1.0)
+    )
+
+    message = "The output range start and end must not be equal (both are 1.0)."
+    assert errors == {
+        "entitiesUrl": ["Field may not be null."],
+        "outputRangeMin": [message],
+        "outputRangeMax": [message],
+    }
+
+
+@pytest.mark.parametrize(
+    ("start", "end"),
+    [(1.0, 0.0), (1.0, -1.0), (-1.0, -2.0), (100.0, 0.0)],
+)
+def test_inverted_output_range_is_accepted(start, end):
+    params = InputParametersSchema().load(
+        _payload(outputRangeMin=start, outputRangeMax=end)
+    )
+
+    assert params.output_range_start == start
+    assert params.output_range_end == end
 
 
 @pytest.mark.parametrize(
@@ -222,8 +253,13 @@ def test_input_maximum_must_be_greater_than_minimum(minimum, maximum):
             _payload(inputRangeMin=minimum, inputRangeMax=maximum)
         )
 
+    message = (
+        f"The input range maximum ({maximum}) must be greater than the "
+        f"input range minimum ({minimum})."
+    )
     assert exc.value.messages == {
-        "input_range_max": ["The input maximum must be greater than the input minimum."]
+        "inputRangeMin": [message],
+        "inputRangeMax": [message],
     }
 
 

@@ -71,6 +71,9 @@ y = y_{min} + \frac{x - x_{min}}{x_{max} - x_{min}} \cdot (y_{max} - y_{min})
 $$
 
 The input range can be determined automatically for each attribute or supplied manually.
+
+The output range may be inverted (for example $y_{min} = 1$ and $y_{max} = 0$) to invert the
+normalized values.
 """.strip()
 
 
@@ -78,6 +81,7 @@ NORMALIZATION_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
     description=_description,
+    template_folder="templates",
 )
 
 
@@ -101,19 +105,66 @@ class InputParameters:
     attributes: List[str]
     input_range_min: Optional[float]
     input_range_max: Optional[float]
-    output_range_min: float
-    output_range_max: float
+    output_range_start: float
+    output_range_end: float
     use_clipping: bool
     allow_missing_values: bool
 
 
-class NullableFloat(ma.fields.Float):
-    """Float field that treats an empty string form value as None."""
+def _sibling_number(field: ma.fields.Field, data: Any, sibling: str) -> Optional[float]:
+    """Read the raw value of a sibling field to allow field level range validation."""
+    if not data:
+        return None
+    try:
+        return float(data.get(field.parent.fields[sibling].data_key))
+    except (AttributeError, TypeError, ValueError):
+        return None
+
+
+class OutputRangeBound(ma.fields.Float):
+    """Output range bound that must be present and differ from the other bound."""
+
+    def __init__(self, sibling: str, **kwargs):
+        super().__init__(**kwargs)
+        self.sibling = sibling
+
+    def _deserialize(self, value, attr, data, **kwargs):
+        if value == "":
+            raise ma.ValidationError("An output range start and end is required.")
+        number = super()._deserialize(value, attr, data, **kwargs)
+        other = _sibling_number(self, data, self.sibling)
+        if other is not None and number == other:
+            raise ma.ValidationError(
+                f"The output range start and end must not be equal (both are {number})."
+            )
+        return number
+
+
+class InputRangeBound(ma.fields.Float):
+    """Optional input range bound that must not cross the other bound."""
+
+    def __init__(self, sibling: str, is_lower_bound: bool, **kwargs):
+        super().__init__(**kwargs)
+        self.sibling = sibling
+        self.is_lower_bound = is_lower_bound
 
     def deserialize(self, value, attr=None, data=None, **kwargs):
         if value == "":
             value = None
         return super().deserialize(value, attr, data, **kwargs)
+
+    def _deserialize(self, value, attr, data, **kwargs):
+        number = super()._deserialize(value, attr, data, **kwargs)
+        other = _sibling_number(self, data, self.sibling)
+        if other is None:
+            return number
+        minimum, maximum = (number, other) if self.is_lower_bound else (other, number)
+        if minimum >= maximum:
+            raise ma.ValidationError(
+                f"The input range maximum ({maximum}) must be greater than the "
+                f"input range minimum ({minimum})."
+            )
+        return number
 
 
 class InputParametersSchema(FrontendFormBaseSchema):
@@ -150,7 +201,9 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "input_type": "textarea",
         },
     )
-    input_range_min = NullableFloat(
+    input_range_min = InputRangeBound(
+        sibling="input_range_max",
+        is_lower_bound=True,
         required=False,
         allow_none=True,
         metadata={
@@ -159,7 +212,9 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "input_type": "number",
         },
     )
-    input_range_max = NullableFloat(
+    input_range_max = InputRangeBound(
+        sibling="input_range_min",
+        is_lower_bound=False,
         required=False,
         allow_none=True,
         metadata={
@@ -168,19 +223,21 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "input_type": "number",
         },
     )
-    output_range_min = ma.fields.Float(
+    output_range_start = OutputRangeBound(
+        sibling="output_range_end",
         required=True,
         metadata={
-            "label": "Output range minimum",
-            "description": "Target minimum applied to every selected attribute. Common choices are [0..1], [-1..1] and [0..100].",
+            "label": "Output range start",
+            "description": "Value the input range minimum is mapped to. Common choices are [0..1], [-1..1] and [0..100]. Use a start greater than the end to invert the values.",
             "input_type": "number",
         },
     )
-    output_range_max = ma.fields.Float(
+    output_range_end = OutputRangeBound(
+        sibling="output_range_start",
         required=True,
         metadata={
-            "label": "Output range maximum",
-            "description": "Target maximum applied to every selected attribute. Common choices are [0..1], [-1..1] and [0..100].",
+            "label": "Output range end",
+            "description": "Value the input range maximum is mapped to. Common choices are [0..1], [-1..1] and [0..100]. Use an end smaller than the start to invert the values.",
             "input_type": "number",
         },
     )
@@ -203,39 +260,6 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "input_type": "checkbox",
         },
     )
-
-    @validates_schema
-    def validate_parameters(self, data, **kwargs):
-        errors = {}
-
-        input_minimum = data.get("input_range_min")
-        input_maximum = data.get("input_range_max")
-
-        if input_minimum is not None and input_maximum is not None:
-            if not math.isfinite(input_minimum) or not math.isfinite(input_maximum):
-                errors["input_range_max"] = [
-                    "The input minimum and maximum must be finite numbers."
-                ]
-            elif input_minimum >= input_maximum:
-                errors["input_range_max"] = [
-                    "The input maximum must be greater than the input minimum."
-                ]
-
-        output_minimum = data.get("output_range_min")
-        output_maximum = data.get("output_range_max")
-        if output_minimum is None or output_maximum is None:
-            errors["output_range_max"] = ["An output minimum and maximum is required."]
-        elif not math.isfinite(output_minimum) or not math.isfinite(output_maximum):
-            errors["output_range_max"] = [
-                "The output minimum and maximum must be finite numbers."
-            ]
-        elif output_minimum >= output_maximum:
-            errors["output_range_max"] = [
-                "The output maximum must be greater than the output minimum and."
-            ]
-
-        if errors:
-            raise ma.ValidationError(errors)
 
     @ma.post_load
     def make_input_params(self, data, **kwargs) -> InputParameters:
@@ -334,14 +358,14 @@ class MicroFrontend(MethodView):
         schema = InputParametersSchema()
         fields = schema.fields
         default_values = {
-            fields["output_range_min"].data_key: 0.0,
-            fields["output_range_max"].data_key: 1.0,
+            fields["output_range_start"].data_key: 0.0,
+            fields["output_range_end"].data_key: 1.0,
             fields["use_clipping"].data_key: True,
         }
         default_values.update(data)
         return Response(
             render_template(
-                "simple_template.html",
+                "normalization.html",
                 name=Normalization.instance.name,
                 version=Normalization.instance.version,
                 schema=schema,
@@ -443,9 +467,11 @@ def normalize_entities(
 ) -> List[Dict[str, Any]]:
     """Normalize selected scalar numeric attributes while preserving entities."""
     selected_attributes = params.attributes.splitlines()
-    output_min = params.output_range_min
-    output_max = params.output_range_max
-    output_range = output_max - output_min
+    output_start = params.output_range_start
+    output_end = params.output_range_end
+    output_range = output_end - output_start
+    # the output range may be inverted, bounds are needed in ascending order for clamping
+    output_low, output_high = sorted((output_start, output_end))
     if attribute_metadata:
         for attribute in selected_attributes:
             metadata: AttributeMetadata | None = attribute_metadata.get(attribute)
@@ -503,22 +529,20 @@ def normalize_entities(
             if value is None:
                 result[attribute] = None
                 continue
-            scaled = output_min + (
+            scaled = output_start + (
                 (value - input_min) * output_range / (input_max - input_min)
             )
-            if not params.use_clipping and (scaled < output_min or scaled > output_max):
+            if not params.use_clipping and (scaled < output_low or scaled > output_high):
                 msg = (
                     f"Entity '{entity['ID']}' has a value for attribute '{attribute}' "
                     f"that is outside the input range [{input_min}, {input_max}] "
                     f"and would be mapped to {scaled}, which is outside the output range "
-                    f"[{output_min}, {output_max}]."
+                    f"[{output_low}, {output_high}]."
                 )
                 TASK_LOGGER.error(msg)
                 raise ValueError(msg)
             # Values outside a manual input range must not leave the output range.
-            result[attribute] = min(
-                max(scaled, params.output_range_min), params.output_range_max
-            )
+            result[attribute] = min(max(scaled, output_low), output_high)
         normalized.append(result)
     return normalized
 
