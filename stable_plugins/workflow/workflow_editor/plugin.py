@@ -2,7 +2,7 @@ from time import time
 from typing import ClassVar, Optional
 
 from flask import Blueprint, Flask
-from kombu.exceptions import ConnectionError
+from kombu.exceptions import OperationalError
 from requests.exceptions import ConnectionError as RequestsConnectionError
 
 from qhana_plugin_runner.api.util import SecurityBlueprint
@@ -69,7 +69,7 @@ class WorkflowEditor(QHAnaPluginBase):
                 update_config.apply_async(expires=30, retry=False)
             except NameError:
                 pass  # called too early, name not yet defined
-            except ConnectionError:
+            except OperationalError:
                 pass  # redis is not available, do nothing
         if saved_config:
             config.update(saved_config)

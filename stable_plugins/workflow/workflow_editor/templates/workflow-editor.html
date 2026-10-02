@@ -98,6 +98,7 @@
             <button class="qhana-form-submit" type="submit" value="cancel" autofocus>Cancel</button>
             <button class="qhana-form-submit" type="submit" value="deployPlugin">Deploy as Plugin</button>
             <button class="qhana-form-submit" type="submit" value="deployWorkflow">Deploy as Workflow</button>
+            <button class="qhana-form-submit" type="submit" value="deployUiTemplate">Deploy as UI Template</button>
         </form>
     </dialog>
 </div>
@@ -305,6 +306,12 @@
         if (dialogResult === "deployPlugin") {
             fetch(
                 `${url}?autosave=false&deploy=plugin`,
+                {method: "post", keepalive: true, body: bpmn, headers: {content_type: "application/bpmn+xml"}}
+            );
+        }
+        if (dialogResult === "deployUiTemplate") {
+            fetch(
+                `${url}?autosave=false&deploy=ui-template`,
                 {method: "post", keepalive: true, body: bpmn, headers: {content_type: "application/bpmn+xml"}}
             );
         }

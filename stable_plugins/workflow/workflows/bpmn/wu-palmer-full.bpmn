@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn2:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn2="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="sample-diagram" targetNamespace="http://bpmn.io/schema/bpmn" xsi:schemaLocation="http://www.omg.org/spec/BPMN/20100524/MODEL BPMN20.xsd">
+  <bpmn2:process id="Wu_Palmer" name="Wu Palmer Pipeline (transformed)" isExecutable="true" camunda:versionTag="v1.3">
+    <bpmn2:startEvent id="StartEvent_1">
+      <bpmn2:extensionElements>
+        <camunda:formData>
+          <camunda:formField id="start_entitiesUrl" label="Entities URL" type="string" defaultValue="file_url:: entity/*, text/csv">
+            <camunda:properties />
+          </camunda:formField>
+          <camunda:formField id="start_entitiesMetadataUrl" label="Attribute Metadata URL" type="string" defaultValue="file_url:: entity/attribute-metadata, application/json" />
+          <camunda:formField id="start_taxonomiesZipUrl" label="Taxonomies URL" type="string" defaultValue="file_url:: graph/taxonomy, application/zip" />
+          <camunda:formField id="start_attributes" label="Attributes (1 Attribute per Line)" type="string" />
+          <camunda:formField id="start_mdsDimensions" label="Nr. of Dimensions for MDS" type="string" defaultValue="2">
+            <camunda:properties />
+            <camunda:validation />
+          </camunda:formField>
+          <camunda:formField id="start_mdsMaxIter" label="Max Iterations for MDS" type="string" defaultValue="300" />
+        </camunda:formData>
+      </bpmn2:extensionElements>
+      <bpmn2:outgoing>Flow_05mvkgh</bpmn2:outgoing>
+    </bpmn2:startEvent>
+    <bpmn2:sequenceFlow id="Flow_05mvkgh" sourceRef="StartEvent_1" targetRef="Activity_1do8hxs" />
+    <bpmn2:sequenceFlow id="Flow_13r8zml" sourceRef="Activity_1do8hxs" targetRef="Activity_0tfwzt0" />
+    <bpmn2:sequenceFlow id="Flow_0sl6imb" sourceRef="Activity_0tfwzt0" targetRef="Activity_1nnwor0" />
+    <bpmn2:sequenceFlow id="Flow_0w1duld" sourceRef="Activity_1nnwor0" targetRef="Activity_0s7n3hs" />
+    <bpmn2:sequenceFlow id="Flow_0texvqp" sourceRef="Activity_0s7n3hs" targetRef="Activity_0itt0yf" />
+    <bpmn2:endEvent id="Event_0ck8ig8">
+      <bpmn2:incoming>Flow_11jt0ti</bpmn2:incoming>
+    </bpmn2:endEvent>
+    <bpmn2:sequenceFlow id="Flow_11jt0ti" sourceRef="Activity_0itt0yf" targetRef="Event_0ck8ig8" />
+    <bpmn2:serviceTask id="Activity_1do8hxs" name="Wu Palmer similarities" camunda:type="external" camunda:topic="qhana-task">
+      <bpmn2:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qinput.entitiesUrl">${start_entitiesUrl}</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.entitiesMetadataUrl">${start_entitiesMetadataUrl}</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.taxonomiesZipUrl">${start_taxonomiesZipUrl}</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.attributes">${start_attributes}</camunda:inputParameter>
+          <camunda:inputParameter name="qhanaPlugin">wu-palmer</camunda:inputParameter>
+          <camunda:inputParameter name="qhanaPluginVersion">v0.2.1</camunda:inputParameter>
+          <camunda:inputParameter name="qhanaName">Wu Palmer similarities</camunda:inputParameter>
+          <camunda:inputParameter name="qhanaDescription">Compares elements and returns similarity values.</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.wuPalmer">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn2:extensionElements>
+      <bpmn2:incoming>Flow_05mvkgh</bpmn2:incoming>
+      <bpmn2:outgoing>Flow_13r8zml</bpmn2:outgoing>
+    </bpmn2:serviceTask>
+    <bpmn2:serviceTask id="Activity_0tfwzt0" name="Sym Max Mean attribute comparer" camunda:type="external" camunda:topic="qhana-task">
+      <bpmn2:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qinput.entitiesUrl">${start_entitiesUrl}</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.elementSimilaritiesUrl">
+            <camunda:map>
+              <camunda:entry key="from">qoutput.wuPalmer</camunda:entry>
+              <camunda:entry key="name">wu_palmer*.zip</camunda:entry>
+              <camunda:entry key="dataType">custom/element-similarities</camunda:entry>
+            </camunda:map>
+          </camunda:inputParameter>
+          <camunda:inputParameter name="qinput.attributes">${start_attributes}</camunda:inputParameter>
+          <camunda:inputParameter name="qhanaPlugin">sym-max-mean</camunda:inputParameter>
+          <camunda:inputParameter name="qhanaPluginVersion">v0.1.2</camunda:inputParameter>
+          <camunda:inputParameter name="qhanaName">Sym Max Mean attribute comparer</camunda:inputParameter>
+          <camunda:inputParameter name="qhanaDescription">Compares attributes and returns similarity values.</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.symMaxMean">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn2:extensionElements>
+      <bpmn2:incoming>Flow_13r8zml</bpmn2:incoming>
+      <bpmn2:outgoing>Flow_0sl6imb</bpmn2:outgoing>
+    </bpmn2:serviceTask>
+    <bpmn2:serviceTask id="Activity_1nnwor0" name="Similarities to distances transformers" camunda:type="external" camunda:topic="qhana-task">
+      <bpmn2:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qinput.attributeSimilaritiesUrl">
+            <camunda:map>
+              <camunda:entry key="from">qoutput.symMaxMean</camunda:entry>
+              <camunda:entry key="dataType">custom/attribute-similarities</camunda:entry>
+            </camunda:map>
+          </camunda:inputParameter>
+          <camunda:inputParameter name="qinput.attributes">${start_attributes}</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.transformer">linear_inverse</camunda:inputParameter>
+          <camunda:inputParameter name="qhanaPlugin">sim-to-dist-transformers</camunda:inputParameter>
+          <camunda:inputParameter name="qhanaPluginVersion">v0.2.1</camunda:inputParameter>
+          <camunda:inputParameter name="qhanaName">Similarities to distances transformers</camunda:inputParameter>
+          <camunda:inputParameter name="qhanaDescription">Transforms similarities to distances.</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.distances">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn2:extensionElements>
+      <bpmn2:incoming>Flow_0sl6imb</bpmn2:incoming>
+      <bpmn2:outgoing>Flow_0w1duld</bpmn2:outgoing>
+    </bpmn2:serviceTask>
+    <bpmn2:serviceTask id="Activity_0s7n3hs" name="Aggregators" camunda:type="external" camunda:topic="qhana-task">
+      <bpmn2:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qinput.attributeDistancesUrl">
+            <camunda:map>
+              <camunda:entry key="from">qoutput.distances</camunda:entry>
+              <camunda:entry key="dataType">custom/attribute-distances</camunda:entry>
+            </camunda:map>
+          </camunda:inputParameter>
+          <camunda:inputParameter name="qinput.aggregator">mean</camunda:inputParameter>
+          <camunda:inputParameter name="qhanaPlugin">distance-aggregator</camunda:inputParameter>
+          <camunda:inputParameter name="qhanaPluginVersion">v0.2.1</camunda:inputParameter>
+          <camunda:inputParameter name="qhanaName">Aggregators</camunda:inputParameter>
+          <camunda:inputParameter name="qhanaDescription">Aggregates attribute distances to entity distances.</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.missingDataHandling">ignore</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.aggregated">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn2:extensionElements>
+      <bpmn2:incoming>Flow_0w1duld</bpmn2:incoming>
+      <bpmn2:outgoing>Flow_0texvqp</bpmn2:outgoing>
+    </bpmn2:serviceTask>
+    <bpmn2:serviceTask id="Activity_0itt0yf" name="Multidimensional Scaling (MDS)" camunda:type="external" camunda:topic="qhana-task">
+      <bpmn2:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qinput.entityDistancesUrl">
+            <camunda:map>
+              <camunda:entry key="from">qoutput.aggregated</camunda:entry>
+              <camunda:entry key="dataType">custom/entity-distances</camunda:entry>
+            </camunda:map>
+          </camunda:inputParameter>
+          <camunda:inputParameter name="qinput.dimensions">${start_mdsDimensions}</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.metric">metric_mds</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.nInit">4</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.maxIter">${start_mdsMaxIter}</camunda:inputParameter>
+          <camunda:inputParameter name="qhanaPlugin">mds</camunda:inputParameter>
+          <camunda:inputParameter name="qhanaPluginVersion">v0.2.1</camunda:inputParameter>
+          <camunda:inputParameter name="qhanaName">Multidimensional Scaling (MDS)</camunda:inputParameter>
+          <camunda:inputParameter name="qhanaDescription">Converts distance values (distance matrix) to points in a space.</camunda:inputParameter>
+          <camunda:outputParameter name="return.qoutput.mds">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn2:extensionElements>
+      <bpmn2:incoming>Flow_0texvqp</bpmn2:incoming>
+      <bpmn2:outgoing>Flow_11jt0ti</bpmn2:outgoing>
+    </bpmn2:serviceTask>
+  </bpmn2:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Wu_Palmer">
+      <bpmndi:BPMNShape id="BPMNShape_StartEvent_1" bpmnElement="StartEvent_1">
+        <dc:Bounds x="412" y="240" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_0ck8ig8_di" bpmnElement="Event_0ck8ig8">
+        <dc:Bounds x="1302" y="240" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1tvrjsr_di" bpmnElement="Activity_1do8hxs">
+        <dc:Bounds x="500" y="218" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0rc13uv_di" bpmnElement="Activity_0tfwzt0">
+        <dc:Bounds x="660" y="218" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1bpaxat_di" bpmnElement="Activity_1nnwor0">
+        <dc:Bounds x="820" y="218" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0fnk2vq_di" bpmnElement="Activity_0s7n3hs">
+        <dc:Bounds x="980" y="218" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1vvxc55_di" bpmnElement="Activity_0itt0yf">
+        <dc:Bounds x="1140" y="218" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_05mvkgh_di" bpmnElement="Flow_05mvkgh">
+        <di:waypoint x="448" y="258" />
+        <di:waypoint x="500" y="258" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_13r8zml_di" bpmnElement="Flow_13r8zml">
+        <di:waypoint x="600" y="258" />
+        <di:waypoint x="660" y="258" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0sl6imb_di" bpmnElement="Flow_0sl6imb">
+        <di:waypoint x="760" y="258" />
+        <di:waypoint x="820" y="258" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0w1duld_di" bpmnElement="Flow_0w1duld">
+        <di:waypoint x="920" y="258" />
+        <di:waypoint x="980" y="258" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0texvqp_di" bpmnElement="Flow_0texvqp">
+        <di:waypoint x="1080" y="258" />
+        <di:waypoint x="1140" y="258" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_11jt0ti_di" bpmnElement="Flow_11jt0ti">
+        <di:waypoint x="1240" y="258" />
+        <di:waypoint x="1302" y="258" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn2:definitions>

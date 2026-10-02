@@ -36,7 +36,7 @@ class SchuldQkNN(QkNN):
         train_wires: List[int],
         label_wires: List[int],
         qam_ancilla_wires: List[int],
-        backend: qml.Device,
+        backend: qml.devices.Device,
         unclean_wires: List[int] = None,
     ):
         super(SchuldQkNN, self).__init__(
@@ -165,7 +165,7 @@ class SchuldQkNN(QkNN):
     def get_representative_circuit(self, X: np.ndarray) -> str:
         circuit = self.get_quantum_circuit(X[0])
         circuit.construct([], {})
-        return circuit.qtape.to_openqasm()
+        return qml.to_openqasm(circuit)()
 
     def heatmap_meaningful(self) -> bool:
         return False

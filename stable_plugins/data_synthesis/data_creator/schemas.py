@@ -13,9 +13,10 @@
 # limitations under the License.
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING, Optional
 
 import marshmallow as ma
-from marshmallow import post_load
+from marshmallow import ValidationError, post_load, validate, validates_schema
 
 from qhana_plugin_runner.api.extra_fields import EnumField
 from qhana_plugin_runner.api.util import (
@@ -24,6 +25,14 @@ from qhana_plugin_runner.api.util import (
 )
 
 from .backend.datasets import DataTypeEnum
+
+REQUIRED_FIELDS_BY_TYPE: dict[DataTypeEnum, frozenset[str]] = {
+    DataTypeEnum.two_spirals: frozenset({"noise", "turns"}),
+    DataTypeEnum.checkerboard: frozenset(),  # Empty set => only the shared fields are needed.
+    DataTypeEnum.blobs: frozenset({"centers"}),
+    DataTypeEnum.checkerboard_3d: frozenset(),
+    DataTypeEnum.blobs_3d: frozenset({"centers"}),
+}
 
 
 class TaskResponseSchema(MaBaseSchema):
@@ -37,9 +46,9 @@ class InputParameters:
     dataset_type: DataTypeEnum
     num_train_points: int
     num_test_points: int
-    turns: float = None
-    noise: float = None
-    centers: int = None
+    turns: Optional[float] = None
+    noise: Optional[float] = None
+    centers: Optional[int] = None
 
     def __str__(self):
         return str(self.__dict__.copy())
@@ -64,6 +73,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
     num_train_points = ma.fields.Integer(
         required=True,
         allow_none=False,
+        validate=validate.Range(min=1),
         metadata={
             "label": "No. Training Points",
             "description": "Determines the size of the training dataset.",
@@ -71,8 +81,9 @@ class InputParametersSchema(FrontendFormBaseSchema):
         },
     )
     num_test_points = ma.fields.Integer(
-        required=False,
-        allow_none=True,
+        required=True,
+        allow_none=False,
+        validate=validate.Range(min=0),
         metadata={
             "label": "No. Test Points",
             "description": "Determines the size of the test dataset.",
@@ -82,24 +93,27 @@ class InputParametersSchema(FrontendFormBaseSchema):
     noise = ma.fields.Float(
         required=False,
         allow_none=True,
+        validate=validate.Range(min=0),
         metadata={
             "label": "Noise",
             "description": "Gives the dataset creation some noise",
-            "input_type": "text",
+            "input_type": "number",
         },
     )
     turns = ma.fields.Float(
-        required=True,
-        allow_none=False,
+        required=False,
+        allow_none=True,
+        validate=validate.Range(min=0, min_inclusive=False),
         metadata={
             "label": "Turns",
             "description": "Determines the turns of the spiral dataset",
-            "input_type": "text",
+            "input_type": "number",
         },
     )
     centers = ma.fields.Integer(
         required=False,
-        allow_none=False,
+        allow_none=True,
+        validate=validate.Range(min=1),
         metadata={
             "label": "No. Centers",
             "description": "Determines the number of Blobs",
@@ -107,6 +121,26 @@ class InputParametersSchema(FrontendFormBaseSchema):
         },
     )
 
+    @validates_schema
+    def validate_required_for_type(self, data, **kwargs):
+        dataset_type = data.get("dataset_type")
+        if not isinstance(dataset_type, DataTypeEnum):
+            raise ValidationError(
+                {"dataset_type": [f"Unknown dataset type: {dataset_type!r}."]}
+            )
+        required = REQUIRED_FIELDS_BY_TYPE.get(dataset_type, frozenset())
+        missing = {f for f in required if data.get(f) is None}
+        if missing:
+            raise ValidationError(
+                {f: ["Required for selected dataset type."] for f in sorted(missing)}
+            )
+
     @post_load
     def make_input_params(self, data, **kwargs) -> InputParameters:
         return InputParameters(**data)
+
+    if TYPE_CHECKING:
+        # type checking hint for tests in test_schema.py
+        def load(
+            self, data, *, many=None, partial=None, unknown=None
+        ) -> InputParameters: ...

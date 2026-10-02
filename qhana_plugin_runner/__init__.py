@@ -114,6 +114,13 @@ def create_app(test_config: Optional[Dict[str, Any]] = None, silent_log: bool = 
                 folder for folder in os.environ["PLUGIN_FOLDERS"].split(":") if folder
             ]
 
+        if "DISABLED_PLUGINS" in os.environ:
+            config["DISABLED_PLUGINS"] = [
+                plugin
+                for plugin in re.split(r"[,:]", os.environ["DISABLED_PLUGINS"])
+                if plugin
+            ]
+
         # load database URI from env vars
         if "SQLALCHEMY_DATABASE_URI" in os.environ:
             config["SQLALCHEMY_DATABASE_URI"] = os.environ["SQLALCHEMY_DATABASE_URI"]

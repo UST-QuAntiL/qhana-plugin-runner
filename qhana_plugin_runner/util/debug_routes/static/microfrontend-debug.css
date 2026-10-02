@@ -1,0 +1,406 @@
+:root {
+    --background: white;
+    --background-card: #ddd;
+    --border-color: #aaa;
+    --scroll-background: #ddd;
+    --scroll-color: #888;
+    --text: black;
+    --text-inv: white;
+    --text-washed: #222;
+    --text-disabled: #444;
+    --primary: #0b0089;
+    --primary-darker: #06004b;
+    --primary-lighter: #1000c6;
+    --primary-text: #0b0089;
+    --primary-text-visited: #06004b;
+    --accent: #b25300;
+    --accent-darker: #833d00;
+    --accent-lighter: #dc6803;
+    --accent-text: #b25300;
+    --warn: #de0000;
+    --warn-darker: #8a0000;
+    --warn-lighter: #ff2d2d;
+    --warn-text: #de0000;
+    --text-primary: white;
+    --text-primary-lighter: var(--text, black);
+    --text-primary-darker: var(--text-primary);
+    --text-accent: white;
+    --text-warn: white;
+    --line: 150,150,150;
+}
+
+/* expose typography as css classes */
+.t-page-headline {
+    margin-block: 0.8ex
+}
+
+.t-headline {
+}
+
+.t-title {
+}
+
+.t-subheading {
+}
+
+.t-subsubheading {
+}
+
+.t-paragraph {
+}
+
+.text {
+    color: var(--text, black);
+}
+
+.text-primary {
+    color: var(--text-primary);
+}
+
+.text-light-primary {
+    color: var(--text-light-primary);
+}
+
+html, body {
+    height: 100%;
+    height: stretch;
+}
+
+body {
+    margin: 0;
+    font-family: Inter, "Helvetica Neue", sans-serif;
+    background-color: var(--background, white);
+    color: var(--text, black);
+}
+
+a {
+    color: var(--primary-text);
+}
+
+::any-link {
+    color: var(--primary-text);
+}
+
+a:hover, a:visited {
+    color: var(--primary-text-visited);
+}
+
+::any-link:hover, ::any-link:visited {
+    color: var(--primary-text-visited)
+}
+
+::selection {
+    background-color: var(--primary-lighter);
+    color: var(--text-primary-lighter, black);
+}
+
+/* overwrite flex or grid display for hidden nodes */
+*[hidden] {
+    display: none !important;
+}
+
+/*//////////////////////////////////////////////////////////////////////////////
+// top level classes applying to all components ////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////*/
+
+.scrollable {
+    scrollbar-color: var(--scroll-color) var(--scroll-background);
+}
+
+.big-content {
+    max-width: 60rem;
+    margin-inline-start: auto;
+    margin-inline-end: auto;
+}
+
+.title-link {
+    color: var(--primary-text);
+}
+
+.title-link:visited {
+    color: var(--primary-text-visited);
+}
+
+.scroll-spacer {
+    height: 20vh;
+}
+
+.bold {
+    font-weight: 500;
+}
+
+.italic {
+    font-style: italic;
+}
+
+.break-words {
+    overflow-wrap: break-word;
+}
+
+.break-all {
+    word-break: break-all;
+}
+
+.file-input {
+    color: var(--text);
+    background-color: var(--background);
+    border: 2px solid var(--border-color, currentColor);
+    border-radius: 5px;
+    max-width: initial;
+    box-sizing: border-box;
+    padding-inline: 0.5rem;
+    padding-block: 1.3ex;
+}
+
+.file-input:focus:not(:focus-visible) {
+    outline: none;
+}
+
+.file-input:focus-visible {
+    outline: 4px solid var(--accent-darker, black);
+}
+
+.file-input::file-selector-button {
+    right: 0px;
+    margin: 0.4rem;
+    padding-inline: 1em;
+    background-color: var(--primary, purple);
+    color: var(--text-primary, white);
+    cursor: pointer;
+    outline: none;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    line-height: 36px;
+    font-weight: 600;
+}
+
+.file-input::file-selector-button:hover {
+    background-color: var(--primary, purple);
+    color: var(--text-primary, white);
+}
+
+.file-input::file-selector-button:active {
+    background-color: var(--primary-lighter, purple);
+}
+
+.file-input::file-selector-button:focus-visible {
+    outline: 4px solid var(--accent-darker, black);
+}
+
+/* extra helpers */
+.strip-button-hover:hover .mat-mdc-button-focus-overlay {
+    background: transparent;
+}
+
+summary.no-decoration {
+    list-style: none;
+}
+
+summary.no-decoration::marker, summary.no-decoration::-webkit-details-marker {
+    content: none;
+    display: none;
+}
+
+/* qhana form inputs (from micro frontends) */
+
+form.qhana-form {
+    max-width: initial;
+}
+
+.qhana-form-label {
+    font-weight: 500;
+    padding-inline-start: 0.5rem;
+    color: var(--border-color, currentColor);
+}
+
+.qhana-form-input, input.qhana-form-input, select.qhana-form-input, textarea.qhana-form-input {
+    color: var(--text);
+    background-color: var(--background);
+    border: 2px solid var(--border-color, currentColor);
+    border-radius: 5px;
+    max-width: initial;
+    box-sizing: border-box;
+    padding-inline: 0.5rem;
+    padding-block: 1.3ex;
+}
+
+.qhana-form-input:focus {
+    outline: none;
+}
+
+.qhana-form-field {
+    margin-block-end: 0.8rem;
+    --border-color: var(--text-washed, #333);
+}
+
+.qhana-form-field:hover:not(:focus-within) {
+    --border-color: var(--text, black);
+}
+
+.qhana-form-field:focus-within {
+    --border-color: var(--primary-text, black);
+}
+
+.qhana-form-input:focus-visible {
+    outline: 4px solid var(--accent-darker, black);
+}
+
+.qhana-form-submit {
+    margin: 0.4rem;
+    padding-inline: 1em;
+    background-color: var(--primary, purple);
+    color: var(--text-primary, white);
+    cursor: pointer;
+    outline: none;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    line-height: 36px;
+    font-weight: 500;
+}
+
+.qhana-form-submit:active {
+    background-color: var(--primary-lighter, purple);
+}
+
+.qhana-form-submit:focus-visible {
+    outline: 4px solid var(--accent-darker, black);
+}
+
+.qhana-choose-file-button, .qhana-choose-plugin-button {
+    padding-inline: 0.5rem;
+    padding-block: 1.3ex;
+    color: var(--primary-text, purple);
+    background-color: var(--background, white);
+    cursor: pointer;
+    outline: none;
+    border: 2px solid var(--primary-text, purple);
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+.qhana-choose-file-button:hover:not([disabled]), .qhana-choose-plugin-button:hover:not([disabled]) {
+    background-color: var(--primary, purple);
+    color: var(--text-primary, white);
+}
+
+.qhana-choose-file-button:active:not([disabled]), .qhana-choose-plugin-button:active:not([disabled]) {
+    background-color: var(--primary-lighter, purple);
+    color: var(--text-dark-primary, black);
+}
+
+.qhana-choose-file-button:focus-visible, .qhana-choose-plugin-button:focus-visible {
+    outline: 4px solid var(--accent-darker, black);
+}
+
+.qhana-choose-file-button[disabled], .qhana-choose-plugin-button[disabled] {
+    cursor: revert;
+    color: var(--text-disabled, black);
+    border-color: var(--text-disabled, black);
+}
+
+.qhana-show-preview-button {
+    display: inline-block;
+    padding-inline: 0.5rem;
+    padding-block: 0.3ex;
+    color: var(--primary-text, purple);
+    background-color: transparent;
+    cursor: pointer;
+    outline: none;
+    border: none;
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+.qhana-show-preview-button:hover {
+    background-color: var(--primary, purple);
+    color: var(--text-primary, white);
+}
+
+.qhana-show-preview-button:active {
+    background-color: var(--primary-lighter, purple);
+    color: var(--text-dark-primary, black);
+}
+
+.qhana-show-preview-button:focus-visible {
+    outline: 4px solid var(--accent-darker, black);
+}
+
+.qhana-input-description {
+}
+
+.qhana-input-description p {
+    margin-block: 0.1em;
+}
+
+.qhana-error-message {
+    color: var(--warn-text, red);
+}
+
+.qhana-valid-icon {
+    color: rgb(0, 247, 0);
+}
+
+.plugin-micro-frontend {
+}
+
+.plugin-micro-frontend h1 {
+}
+
+.plugin-micro-frontend h2 {
+}
+
+.plugin-micro-frontend h3 {
+}
+
+.plugin-micro-frontend h4 {
+}
+
+.qhana-table {
+    flex-direction: row;
+    flex-wrap: wrap;
+    overflow: auto;
+    border: 2px solid var(--border-color, currentColor);
+    border-radius: 5px;
+}
+
+.qhana-table table {
+    border-collapse: collapse;
+}
+
+.qhana-table td, .qhana-table th {
+    border: 2px solid var(--border-color, currentColor);
+    text-align: left;
+    padding: 0.5em;
+}
+
+.qhana-table th {
+    padding-top: 1em;
+    padding-bottom: 1em;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background-color: var(--primary, purple);
+    text-decoration-color: white;
+}
+
+.qhana-table tr:hover {
+    background-color: var(--primary, currentColor);
+}
+
+.qhana-table tr:first-child th {
+    border-top: 0;
+}
+
+.qhana-table tr:last-child td {
+    border-bottom: 0;
+}
+
+.qhana-table tr td:first-child, .qhana-table tr th:first-child {
+    border-left: 0;
+}
+
+.qhana-table tr td:last-child, .qhana-table tr th:last-child {
+    border-right: 0;
+}

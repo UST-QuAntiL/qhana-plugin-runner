@@ -19,6 +19,12 @@
 function registerMessageListener() {
     // main event listener, delegates events to dedicated listeners
     window.addEventListener("message", (event) => {
+        if (window._qhana_microfrontend_state.messageHandler != null) {
+            const eventHandled = window._qhana_microfrontend_state.messageHandler(event);
+            if (eventHandled) {
+                return;
+            }
+        }
         var data = event.data;
         if (typeof data === "string") {
             if (data === "ui-prevent-submit") {
@@ -602,7 +608,6 @@ function submitFormData(formData, formAction, formMethod) {
 
 
 // Main script entry point /////////////////////////////////////////////////////
-
 
 // only execute functions if loaded from a parent window (e.g. inside an iframe)
 if (window.top !== window.self) {

@@ -607,3 +607,17 @@ Entities of type :ref:`data-formats/examples/entities:entity/vector` can be prep
 
     Use :py:meth:`~qhana_plugin_runner.plugin_utils.attributes.AttributeMetadata.to_dict` to serialize the :py:class:`~qhana_plugin_runner.plugin_utils.attributes.AttributeMetadata` objects themselves.
 
+Writing Plugin Tests
+--------------------
+
+Plugin tests are co-located with the plugin code, in either a nested layout (``plugins/<name>/tests/test_*.py``) or a flat layout (``plugins/<name>/test_*.py``). See :doc:`adr/0019-co-locate-plugin-tests` for the rationale and :doc:`testing` for a worked example of each layout.
+The shared ``task_data`` fixture and the helpers from ``tests/utils.py`` are reusable from plugin tests with no extra setup.
+Celery task tests run against an in-process worker on an in-memory broker, with no Redis or Docker required (see :doc:`adr/0018-celery-task-testing-strategy`).
+
+A few points to keep in mind when adding tests for a plugin:
+
+* Plugin source files **must use relative imports** so plugins remain relocatable. Test files are excluded from this check and may use absolute imports.
+* Test module names can collide across plugins. Pytest's ``--import-mode=importlib`` handles the disambiguation.
+* For Celery tasks, import the plugin's tasks at module level in the test file so the ``CELERY`` singleton picks up the registration before the worker fixture starts.
+
+See :doc:`testing` for the pytest configuration, the full fixture catalogue, the Celery testing pattern, and how tests run in CI.

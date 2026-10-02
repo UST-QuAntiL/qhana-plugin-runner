@@ -29,19 +29,17 @@ PLUGIN_LOCATIONS = [
 IGNORE_FOLDERS = {"__pycache__", "node_modules"}
 
 
-# Only add stdlib modules or dependencies found in pyproject.toml or poetry.lock to this set
+# Only add dependencies found in pyproject.toml or poetry.lock to this set;
 ALLOWED_IMPORTS = {
-    # python stdlib
-    "typing",
-    "http",
-    "mimetypes",
     # plugin runner
     "qhana_plugin_runner",
     # direct plugin runner dependencies
     "flask",
+    "flask_smorest",
     "werkzeug",
     "marshmallow",
     "celery",
+    "kombu",
     "requests",
     "sqlalchemy",
     "typing_extensions",
@@ -55,6 +53,7 @@ PLUGIN_BASE_QALIFIED = PLUGIN_BASE_MODULE + (PLUGIN_BASE_CLASS_NAME,)
 BASE_PATH = Path(sys.base_prefix)
 VENV_PATH = Path(sys.prefix)
 REPOSITORY_PATH = Path(".").resolve()
+STDLIB_MODULES = sys.stdlib_module_names
 
 
 def get_plugin_roots():
@@ -102,6 +101,10 @@ def extract_imports(code: str, path: Path):  # noqa: C901
                         base_class_aliases.add(PLUGIN_BASE_CLASS_NAME)
                 yield module, n.lineno
         elif isinstance(node, ast.ImportFrom):
+            if node.module is None and node.level == 1:
+                for name in node.names:
+                    yield ("", str(name.name)), node.lineno
+                continue
             assert (
                 node.module is not None
             ), f"Bad import found in line {node.lineno} in file {path}"
@@ -171,6 +174,8 @@ def is_valid_import(module: tuple[str, ...], lineno, file_) -> bool:
         return False
     if module[0] == "":
         return True  # allow relative imports
+    if module[0] in STDLIB_MODULES or module[0] in sys.builtin_module_names:
+        return True  # stdlib and builtin modules are always fine
     if module[0] in ALLOWED_IMPORTS:
         return True  # explicitly allowed imports
     sys_module = sys.modules.get(module[0])
@@ -241,7 +246,17 @@ def check_imports_recursive(
 
     import_path = file_
     if import_path.name == "__init__.py":
+        # file is standin for parent folder
         import_path = import_path.parent
+    if (
+        import_path.name.endswith(".py")
+        and import_path.is_file()
+        and import_path.exists()
+    ):
+        # path is a python file which cannot have submodules
+        if import_path.parent.is_relative_to(module_base):
+            # file is part of a larger module, resolve import relative to that
+            import_path = import_path.parent
 
     for component in module[1:]:
         if component == "":

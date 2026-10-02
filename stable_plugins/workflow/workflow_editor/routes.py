@@ -12,6 +12,7 @@ from flask.wrappers import Response
 from flask_smorest import abort
 from marshmallow import EXCLUDE
 from werkzeug.utils import secure_filename
+from kombu.exceptions import OperationalError
 
 from qhana_plugin_runner.api.plugin_schemas import (
     ApiLink,
@@ -200,7 +201,9 @@ class WorkflowListView(MethodView):
     @WF_EDITOR_BLP.response(HTTPStatus.OK, WorkflowSchema())
     @WF_EDITOR_BLP.require_jwt("jwt", optional=True)
     def post(
-        self, autosave: bool = False, deploy: Literal["", "plugin", "workflow"] = ""
+        self,
+        autosave: bool = False,
+        deploy: Literal["", "plugin", "workflow", "ui-template"] = "",
     ):
         plugin = WorkflowEditor.instance
         if plugin is None:
@@ -234,7 +237,10 @@ class WorkflowListView(MethodView):
             )
             deploy_workflow.s(workflow_url, wf_id, deploy_as=deploy).apply_async()
 
-        cleanup_autosaved_workflows.s(plugin.name).apply_async()
+        try:
+            cleanup_autosaved_workflows.s(plugin.name).apply_async()
+        except OperationalError:
+            pass  # it is OK to trigger the autosave cleanup the next time it works
 
         return unparse_datetime(workflow)
 
