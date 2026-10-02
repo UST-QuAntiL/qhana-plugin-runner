@@ -3,7 +3,7 @@ from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _name = "pattern-atlas"
-_version = "v0.0.0"
+_version = "v0.0.1"
 
 PA_BLP = SecurityBlueprint(
     plugin_identifier(_name, _version),
