@@ -174,6 +174,7 @@ Consumed by:
 
   * :ref:`cluster-scatter-visualization`
   * :ref:`csv-visualization`
+  * :ref:`json-visualization`
 
 
 Content Types

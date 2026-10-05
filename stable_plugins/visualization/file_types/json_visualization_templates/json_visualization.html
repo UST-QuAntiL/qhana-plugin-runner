@@ -14,6 +14,12 @@
                 overflow: auto; 
                 background: transparent;
             }
+            .qhana-dimension-label {
+                user-select: none;
+            }
+            .qhana-dimension-label::after {
+                content: attr(data-label);
+            }
         </style>
     </head>
 
@@ -36,46 +42,141 @@
 
         <pre><code id="json-preview" class="qhana-data-preview" hidden></code></pre>
 
+        <script src="{{url_for('static', filename='microfrontend.js')}}"></script>
+
         <script>
+        const dimensionLabelsUrl = "{{ dimension_labels_url }}";
+
         let currentJsonPreviewUrl = null;
+        let currentJsonStr = null;
 
         function checkUrl(newUrl) {
             const dataPreview = document.querySelector('#json-preview');
             const options = document.querySelector('#visualization-options');
             if (newUrl == null || newUrl === "") {
                 currentJsonPreviewUrl = null;
+                currentJsonStr = null;
                 dataPreview.setAttribute("hidden", "hidden");
                 options.setAttribute("open", "open");
                 return false;
             }
-            
+
             const urlHasChanged = currentJsonPreviewUrl !== newUrl;
             currentJsonPreviewUrl = newUrl;
 
             return urlHasChanged;
         }
 
+        // Asks the plugin for the feature name of every dimension of the mapping file.
+        // Returns an empty mapping when no file is selected or the file cannot be read,
+        // so the preview stays usable without dimension names.
+        async function loadDimensionLabels(mappingUrl) {
+            if (mappingUrl == null || mappingUrl === "") {
+                return {};
+            }
+            const params = new URLSearchParams();
+            params.set("dimensionMappingUrl", mappingUrl);
+            try {
+                const response = await fetch(`${dimensionLabelsUrl}?${params.toString()}`);
+                if (!response.ok) {
+                    return {};
+                }
+                return await response.json();
+            } catch (error) {
+                console.log(error);
+                return {};
+            }
+        }
+
+        const attributeLinePattern = /^\s*("(?:[^"\\]|\\.)*"): /;
+
+        let currentDimensionLabels = {};
+
+        // Finds the feature name of every line whose attribute key is a dimension name
+        // of the mapping file. Returns null for lines without a feature name.
+        function lineLabels(lines, dimensionLabels) {
+            return lines.map(line => {
+                const match = attributeLinePattern.exec(line);
+                if (match == null) {
+                    return null;
+                }
+                const feature = dimensionLabels[JSON.parse(match[1])];
+                return feature ? String(feature).replace(/\s+/g, " ") : null;
+            });
+        }
+
+        // Appends the feature name after every dimension attribute of the preview,
+        // e.g. `"dim0": 0.5,  // color (dim0)`. The name is CSS generated content of
+        // an empty span, so copying the preview yields the unchanged JSON. The names
+        // of consecutive dimension attributes start in the same column.
+        function annotateDimensions(codeBlock, dimensionLabels) {
+            const plainLines = codeBlock.textContent.split("\n");
+            const labels = lineLabels(plainLines, dimensionLabels);
+            if (labels.every(label => label == null)) {
+                return;
+            }
+
+            const columns = new Array(labels.length).fill(0);
+            for (let start = 0; start < labels.length; start++) {
+                if (labels[start] == null) {
+                    continue;
+                }
+                let end = start;
+                while (end < labels.length && labels[end] != null) {
+                    end++;
+                }
+                const column = Math.max(...plainLines.slice(start, end).map(line => line.length));
+                columns.fill(column, start, end);
+                start = end;
+            }
+
+            // highlight.js closes every token span on the line it opens, so the
+            // highlighted HTML splits into the same lines as the plain text.
+            const htmlLines = codeBlock.innerHTML.split("\n");
+            codeBlock.innerHTML = htmlLines.map((html, index) => labels[index] == null
+                ? html
+                : `${html}<span class="qhana-dimension-label hljs-comment"></span>`
+            ).join("\n");
+
+            const labelSpans = codeBlock.querySelectorAll(".qhana-dimension-label");
+            let spanIndex = 0;
+            labels.forEach((label, index) => {
+                if (label == null) {
+                    return;
+                }
+                const padding = " ".repeat(columns[index] - plainLines[index].length);
+                labelSpans[spanIndex++].dataset.label = `${padding} // ${label}`;
+            });
+        }
+
         function highlightJson(code_block) {
             if (code_block == null) {
                 code_block = document.querySelector('#json-preview');
             }
+            // highlight.js skips elements it has highlighted before.
+            delete code_block.dataset.highlighted;
+            // highlight.js replaces the content with its highlighted text content,
+            // which drops the feature names.
             hljs.highlightElement(code_block);
+            annotateDimensions(code_block, currentDimensionLabels);
         }
 
-        function addJsonToPreview(json_str) {
+        function addJsonToPreview(json_str, dimensionLabels) {
             const dataPreview = document.querySelector('#json-preview');
             const colorizeButton = document.querySelector('#colorizePreview');
             const options = document.querySelector('#visualization-options');
 
             colorizeButton.setAttribute("hidden", "");
-            
+            currentDimensionLabels = dimensionLabels;
+
             const prettified_json_str = JSON.stringify(JSON.parse(json_str), null, 4);
 
-            dataPreview.innerHTML = prettified_json_str;
+            dataPreview.textContent = prettified_json_str;
 
             if (json_str.length > 5000) {
                 // allow colorization on demand when preview is too large
                 colorizeButton.removeAttribute("hidden");
+                annotateDimensions(dataPreview, dimensionLabels);
             } else {
                 highlightJson(dataPreview);
             }
@@ -87,24 +188,68 @@
             }
         }
 
-        function getUrl() {
-            return document.querySelector('input[name=data]').value;
-        }
-
-        function updatePreview() {
-            const url = getUrl()
-
-            if (checkUrl(url)) {
-                fetch(url)
-                    .then((response) => response.text())
-                    .then((json_str) => addJsonToPreview(json_str))
+        async function renderPreview() {
+            const jsonStr = currentJsonStr;
+            if (jsonStr == null) {
+                return;
+            }
+            const dimensionLabels = await loadDimensionLabels(mappingInput.value);
+            // Drops the result if the data changed while the labels were loading.
+            if (jsonStr === currentJsonStr) {
+                addJsonToPreview(jsonStr, dimensionLabels);
             }
         }
 
-        updatePreview();
+        async function updatePreview() {
+            const url = dataInput.value;
+
+            if (checkUrl(url)) {
+                currentJsonStr = null;
+                const response = await fetch(url);
+                const jsonStr = await response.text();
+                if (url !== currentJsonPreviewUrl) {
+                    return;
+                }
+                currentJsonStr = jsonStr;
+                await renderPreview();
+            }
+        }
+
+        let requestedRelatedFor = null;
+
+        // Asks the parent to fill the dimension mapping input with a file related
+        // to the json file. The mapping is a sibling output of the step that
+        // produced the json file, so the search includes the producing step itself.
+        function autoSelectDimensionMapping(dataUrl) {
+            if (!dataUrl || mappingInput.value) {
+                requestedRelatedFor = null;
+                return;
+            }
+            const looksLikeUrl = dataUrl.includes("://") || dataUrl.startsWith("data:");
+            if (!looksLikeUrl || requestedRelatedFor === dataUrl) {
+                return;
+            }
+            requestedRelatedFor = dataUrl;
+            sendMessage({
+                type: "request-related-data-url",
+                inputKey: "dimension_mapping_url",
+                dataUrl: dataUrl,
+                relation: "pre",
+                includeSelf: true,
+                acceptedInputType: "entity/dimension-mapping",
+                userInteraction: false,
+            });
+        }
 
         const dataInput = document.querySelector('input[name=data]');
-        dataInput.addEventListener("input", (event) => updatePreview());
+        const mappingInput = document.querySelector('input[name=dimensionMappingUrl]');
+        autoSelectDimensionMapping(dataInput.value);
+        updatePreview();
+        dataInput.addEventListener("input", (event) => {
+            autoSelectDimensionMapping(dataInput.value);
+            updatePreview();
+        });
+        mappingInput.addEventListener("input", (event) => renderPreview());
 
         document.querySelector('#colorizePreview').addEventListener('click', (event) => {
             event.target.setAttribute("hidden", "");
@@ -114,8 +259,6 @@
             }
         });
         </script>
-
-        <script src="{{url_for('static', filename='microfrontend.js')}}"></script>
 
     </body>
 </html>
