@@ -189,7 +189,7 @@ class DynamicRender:
     def render_index(self, atlas: PatternAtlasContent) -> str:
         template = self._jinja.get_template("languages.jinja2")
         return template.render(
-            atlas=atlas, 
+            atlas=atlas,
             base_url=f"/plugins/{PA_BLP.name}/ui",
         )
 
