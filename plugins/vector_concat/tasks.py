@@ -21,8 +21,8 @@ from celery.utils.log import get_task_logger
 
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.plugin_utils.dimension_mapping import entity_dimension_names
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
+    entity_dimension_names,
     ensure_array,
     load_entities,
     save_entities,

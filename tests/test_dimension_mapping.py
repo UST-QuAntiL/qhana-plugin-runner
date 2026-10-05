@@ -15,17 +15,10 @@
 """Tests for the dimension_mapping module."""
 
 import json
-from collections import namedtuple
 
 import pytest
 
-from qhana_plugin_runner.plugin_utils.dimension_mapping import (
-    dimension_labels,
-    dimension_mapping_labels,
-    entity_dimension_names,
-    load_dimension_mapping,
-)
-from qhana_plugin_runner.plugin_utils.entity_marshalling import ensure_array
+from qhana_plugin_runner.plugin_utils.dimension_mapping import load_dimension_labels
 
 from .utils import MockResponse
 
@@ -52,13 +45,19 @@ def _serve(monkeypatch, mapping):
     )
 
 
-def test_every_dimension_of_a_source_shares_the_feature_name():
-    labels = dimension_mapping_labels(
+def _labels_of(monkeypatch, mapping):
+    _serve(monkeypatch, mapping)
+    return load_dimension_labels(MAPPING_URL)
+
+
+def test_every_dimension_of_a_source_shares_the_feature_name(monkeypatch):
+    labels = _labels_of(
+        monkeypatch,
         [
             _mapping_entity("dim0", "color", "dim0", url="color-url"),
             _mapping_entity("dim1", "color", "dim1", url="color-url"),
             _mapping_entity("dim2", "shape", "dim0", url="shape-url"),
-        ]
+        ],
     )
 
     assert labels == {
@@ -68,63 +67,63 @@ def test_every_dimension_of_a_source_shares_the_feature_name():
     }
 
 
-def test_label_ignores_the_source_column_name():
-    labels = dimension_mapping_labels(
+def test_label_ignores_the_source_column_name(monkeypatch):
+    labels = _labels_of(
+        monkeypatch,
         [
             _mapping_entity("dim0", "points", "x"),
             _mapping_entity("dim1", "points", "y"),
-        ]
+        ],
     )
 
     assert labels == {"dim0": "points", "dim1": "points"}
 
 
-def test_zip_members_and_plain_urls_yield_the_same_name():
-    from_zip = dimension_mapping_labels(
-        [_mapping_entity("dim0", "color.json", "dim0", zip_member="color.json")]
+def test_zip_members_and_plain_urls_yield_the_same_name(monkeypatch):
+    from_zip = _labels_of(
+        monkeypatch,
+        [_mapping_entity("dim0", "color.json", "dim0", zip_member="color.json")],
     )
-    from_url = dimension_mapping_labels([_mapping_entity("dim0", "color", "dim0")])
+    from_url = _labels_of(monkeypatch, [_mapping_entity("dim0", "color", "dim0")])
 
     assert from_zip == from_url == {"dim0": "color"}
 
 
 @pytest.mark.parametrize("source", [None, "", "  "])
-def test_entities_without_a_source_are_skipped(source):
-    labels = dimension_mapping_labels(
+def test_entities_without_a_source_are_skipped(monkeypatch, source):
+    labels = _labels_of(
+        monkeypatch,
         [
             _mapping_entity("dim0", source, "dim0"),
             _mapping_entity("dim1", "color", "dim0"),
-        ]
+        ],
     )
 
     assert labels == {"dim1": "color"}
 
 
-def test_entities_without_a_dimension_name_are_skipped():
-    assert dimension_mapping_labels([_mapping_entity("", "color", "dim0")]) == {}
+def test_entities_without_a_dimension_name_are_skipped(monkeypatch):
+    assert _labels_of(monkeypatch, [_mapping_entity("", "color", "dim0")]) == {}
 
 
-def test_a_missing_source_dimension_does_not_change_the_label():
-    labels = dimension_mapping_labels(
+def test_a_missing_source_dimension_does_not_change_the_label(monkeypatch):
+    labels = _labels_of(
+        monkeypatch,
         [
             _mapping_entity("dim0", "color", ""),
             _mapping_entity("dim1", "color", "dim1"),
-        ]
+        ],
     )
 
     assert labels == {"dim0": "color", "dim1": "color"}
 
 
-def test_dimension_labels_fall_back_to_the_dimension_name():
-    assert dimension_labels(["dim0", "dim1"], {"dim0": "color"}) == ["color", "dim1"]
-
-
 @pytest.mark.parametrize("url", [None, ""])
 def test_no_url_yields_no_labels(url):
-    assert load_dimension_mapping(url) == {}
+    assert load_dimension_labels(url) == {}
 
 
-def test_load_dimension_mapping_reads_the_file(monkeypatch):
+def test_load_dimension_labels_reads_the_file(monkeypatch):
     _serve(
         monkeypatch,
         [
@@ -134,14 +133,14 @@ def test_load_dimension_mapping_reads_the_file(monkeypatch):
         ],
     )
 
-    assert load_dimension_mapping(MAPPING_URL) == {
+    assert load_dimension_labels(MAPPING_URL) == {
         "dim0": "color",
         "dim1": "color",
         "dim2": "shape",
     }
 
 
-def test_load_dimension_mapping_without_mimetype_raises(monkeypatch):
+def test_load_dimension_labels_without_mimetype_raises(monkeypatch):
     # A url without a file extension gives no mimetype hint.
     response = MockResponse("http://example.com/download", "", json_data=[])
     del response.headers["Content-Type"]
@@ -151,56 +150,10 @@ def test_load_dimension_mapping_without_mimetype_raises(monkeypatch):
     )
 
     with pytest.raises(ValueError, match="Could not determine mimetype"):
-        load_dimension_mapping(MAPPING_URL)
+        load_dimension_labels(MAPPING_URL)
 
 
-def test_entity_dimension_names_of_no_entities():
-    assert entity_dimension_names([]) == []
-
-
-def test_entity_dimension_names_of_named_tuples():
-    entity = namedtuple("entity", ["ID", "href", "dim0", "dim1"])
-
-    assert entity_dimension_names([entity("e1", "h1", 1, 2)]) == ["dim0", "dim1"]
-
-
-def test_entity_dimension_names_of_named_tuples_without_href():
-    entity = namedtuple("entity", ["ID", "x", "y"])
-
-    assert entity_dimension_names([entity("e1", 1, 2)]) == ["x", "y"]
-
-
-def test_entity_dimension_names_match_the_ensure_array_value_order():
-    """``ensure_array`` sorts dict keys lexicographically, so ``dim10 < dim2``."""
-    entity = {"ID": "e1", "href": "h1"}
-    entity.update({f"dim{i}": i for i in range(12)})
-
-    names = entity_dimension_names([entity])
-    values = next(ensure_array(iter([dict(entity)]))).values
-
-    assert names == [f"dim{i}" for i in sorted(range(12), key=lambda i: f"dim{i}")]
-    assert [int(name[len("dim") :]) for name in names] == list(values)
-
-
-def test_labels_stay_correct_beyond_the_ninth_dimension(monkeypatch):
-    """Labels are looked up by name, so the lexicographic value order is harmless."""
-    mapping = [
-        _mapping_entity(f"dim{i}", f"feature{i}", "dim0", url=f"url{i}")
-        for i in range(12)
-    ]
-    _serve(monkeypatch, mapping)
-    labels = load_dimension_mapping(MAPPING_URL)
-
-    entity = {"ID": "e1", "href": "h1"}
-    entity.update({f"dim{i}": i for i in range(12)})
-    names = entity_dimension_names([entity])
-    values = next(ensure_array(iter([dict(entity)]))).values
-
-    assert dimension_labels(names, labels) == [f"feature{value}" for value in values]
-    assert dimension_labels(names, labels)[1] == "feature1"
-
-
-def test_load_dimension_mapping_reads_the_vector_concat_output_verbatim(monkeypatch):
+def test_load_dimension_labels_reads_the_vector_concat_output_verbatim(monkeypatch):
     """The exact payload documented for ``entity/dimension-mapping``."""
     payload = json.loads(
         """
@@ -219,7 +172,7 @@ def test_load_dimension_mapping_reads_the_vector_concat_output_verbatim(monkeypa
     )
     _serve(monkeypatch, payload)
 
-    assert load_dimension_mapping(MAPPING_URL) == {
+    assert load_dimension_labels(MAPPING_URL) == {
         "dim0": "color",
         "dim1": "color",
         "dim2": "shape",

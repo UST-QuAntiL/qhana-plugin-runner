@@ -26,7 +26,9 @@ from qhana_plugin_runner.plugin_utils.attributes import (
     tuple_serializer,
 )
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
+    ensure_array,
     ensure_dict,
+    entity_dimension_names,
     ensure_tuple,
     load_entities,
     save_entities,
@@ -319,3 +321,29 @@ def test_ensure_dict_plain_namedtuple_ignores_metadata(entities):
             assert isinstance(
                 value, str
             ), f"Value {value} of entity {entity} is not a string!"
+
+
+def test_entity_dimension_names_of_no_entities():
+    assert entity_dimension_names([]) == []
+
+
+def test_entity_dimension_names_of_named_tuples():
+    entity = namedtuple("entity", ["ID", "href", "dim0", "dim1"])
+
+    assert entity_dimension_names([entity("e1", "h1", 1, 2)]) == ["dim0", "dim1"]
+
+
+def test_entity_dimension_names_of_named_tuples_without_href():
+    entity = namedtuple("entity", ["ID", "x", "y"])
+
+    assert entity_dimension_names([entity("e1", 1, 2)]) == ["x", "y"]
+
+
+def test_entity_dimension_names_follow_the_ensure_array_value_order():
+    entity = {"ID": "e1", "href": "h1"}
+    entity.update({f"dim{i}": i for i in range(12)})
+
+    names = entity_dimension_names([entity])
+    (array_entity,) = ensure_array([entity])
+
+    assert [entity[name] for name in names] == list(array_entity.values)

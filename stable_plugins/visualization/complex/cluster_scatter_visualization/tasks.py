@@ -24,11 +24,9 @@ from requests import HTTPError
 
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.virtual_plugins import DataBlob, PluginState
-from qhana_plugin_runner.plugin_utils.dimension_mapping import (
-    entity_dimension_names,
-    load_dimension_mapping,
-)
+from qhana_plugin_runner.plugin_utils.dimension_mapping import load_dimension_labels
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
+    entity_dimension_names,
     ensure_array,
     ensure_dict,
     load_entities,
@@ -185,15 +183,9 @@ def _get_plot(
     for column_name in attr_to_column_name.values():
         hover_data[column_name] = True
 
-    # Renaming the axes instead of the dataframe columns keeps the reserved column
-    # names above (and the click handler below) working unchanged.
-    # Only the first three dimensions are plotted, so every axis title names the
-    # dimension it shows.
-    labels_by_dimension = load_dimension_mapping(dimension_mapping_url)
+    labels_by_dimension = load_dimension_labels(dimension_mapping_url)
     axis_labels: Dict[str, str] = {}
     for axis, index in (("x", 0), ("y", 1), ("z", 2)):
-        # A plot of one-dimensional points uses a constant y axis, which has no
-        # matching dimension name.
         if index >= len(dimension_names):
             continue
         dimension_name = dimension_names[index]

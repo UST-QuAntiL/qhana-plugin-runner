@@ -44,7 +44,7 @@ from qhana_plugin_runner.api.util import (
 )
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.plugin_utils.dimension_mapping import load_dimension_mapping
+from qhana_plugin_runner.plugin_utils.dimension_mapping import load_dimension_labels
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
@@ -214,7 +214,7 @@ def get_dimension_labels(data: Mapping):
     if not dimension_mapping_url:
         return Response(dumps({}), mimetype="application/json")
     try:
-        labels = load_dimension_mapping(
+        labels = load_dimension_labels(
             dimension_mapping_url, include_source_dimension=True
         )
     except (HTTPError, ValueError):
