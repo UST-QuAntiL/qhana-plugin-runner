@@ -18,19 +18,23 @@ DEFAULT_CONFIG = {
 
 
 def get_config() -> dict[str, str]:
-    with PLUGIN_REGISTRY_CLIENT as client:
-        config = dict(DEFAULT_CONFIG)
-        for key, value in config.items():
-            config[key] = getenv(f"LCM_{key}", value)
-        services = client.fetch_by_rel(
-            ["service"], {"service-id": ",".join(config.keys())}
-        )
-        if services is not None:
-            for api_link in services.data.get("items", []):
-                service = client.fetch_by_api_link(api_link)
-                service_id = service.data.get("serviceId")
-                url = service.data.get("url")
-                if service_id is None or url is None:
-                    continue
-                config[service_id] = url
-        return config
+    config = dict(DEFAULT_CONFIG)
+    for key, value in config.items():
+        config[key] = getenv(f"LCM_{key}", value)
+    try:
+        with PLUGIN_REGISTRY_CLIENT as client:
+            services = client.fetch_by_rel(
+                ["service"], {"service-id": ",".join(config.keys())}
+            )
+            if services is not None:
+                for api_link in services.data.get("items", []):
+                    service = client.fetch_by_api_link(api_link)
+                    service_id = service.data.get("serviceId")
+                    url = service.data.get("url")
+                    if service_id is None or url is None:
+                        continue
+                    config[service_id] = url
+    except ValueError:
+        # fallback if plugin registry url is not set
+        pass
+    return config

@@ -5,6 +5,7 @@ from flask.views import MethodView
 from flask.helpers import url_for
 from flask.wrappers import Response
 import time
+from celery.utils.log import get_task_logger
 
 from qhana_plugin_runner.api.plugin_schemas import (
     PluginMetadata,
@@ -19,6 +20,8 @@ from .pattern_atlas_dynamic.client import PatternAtlasClient, QCAtlasClient
 from .pattern_atlas_dynamic.model import PatternAtlasContent, QCAtlasContent
 from .pattern_atlas_dynamic.render import DynamicRender
 
+TASK_LOGGER = get_task_logger(__name__)
+
 DEFAULT_CONFIG = {
     "PatternAtlasApiEndpoint": "http://localhost:1977/patternatlas",
     "QcAtlasEndpoint": "http://localhost:6626/atlas",
@@ -26,22 +29,26 @@ DEFAULT_CONFIG = {
 
 
 def get_config() -> dict[str, str]:
-    with PLUGIN_REGISTRY_CLIENT as client:
-        config = dict(DEFAULT_CONFIG)
-        for key, value in config.items():
-            config[key] = getenv(f"PA_{key}", value)
-        services = client.fetch_by_rel(
-            ["service"], {"service-id": ",".join(config.keys())}
-        )
-        if services is not None:
-            for api_link in services.data.get("items", []):
-                service = client.fetch_by_api_link(api_link)
-                service_id = service.data.get("serviceId")
-                url = service.data.get("url")
-                if service_id is None or url is None:
-                    continue
-                config[service_id] = url
-        return config
+    config = dict(DEFAULT_CONFIG)
+    for key, value in config.items():
+        config[key] = getenv(f"PA_{key}", value)
+    try:
+        with PLUGIN_REGISTRY_CLIENT as client:
+            services = client.fetch_by_rel(
+                ["service"], {"service-id": ",".join(config.keys())}
+            )
+            if services is not None:
+                for api_link in services.data.get("items", []):
+                    service = client.fetch_by_api_link(api_link)
+                    service_id = service.data.get("serviceId")
+                    url = service.data.get("url")
+                    if service_id is None or url is None:
+                        continue
+                    config[service_id] = url
+    except ValueError:
+        # fallback if plugin registry url is not set
+        pass
+    return config
 
 
 renderer = DynamicRender()
@@ -56,6 +63,7 @@ def get_cached_atlases() -> tuple[PatternAtlasContent, QCAtlasContent]:
     now = time.time()
     if _cache_data is None or (now - _cache_timestamp > CACHE_TTL):
         config = get_config()
+        TASK_LOGGER.info("CONFIG", config)
         pattern_atlas_client = PatternAtlasClient(config["PatternAtlasApiEndpoint"])
         qc_atlas_client = QCAtlasClient(config["QcAtlasEndpoint"])
         _cache_data = pattern_atlas_client.get_all(), qc_atlas_client.get_all()
