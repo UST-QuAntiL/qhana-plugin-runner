@@ -13,6 +13,7 @@
 # limitations under the License.
 from datetime import datetime, timezone
 from io import BytesIO
+from json import loads
 from pathlib import PurePath
 from sqlite3 import IntegrityError
 from zipfile import ZipFile
@@ -45,6 +46,7 @@ from .schemas import (
     NUMERIC_MAPPING_PIPELINE,
     ONE_HOT_PLUGIN,
     PCA_PLUGIN,
+    PIPELINE_SETTINGS_KEYS,
     TRANSFORMERS_PLUGIN,
     VECTOR_CONCAT_PLUGIN,
     WU_PALMER_PLUGIN,
@@ -62,6 +64,7 @@ from .tasks_helpers import (
     taxonomy_ref,
 )
 from .tasks_pipeline_steps import (
+    finalize_one_hot,
     finalize_pca,
     finalize_pipeline,
     finalize_vector_concat,
@@ -167,6 +170,27 @@ def preprocessing_task(self, db_id: int) -> str:
 
 
 # --- Initial Routing Task Launcher ---
+
+# Number of plugin runs one pipeline group needs, for the progress of the whole task.
+PIPELINE_STEP_COUNTS = {
+    WU_PALMER_PLUGIN: 4,  # Wu-Palmer, Transformers, Aggregator, MDS
+    MAPPING_PLUGIN: 3,  # Mapping, Aggregator, MDS
+    ONE_HOT_PLUGIN: 1,  # One-Hot Encoding
+    NUMERIC_MAPPING_PIPELINE: 3,  # Mapping, Aggregator, MDS
+    FEATURE_VECTOR: 1,
+}
+
+PIPELINE_LOG_NAMES = {
+    WU_PALMER_PLUGIN: "Wu-Palmer pipeline for attributes",
+    MAPPING_PLUGIN: "distances mapping pipeline for attributes",
+    ONE_HOT_PLUGIN: "one-hot encoding pipeline for attributes",
+    NUMERIC_MAPPING_PIPELINE: (
+        "numeric mapping pipeline for multi-valued numeric attributes"
+    ),
+    FEATURE_VECTOR: "feature vector for single-valued numeric attributes",
+}
+
+
 def _validate_numeric_selections(selections: dict, numeric_attributes: set):
     """Reject selections that do not fit the attribute type.
 
@@ -180,6 +204,36 @@ def _validate_numeric_selections(selections: dict, numeric_attributes: set):
                 f"The numeric attribute '{attr}' cannot run the pipeline '{option}'. "
                 "Numeric attributes are only included or skipped."
             )
+
+
+def _pipeline_groups(
+    pipeline: str, attributes: list, base_settings: dict, attribute_settings: dict
+) -> list:
+    """Split the attributes of one pipeline into runs with identical settings.
+
+    The aggregator and the MDS step combine all attributes of a run into a single
+    result, so attributes that disagree on a setting of that pipeline have to run
+    separately. A group records only the settings that differ from the first step, and
+    a label that keeps the result files of the groups apart.
+    """
+    keys = PIPELINE_SETTINGS_KEYS.get(pipeline, ())
+    by_settings: dict = {}
+    for attribute in attributes:
+        settings = {
+            key: value
+            for key, value in attribute_settings.get(attribute, {}).items()
+            if key in keys and value != base_settings.get(key)
+        }
+        group = by_settings.setdefault(
+            tuple(sorted(settings.items())),
+            {"pipeline": pipeline, "attributes": [], "settings": settings},
+        )
+        group["attributes"].append(attribute)
+
+    groups = list(by_settings.values())
+    for number, group in enumerate(groups, start=1):
+        group["label"] = pipeline if len(groups) == 1 else f"{pipeline}_{number}"
+    return groups
 
 
 @CELERY.task(
@@ -228,52 +282,30 @@ def start_routing_task(self, db_id: int) -> str:
     ]
     none_selected = [attr for attr, option in selections.items() if option == NONE_PLUGIN]
 
+    base_settings = loads(task_data.parameters or "{}")
+    attribute_settings = task_data.data.get("attribute_settings", {})
+
     # The queue order is the dimension order of the concatenated vector.
-    pipeline_queue = []
+    pipeline_queue: list = []
     total_plugins = 1  # 1, because the inital start value of progress_value has to be 1
 
-    if wu_palmer_attributes:
-        task_data.add_task_log_entry(
-            f"Queued Wu-Palmer pipeline for attributes: {wu_palmer_attributes}"
-        )
-        task_data.data[f"{WU_PALMER_PLUGIN}_attributes"] = "\n".join(wu_palmer_attributes)
-        pipeline_queue.append(WU_PALMER_PLUGIN)
-        total_plugins += 4  # (Wu-Palmer, Transformers, Aggregator, MDS)
-
-    if mapping_attributes:
-        task_data.add_task_log_entry(
-            f"Queued distances mapping pipeline for attributes: {mapping_attributes}"
-        )
-        task_data.data[f"{MAPPING_PLUGIN}_attributes"] = "\n".join(mapping_attributes)
-        pipeline_queue.append(MAPPING_PLUGIN)
-        total_plugins += 3  # (Mapping, Aggregator, MDS)
-
-    if numeric_mapping_attributes:
-        task_data.add_task_log_entry(
-            "Queued numeric mapping pipeline for multi-valued numeric attributes: "
-            f"{numeric_mapping_attributes}"
-        )
-        task_data.data[f"{NUMERIC_MAPPING_PIPELINE}_attributes"] = "\n".join(
-            numeric_mapping_attributes
-        )
-        pipeline_queue.append(NUMERIC_MAPPING_PIPELINE)
-        total_plugins += 3  # (Mapping, Aggregator, MDS)
-
-    if feature_vector_attributes:
-        task_data.add_task_log_entry(
-            "Queued feature vector for single-valued numeric attributes: "
-            f"{feature_vector_attributes}"
-        )
-        task_data.data[f"{FEATURE_VECTOR}_attributes"] = "\n".join(
-            feature_vector_attributes
-        )
-        pipeline_queue.append(FEATURE_VECTOR)
-        total_plugins += 1  # (feature vector)
-
-    if one_hot_attributes:
-        task_data.add_task_log_entry(
-            f"One-Hot encoding not yet supported. Selected One-Hot for attributes: {one_hot_attributes}"
-        )
+    for pipeline, attributes in (
+        (WU_PALMER_PLUGIN, wu_palmer_attributes),
+        (MAPPING_PLUGIN, mapping_attributes),
+        (ONE_HOT_PLUGIN, one_hot_attributes),
+        (NUMERIC_MAPPING_PIPELINE, numeric_mapping_attributes),
+        (FEATURE_VECTOR, feature_vector_attributes),
+    ):
+        if not attributes:
+            continue
+        groups = _pipeline_groups(pipeline, attributes, base_settings, attribute_settings)
+        for group in groups:
+            message = f"Queued {PIPELINE_LOG_NAMES[pipeline]}: {group['attributes']}"
+            if group["settings"]:
+                message += f" with the attribute settings {group['settings']}"
+            task_data.add_task_log_entry(message)
+        pipeline_queue.extend(groups)
+        total_plugins += PIPELINE_STEP_COUNTS[pipeline] * len(groups)
 
     if none_selected:
         task_data.add_task_log_entry(f"None selected attributes skipped: {none_selected}")
@@ -335,6 +367,7 @@ def handle_webhook_task(self, db_id: int, source_url: str, via: str):
     known_urls = [
         task_data.data.get(f"{WU_PALMER_PLUGIN}_url"),
         task_data.data.get(f"{MAPPING_PLUGIN}_url"),
+        task_data.data.get(f"{ONE_HOT_PLUGIN}_url"),
         task_data.data.get(f"{TRANSFORMERS_PLUGIN}_url"),
         task_data.data.get(f"{AGGREGATOR_PLUGIN}_url"),
         task_data.data.get(f"{MDS_PLUGIN}_url"),
@@ -455,6 +488,9 @@ def handle_webhook_task(self, db_id: int, source_url: str, via: str):
     elif current_pipeline == MAPPING_PLUGIN:
         handle_mapping_progression(task_data, db_id, source_url)
 
+    elif current_pipeline == ONE_HOT_PLUGIN:
+        handle_one_hot_progression(task_data, db_id, source_url)
+
     elif current_pipeline == NUMERIC_MAPPING_PIPELINE:
         handle_mapping_progression(task_data, db_id, source_url)
 
@@ -499,6 +535,16 @@ def handle_mapping_progression(task_data: ProcessingTask, db_id: int, source_url
         finalize_pipeline.apply_async(
             args=[db_id, source_url], countdown=CELERY_COUNTDOWN
         )
+
+
+def handle_one_hot_progression(task_data: ProcessingTask, db_id: int, source_url: str):
+    """
+    Handle progression of the one-hot pipeline. The encoding plugin is the only
+    step, so its completion finalizes the pipeline.
+    """
+
+    if source_url == task_data.data.get(f"{ONE_HOT_PLUGIN}_url"):
+        finalize_one_hot.apply_async(args=[db_id, source_url], countdown=CELERY_COUNTDOWN)
 
 
 def handle_finalize_progression(task_data: ProcessingTask, db_id: int, source_url: str):

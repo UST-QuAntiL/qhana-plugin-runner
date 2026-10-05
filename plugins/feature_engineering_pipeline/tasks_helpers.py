@@ -20,6 +20,7 @@ from zipfile import ZipFile
 import requests
 from celery.utils.log import get_task_logger
 from flask.globals import current_app
+from marshmallow import EXCLUDE
 from requests.exceptions import ConnectionError, Timeout
 
 from qhana_plugin_runner.celery import CELERY
@@ -42,6 +43,7 @@ from .schemas import (
     MAPPING_PLUGIN,
     WU_PALMER_PLUGIN,
     InputParameters,
+    InputParametersSchema,
 )
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -148,6 +150,23 @@ def plugin_process_url(task_data: ProcessingTask, plugin: str) -> str:
     the plugin's processing endpoint.
     """
     return get_plugin_endpoint(task_data.data["plugin_urls"][plugin])
+
+
+def load_params(task_data: ProcessingTask) -> InputParameters:
+    """Return the input parameters that apply to the running pipeline group.
+
+    A group carries the settings it overrides, see ``start_routing_task``.
+    """
+    parameters = json.loads(task_data.parameters or "{}")
+    parameters.update(task_data.data.get("current_settings", {}))
+    return InputParametersSchema(unknown=EXCLUDE).load(parameters)
+
+
+def pipeline_label(task_data: ProcessingTask) -> str:
+    """Return the label of the running pipeline group, used in its result file names."""
+    return task_data.data.get("current_pipeline_label") or task_data.data.get(
+        "current_pipeline", "unknown"
+    )
 
 
 def load_task(db_id: int) -> ProcessingTask:
@@ -323,10 +342,12 @@ def run_pipeline_step(
         )
 
 
-def should_store_mds_output(params: InputParameters) -> bool:
+def should_store_pipeline_vectors(params: InputParameters) -> bool:
     """
-    Returns true if the MDS output should be stored or
-    the output should be concatenated and the intermediate results shall be included.
+    Returns true if the feature vectors of a single pipeline are stored as a task result.
+
+    Without concatenation the per-pipeline vectors are the only result of the run. With
+    concatenation they are stored only if intermediate results are included in the output.
     """
     if params.concat_output:
         return params.include_intermediate_results_in_output
