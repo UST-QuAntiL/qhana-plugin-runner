@@ -147,11 +147,16 @@ limitations under the License.
     .attribute-settings .settings-section:last-child {
         margin-bottom: 0.4rem;
     }
+
+    #pca-settings {
+        margin-top: 1rem;
+    }
 </style>
 {% endblock head %}
 
 {% block content %}
 <div class="qhana-microfrontend">
+    {% call forms.render_form(target="microfrontend") %}
     {% if input_params %}
     <fieldset class="input-params">
         <legend>Selected inputs (from step 1)</legend>
@@ -197,7 +202,6 @@ limitations under the License.
         </dl>
     </fieldset>
 
-    {% call forms.render_form(target="microfrontend") %}
     {% if attributes %}
     <fieldset>
         <legend>Taxonomy Attributes</legend>
@@ -304,6 +308,16 @@ limitations under the License.
     <p>No numeric attributes were found in the provided metadata.</p>
     {% endif %}
 
+    <fieldset id="pca-settings">
+        <legend>PCA Settings</legend>
+        {% if concat_output %}
+        {{ forms.render_fields(pca_schema, values=values, errors=errors) }}
+        {% else %}
+        <p>PCA reduces the dimensions of the concatenated vector. Enable "Concat output" in the
+            first step to reduce them.</p>
+        {% endif %}
+    </fieldset>
+
     <div class="qhana-form-buttons">
         {{ forms.submit("validate", target="microfrontend")}}
         {{ forms.submit("submit", action=process)}}
@@ -336,5 +350,25 @@ limitations under the License.
             window.requestAnimationFrame(reportContentHeight);
         });
     });
+</script>
+
+<script>
+    const reduceDimensions = document.getElementById("reduce_dimensions");
+
+    function togglePcaFields() {
+        const reduceField = reduceDimensions.closest(".qhana-form-field");
+        document.querySelectorAll("#pca-settings .qhana-form-field").forEach(field => {
+            if (field !== reduceField) {
+                field.hidden = !reduceDimensions.checked;
+            }
+        });
+        window.requestAnimationFrame(reportContentHeight);
+    }
+
+    // the section is only rendered for a concatenated output
+    if (reduceDimensions != null) {
+        reduceDimensions.addEventListener("change", togglePcaFields);
+        togglePcaFields();
+    }
 </script>
 {% endblock script %}

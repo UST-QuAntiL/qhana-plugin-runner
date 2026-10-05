@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from http import HTTPStatus
-from json import loads
+from json import dumps, loads
 from typing import Mapping
 
 from celery.canvas import chain
@@ -41,13 +41,13 @@ from . import FEATURE_ENGINEERING_PIPELINE_BLP, FeatureEngineeringPipeline
 from .schemas import (
     MAPPING_PLUGIN,
     NUMERIC_SETTINGS_GROUPS,
-    PCA_PLUGIN,
     PIPELINE_OPTIONS,
     PIPELINE_PLUGINS,
     PIPELINE_SETTINGS_GROUPS,
     VECTOR_CONCAT_PLUGIN,
     InputParametersSchema,
     MetricEnum,
+    PCAParametersSchema,
     PCATypeEnum,
     RoutingStepParametersSchema,
     SolverEnum,
@@ -79,18 +79,6 @@ INPUT_FIELD_GROUPS = (
         VECTOR_CONCAT_PLUGIN,
         "Vector Concatenation Settings",
         ("concat_output", "output_format"),
-    ),
-    (
-        PCA_PLUGIN,
-        "PCA Settings",
-        (
-            "reduce_dimensions",
-            "pca_type",
-            "pca_dimensions",
-            "solver",
-            "tol",
-            "iterated_power",
-        ),
     ),
 )
 
@@ -265,11 +253,6 @@ class MicroFrontend(MethodView):
             fields["metric"].data_key: MetricEnum.metric_mds,
             fields["n_init"].data_key: 4,
             fields["max_iter"].data_key: 300,
-            fields["pca_type"].data_key: PCATypeEnum.normal,
-            fields["pca_dimensions"].data_key: 1,
-            fields["solver"].data_key: SolverEnum.auto,
-            fields["tol"].data_key: 0,
-            fields["iterated_power"].data_key: 0,
         }
 
         default_values.update(data_dict)
@@ -378,6 +361,19 @@ class RoutingStepFrontend(MethodView):
         )
         recommendations = db_task.data.get("recommendations", {})
         input_params = loads(db_task.parameters or "{}")
+        input_fields = InputParametersSchema().fields
+        pca_fields = PCAParametersSchema().fields
+
+        # The submitted form wins over the defaults, an unchecked checkbox is
+        # absent from it and falls back to the default.
+        values = {
+            pca_fields["pca_type"].data_key: PCATypeEnum.normal.name,
+            pca_fields["pca_dimensions"].data_key: 1,
+            pca_fields["solver"].data_key: SolverEnum.auto.name,
+            pca_fields["tol"].data_key: 0,
+            pca_fields["iterated_power"].data_key: 0,
+        }
+        values.update(data)
 
         # A multi-valued numeric attribute runs the distances mapping, so it carries
         # the settings of that pipeline. A single-valued one has no settings yet.
@@ -412,6 +408,7 @@ class RoutingStepFrontend(MethodView):
                 name=FeatureEngineeringPipeline.instance.name,
                 version=FeatureEngineeringPipeline.instance.version,
                 schema=RoutingStepParametersSchema(),
+                pca_schema=PCAParametersSchema(),
                 attributes=attributes,
                 numeric_attributes=numeric_attributes,
                 multi_valued_numeric=multi_valued_numeric,
@@ -423,7 +420,10 @@ class RoutingStepFrontend(MethodView):
                 input_params=input_params,
                 settings_values=settings_values,
                 settings_errors=settings_errors,
-                values=data,
+                concat_output=bool(
+                    input_params.get(input_fields["concat_output"].data_key)
+                ),
+                values=values,
                 valid=valid,
                 errors=errors,
                 process=url_for(
@@ -459,6 +459,14 @@ class RoutingStepView(MethodView):
         db_task.data["attribute_settings"] = {
             attribute: load_settings(raw) for attribute, raw in submitted_settings.items()
         }
+
+        # The PCA settings are part of the input parameters, the pipeline tasks
+        # read them from there. The form only offers them for a concatenated
+        # output, so without concatenation the defaults of the first step stay.
+        input_params = loads(db_task.parameters or "{}")
+        if input_params.get(InputParametersSchema().fields["concat_output"].data_key):
+            input_params.update(PCAParametersSchema().dump(arguments))
+            db_task.parameters = dumps(input_params)
 
         db_task.data["webhook_url"] = url_for(
             f"{FEATURE_ENGINEERING_PIPELINE_BLP.name}.WebhookView",
