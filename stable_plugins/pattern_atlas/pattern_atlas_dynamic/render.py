@@ -138,8 +138,7 @@ class ExtractImageLinksParser(HTMLParser):
 
 
 class DynamicRender:
-    def __init__(self, is_planqk: bool = False) -> None:
-        self.is_planqk = is_planqk
+    def __init__(self) -> None:
         self._resource_map: dict[str, str] = {"": "/ui/assets/empty.svg"}
         self._resource_bytes: dict[str, bytes] = {}
         self._jinja = Environment(
@@ -190,7 +189,8 @@ class DynamicRender:
     def render_index(self, atlas: PatternAtlasContent) -> str:
         template = self._jinja.get_template("languages.jinja2")
         return template.render(
-            atlas=atlas, base_url=f"/plugins/{PA_BLP.name}/ui", is_planqk=self.is_planqk
+            atlas=atlas, 
+            base_url=f"/plugins/{PA_BLP.name}/ui",
         )
 
     def render_language_overview(
@@ -202,7 +202,6 @@ class DynamicRender:
             patterns=all_patterns,
             base_url=f"/plugins/{PA_BLP.name}/ui",
             language=language,
-            is_planqk=self.is_planqk,
         )
 
     def render_language_overview_categorized(
@@ -218,7 +217,6 @@ class DynamicRender:
             patterns_by_category=patterns_by_category,
             base_url=f"/plugins/{PA_BLP.name}/ui",
             language=language,
-            is_planqk=self.is_planqk,
         )
 
     def render_language_overview_reverse(
@@ -231,7 +229,6 @@ class DynamicRender:
             patterns=all_patterns,
             base_url=f"/plugins/{PA_BLP.name}/ui",
             language=language,
-            is_planqk=self.is_planqk,
         )
 
     def render_pattern_graph(
@@ -246,7 +243,6 @@ class DynamicRender:
             patterns=all_patterns,
             base_url=f"/plugins/{PA_BLP.name}/ui",
             language=language,
-            is_plank=self.is_planqk,
         )
 
     def render_pattern(
@@ -263,5 +259,4 @@ class DynamicRender:
             base_url=f"/plugins/{PA_BLP.name}/ui",
             pattern=pattern,
             language=language,
-            is_planqk=self.is_planqk,
         )
