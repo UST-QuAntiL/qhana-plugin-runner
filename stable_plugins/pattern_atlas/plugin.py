@@ -25,7 +25,4 @@ class PatternAtlas(QHAnaPluginBase):
     def get_requirements(self):
         return """\
 httpx~=0.25.0
-jinja2~=3.1.2
-mistune~=3.0.0
-markupsafe~=2.1.3
 """
