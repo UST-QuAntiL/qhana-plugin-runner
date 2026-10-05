@@ -68,6 +68,10 @@ limitations under the License.
         margin: 0 0 0.5rem 0;
         word-break: break-all;
     }
+
+    .dimension-estimate {
+        margin: 0.5rem 0;
+    }
 </style>
 {% endblock head %}
 
@@ -126,7 +130,8 @@ limitations under the License.
                 <span class="attribute-name">{{attr}}</span>
                 <span class="value-count">{% if attr in multi_valued_numeric %}multi-valued{% else %}single-valued{% endif %}</span>
                 <input type="checkbox" name="{{field_name}}" id="{{field_name}}" value="numeric"
-                    autocomplete="off" {% if values.get(field_name) == "numeric" %}checked{% endif %}>
+                    autocomplete="off" data-multi-valued="{{ 'true' if attr in multi_valued_numeric else 'false' }}"
+                    {% if values.get(field_name) == "numeric" %}checked{% endif %}>
             </label>
             {%- endfor -%}
         </div>
@@ -134,6 +139,20 @@ limitations under the License.
     {% else %}
     <p>No numeric attributes were found in the provided metadata.</p>
     {% endif %}
+
+    <fieldset id="pca-settings">
+        <legend>PCA Settings</legend>
+        {% if concat_output %}
+        <p class="dimension-estimate">Estimated dimensions of the concatenated vector for the
+            current selection: <strong id="estimated-dimensions">0</strong></p>
+        {{ forms.render_fields(pca_schema, values=values, errors=errors) }}
+        <p id="pca-skip-hint" class="qhana-error-message" hidden>The PCA step is skipped as long as
+            the requested dimensions are not below the dimensions of the concatenated vector.</p>
+        {% else %}
+        <p>PCA reduces the dimensions of the concatenated vector. Enable "Concat output" in the
+            first step to reduce them.</p>
+        {% endif %}
+    </fieldset>
 
     <div class="qhana-form-buttons">
         {{ forms.submit("validate", target="microfrontend")}}
@@ -145,3 +164,71 @@ limitations under the License.
     {% endcall %}
 </div>
 {% endblock content %}
+
+{% block script %}
+{{ super() }}
+{% include "content_height.html" %}
+
+<script>
+    const mdsDimensions = {{ mds_dimensions | default(0, true) | int }};
+    const mdsPipelineOptions = {{ mds_pipeline_options | tojson }};
+    // marks the pipeline that turns all checked multi-valued numeric attributes into one vector
+    const NUMERIC_MAPPING = "numeric-mapping";
+
+    const estimatedDimensions = document.getElementById("estimated-dimensions");
+    const skipHint = document.getElementById("pca-skip-hint");
+    const reduceDimensions = document.getElementById("reduce_dimensions");
+    const pcaDimensions = document.getElementById("pca_dimensions");
+
+    // Every pipeline ends in one MDS run that produces ``mdsDimensions`` dimensions,
+    // a checked single-valued numeric attribute adds one dimension.
+    function estimateDimensions() {
+        const pipelines = new Set();
+        let dimensions = 0;
+        document.querySelectorAll("select[name^='pipeline_']").forEach(select => {
+            if (mdsPipelineOptions.includes(select.value)) {
+                pipelines.add(select.value);
+            }
+        });
+        document.querySelectorAll("input[type=checkbox][name^='pipeline_']").forEach(checkbox => {
+            if (!checkbox.checked) {
+                return;
+            }
+            if (checkbox.dataset.multiValued === "true") {
+                pipelines.add(NUMERIC_MAPPING);
+            } else {
+                dimensions += 1;
+            }
+        });
+        return dimensions + pipelines.size * mdsDimensions;
+    }
+
+    function togglePcaFields() {
+        const reduceField = reduceDimensions.closest(".qhana-form-field");
+        document.querySelectorAll("#pca-settings .qhana-form-field").forEach(field => {
+            if (field !== reduceField) {
+                field.hidden = !reduceDimensions.checked;
+            }
+        });
+    }
+
+    function updatePcaSettings() {
+        const dimensions = estimateDimensions();
+        estimatedDimensions.textContent = dimensions;
+        const requested = parseInt(pcaDimensions.value, 10);
+        skipHint.hidden = !(reduceDimensions.checked && requested > 0 && requested >= dimensions);
+        togglePcaFields();
+        window.requestAnimationFrame(reportContentHeight);
+    }
+
+    // the section is only rendered for a concatenated output
+    if (reduceDimensions != null) {
+        document.querySelectorAll("[name^='pipeline_']").forEach(input => {
+            input.addEventListener("change", updatePcaSettings);
+        });
+        reduceDimensions.addEventListener("change", updatePcaSettings);
+        pcaDimensions.addEventListener("input", updatePcaSettings);
+        updatePcaSettings();
+    }
+</script>
+{% endblock script %}

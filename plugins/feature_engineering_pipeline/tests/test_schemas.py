@@ -31,6 +31,7 @@ from feature_engineering_pipeline.schemas import (
     InputParametersSchema,
     MetricEnum,
     MissingDataHandling,
+    PCAParametersSchema,
     PCATypeEnum,
     RoutingStepParametersSchema,
     SolverEnum,
@@ -118,7 +119,6 @@ def test_missing_required_fields_rejected():
     assert "transformer" in exc.value.messages
     assert "distanceMetric" in exc.value.messages
     assert "mdsDimensions" in exc.value.messages
-    assert "pcaDimensions" in exc.value.messages
 
 
 @pytest.mark.parametrize(
@@ -201,7 +201,26 @@ def test_frontend_validation_reports_cross_field_error():
 def test_all_schema_fields_are_rendered():
     """A field missing from the groups would never show up in the form."""
     rendered = {field for _, fields, _ in INPUT_FIELD_GROUPS for field in fields}
-    assert rendered == set(InputParametersSchema().fields)
+    pca_fields = set(PCAParametersSchema().fields)
+    # The PCA fields are rendered in the routing step, not in the first step.
+    assert rendered == set(InputParametersSchema().fields) - pca_fields
+    assert pca_fields <= set(RoutingStepParametersSchema().fields)
+
+
+def test_pca_fields_default_without_the_routing_step():
+    """The first step no longer submits them, so the defaults have to hold."""
+    payload = router_payload()
+    for field in PCAParametersSchema().fields.values():
+        payload.pop(field.data_key, None)
+
+    result = InputParametersSchema().load(payload)
+
+    assert result.reduce_dimensions is False
+    assert result.pca_type is PCATypeEnum.normal
+    assert result.pca_dimensions == 1
+    assert result.solver is SolverEnum.auto
+    assert result.tol == 0
+    assert result.iterated_power == 0
 
 
 # --- ROUTING STEP ---
@@ -235,7 +254,76 @@ def test_routing_step_accepts_a_numeric_attribute_as_the_only_selection():
     result = RoutingStepParametersSchema(unknown=EXCLUDE).load(
         {"pipeline_genre": NONE_PLUGIN, "pipeline_year": INCLUDE_NUMERIC}
     )
-    assert result == {"pipeline_genre": NONE_PLUGIN, "pipeline_year": INCLUDE_NUMERIC}
+    assert result["pipeline_genre"] == NONE_PLUGIN
+    assert result["pipeline_year"] == INCLUDE_NUMERIC
+
+
+def test_routing_step_loads_the_pca_settings():
+    result = RoutingStepParametersSchema(unknown=EXCLUDE).load(
+        {
+            "pipeline_genre": WU_PALMER_PLUGIN,
+            "reduceDimensions": True,
+            "pcaType": "kernel",
+            "pcaDimensions": 3,
+            "solver": "full",
+            "tol": 0.5,
+            "iteratedPower": 7,
+        }
+    )
+    assert result["reduce_dimensions"] is True
+    assert result["pca_type"] is PCATypeEnum.kernel
+    assert result["pca_dimensions"] == 3
+    assert result["solver"] is SolverEnum.full
+    assert result["tol"] == 0.5
+    assert result["iterated_power"] == 7
+
+
+def test_routing_step_defaults_the_pca_settings():
+    """The form omits the PCA section when the vectors are not concatenated."""
+    result = RoutingStepParametersSchema(unknown=EXCLUDE).load(
+        {"pipeline_genre": WU_PALMER_PLUGIN}
+    )
+    assert result["reduce_dimensions"] is False
+    assert result["pca_type"] is PCATypeEnum.normal
+    assert result["pca_dimensions"] == 1
+
+
+def test_routing_step_rejects_an_invalid_pca_setting():
+    with pytest.raises(ValidationError) as exc:
+        RoutingStepParametersSchema(unknown=EXCLUDE).load(
+            {"pipeline_genre": WU_PALMER_PLUGIN, "pcaType": "Bogus"}
+        )
+    assert "pcaType" in exc.value.messages
+
+
+def test_routing_step_pca_settings_are_no_attribute_selection():
+    """Only a pipeline field counts, a PCA value alone computes nothing."""
+    with pytest.raises(ValidationError):
+        RoutingStepParametersSchema(unknown=EXCLUDE).load(
+            {"pipeline_genre": NONE_PLUGIN, "pcaType": "kernel"}
+        )
+
+
+def test_routing_step_pca_settings_dump_as_input_parameters():
+    """The routing step view merges them into the stored input parameters."""
+    loaded = RoutingStepParametersSchema(unknown=EXCLUDE).load(
+        {
+            "pipeline_genre": WU_PALMER_PLUGIN,
+            "reduceDimensions": True,
+            "pcaType": "sparse",
+        }
+    )
+
+    dumped = PCAParametersSchema().dump(loaded)
+
+    assert dumped == {
+        "reduceDimensions": True,
+        "pcaType": "sparse",
+        "pcaDimensions": 1,
+        "solver": "auto",
+        "tol": 0.0,
+        "iteratedPower": 0,
+    }
 
 
 def test_routing_step_rejects_unknown_field():

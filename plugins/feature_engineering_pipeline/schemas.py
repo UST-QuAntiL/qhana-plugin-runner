@@ -59,6 +59,12 @@ PIPELINE_OPTIONS = {
     MAPPING_PLUGIN: "Mapping",
 }
 
+# Options that run their own MDS. Each of them adds ``mds_dimensions``
+# dimensions to the concatenated vector, the multi-valued numeric attributes add
+# another ``mds_dimensions`` through the numeric mapping pipeline and every
+# single-valued numeric attribute adds one dimension.
+MDS_PIPELINE_OPTIONS = (WU_PALMER_PLUGIN, MAPPING_PLUGIN)
+
 # Value submitted by a checked numeric attribute checkbox in the routing step.
 # The server picks the pipeline from the attribute metadata.
 INCLUDE_NUMERIC = "numeric"
@@ -172,7 +178,83 @@ class InputParameters:
         self.iterated_power = iterated_power
 
 
-class InputParametersSchema(FrontendFormBaseSchema):
+class PCAParametersSchema(FrontendFormBaseSchema):
+    """PCA settings of the routing step.
+
+    The number of dimensions of the concatenated vector follows from the
+    attribute selection, so these fields are rendered in the routing step and
+    merged into the input parameters when that step is submitted. Every field
+    has a default because the routing step omits the whole section when the
+    pipeline outputs are not concatenated.
+    """
+
+    reduce_dimensions = ma.fields.Boolean(
+        required=False,
+        load_default=False,
+        metadata={
+            "label": "Reduce dimensions with PCA",
+            "description": "If checked, the dimensions of the concatenated vector will be reduced.",
+            "input_type": "checkbox",
+        },
+    )
+
+    pca_type = EnumField(
+        PCATypeEnum,
+        load_default=PCATypeEnum.normal,
+        allow_none=False,
+        metadata={
+            "label": "PCA Type",
+            "description": "Type of PCA that will be executed.",
+            "input_type": "select",
+        },
+    )
+
+    pca_dimensions = ma.fields.Integer(
+        load_default=1,
+        allow_none=False,
+        metadata={
+            "label": "Dimensions",
+            "description": "Number of dimensions k that the output will have."
+            "\nFor k <= 0, normal PCA will guess k and all other PCA types will take max k.",
+            "input_type": "number",
+        },
+    )
+
+    solver = EnumField(
+        SolverEnum,
+        load_default=SolverEnum.auto,
+        allow_none=False,
+        metadata={
+            "label": "Solver",
+            "description": "Type of PCA solver that will be used.",
+            "input_type": "select",
+        },
+    )
+
+    tol = ma.fields.Float(
+        load_default=0.0,
+        allow_none=False,
+        metadata={
+            "label": "Error Tolerance",
+            "description": "Tolerance (tol) for the stopping condition of arpack and of sparse PCA. \n"
+            "If tol <= 0, then arpack will choose the optimal value automatically and for sparse PCA, it gets set to 1e-8.",
+            "input_type": "number",
+        },
+    )
+
+    iterated_power = ma.fields.Integer(
+        load_default=0,
+        allow_none=False,
+        metadata={
+            "label": "Iterated Power",
+            "description": "This sets the iterated power parameter for the randomized solver. \n"
+            "If it is set to <= 0, the iterated power will be chosen automatically.",
+            "input_type": "number",
+        },
+    )
+
+
+class InputParametersSchema(PCAParametersSchema):
     # Base Inputs
     entities_url = FileUrl(
         required=True,
@@ -334,7 +416,8 @@ class InputParametersSchema(FrontendFormBaseSchema):
         load_default=False,
         metadata={
             "label": "Concat output",
-            "description": "If checked, the MDS output of all pipelines will be concatenated to one vector.",
+            "description": "If checked, the MDS output of all pipelines will be concatenated to one vector. "
+            "The PCA settings for that vector are part of the attribute selection step.",
             "input_type": "checkbox",
         },
     )
@@ -354,74 +437,6 @@ class InputParametersSchema(FrontendFormBaseSchema):
         },
     )
 
-    reduce_dimensions = ma.fields.Boolean(
-        required=False,
-        load_default=False,
-        metadata={
-            "label": "Reduce dimensions with PCA",
-            "description": "If checked, the dimensions of the concatenated vector will be reduced.",
-            "input_type": "checkbox",
-        },
-    )
-
-    # The parameters from here are required, but only used if ``reduce_dimensions`` is True.
-    # Should be changed probably.
-
-    pca_type = EnumField(
-        PCATypeEnum,
-        required=True,
-        allow_none=False,
-        metadata={
-            "label": "PCA Type",
-            "description": "Type of PCA that will be executed.",
-            "input_type": "select",
-        },
-    )
-
-    pca_dimensions = ma.fields.Integer(
-        required=True,
-        allow_none=False,
-        metadata={
-            "label": "Dimensions",
-            "description": "Number of dimensions k that the output will have."
-            "\nFor k <= 0, normal PCA will guess k and all other PCA types will take max k.",
-            "input_type": "number",
-        },
-    )
-
-    solver = EnumField(
-        SolverEnum,
-        required=True,
-        allow_none=False,
-        metadata={
-            "label": "Solver",
-            "description": "Type of PCA solver that will be used.",
-            "input_type": "select",
-        },
-    )
-
-    tol = ma.fields.Float(
-        required=True,
-        allow_none=False,
-        metadata={
-            "label": "Error Tolerance",
-            "description": "Tolerance (tol) for the stopping condition of arpack and of sparse PCA. \n"
-            "If tol <= 0, then arpack will choose the optimal value automatically and for sparse PCA, it gets set to 1e-8.",
-            "input_type": "number",
-        },
-    )
-
-    iterated_power = ma.fields.Integer(
-        required=True,
-        allow_none=False,
-        metadata={
-            "label": "Iterated Power",
-            "description": "This sets the iterated power parameter for the randomized solver. \n"
-            "If it is set to <= 0, the iterated power will be chosen automatically.",
-            "input_type": "number",
-        },
-    )
-
     @ma.validates_schema
     def validate_pca_requires_concat(self, data, **kwargs):
         # PCA only ever runs on the concatenated vector, so reducing without
@@ -438,20 +453,26 @@ class InputParametersSchema(FrontendFormBaseSchema):
         return InputParameters(**data)
 
 
-class RoutingStepParametersSchema(FrontendFormBaseSchema):
+class RoutingStepParametersSchema(PCAParametersSchema):
     """Second step schema.
 
     The form renders one dropdown per taxonomy attribute and one checkbox per
     numeric attribute, both with the field name ``pipeline_<attribute>``. The
     attributes are only known at runtime, so the fields are accepted dynamically
-    instead of being declared statically.
+    instead of being declared statically. The inherited PCA settings are part of
+    this step because the number of dimensions to reduce only follows from the
+    attribute selection.
     """
 
     @ma.validates_schema(pass_original=True)
     def validate_entries(self, data, original_data, **kwargs):
         allowed_values = [*PIPELINE_OPTIONS, INCLUDE_NUMERIC]
+        declared_keys = {field.data_key for field in self.fields.values()}
         errors = {}
+        selections = []
         for key in original_data:
+            if key in declared_keys:
+                continue
             if not key.startswith(PIPELINE_FIELD_PREFIX):
                 errors[key] = [
                     f"Unexpected field '{key}', only "
@@ -459,6 +480,7 @@ class RoutingStepParametersSchema(FrontendFormBaseSchema):
                 ]
                 continue
             value = original_data[key]
+            selections.append(value)
             if value and value not in allowed_values:
                 errors[key] = [f"'{value}' is not one of {allowed_values}."]
         if errors:
@@ -468,7 +490,7 @@ class RoutingStepParametersSchema(FrontendFormBaseSchema):
         if self.partial:
             return
         # A checked numeric attribute counts as a selection.
-        if not any(value and value != NONE_PLUGIN for value in original_data.values()):
+        if not any(value and value != NONE_PLUGIN for value in selections):
             raise ma.ValidationError(
                 "Select a pipeline or a numeric attribute for at least one attribute, "
                 "otherwise there is nothing to compute."

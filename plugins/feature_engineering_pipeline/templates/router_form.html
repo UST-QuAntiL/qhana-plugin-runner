@@ -63,68 +63,14 @@ limitations under the License.
 
 {% block script %}
 {{ super() }}
+{% include "content_height.html" %}
 
 <script>
-    // the shared height monitor measures the document element, which never shrinks below the
-    // iframe height, so collapsing a section needs an explicitly measured content height
-    function reportContentHeight() {
-        const bodyStyle = window.getComputedStyle(document.body);
-        const height = Math.ceil(
-            document.body.getBoundingClientRect().height
-            + parseFloat(bodyStyle.marginTop)
-            + parseFloat(bodyStyle.marginBottom)
-        );
-        const state = window._qhana_microfrontend_state;
-        if (state != null) {
-            state.height = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
-        }
-        sendMessage({ type: "ui-resize", height: height });
-    }
-
     // resize the window if a section is toggled
     document.querySelectorAll("details.router-section").forEach(section => {
         section.addEventListener("toggle", () => {
             window.requestAnimationFrame(reportContentHeight);
         });
     });
-
-    const concatOutput = document.getElementById("concat_output");
-    const reduceDimensions = document.getElementById("reduce_dimensions");
-    if (concatOutput != null) {
-        const concatSection = concatOutput.closest("details.router-section");
-        const pcaSection = concatSection?.nextElementSibling;
-
-        function openPcaSettings() {
-            if (concatOutput.checked && pcaSection?.matches("details.router-section")) {
-                pcaSection.open = true;
-            }
-        }
-
-        function togglePcaFields() {
-            if (pcaSection == null || reduceDimensions == null) {
-                return;
-            }
-
-            const reduceDimensionsField = reduceDimensions.closest(".qhana-form-field");
-            pcaSection.querySelectorAll(".qhana-form-field").forEach(field => {
-                if (field !== reduceDimensionsField) {
-                    field.hidden = !reduceDimensions.checked;
-                }
-            });
-
-            window.requestAnimationFrame(reportContentHeight);
-        }
-
-        concatOutput.addEventListener("change", () => {
-            if (!concatOutput.checked && reduceDimensions != null) {
-                reduceDimensions.checked = false;
-            }
-            openPcaSettings();
-            togglePcaFields();
-        });
-        reduceDimensions?.addEventListener("change", togglePcaFields);
-        openPcaSettings();
-        togglePcaFields();
-    }
 </script>
 {% endblock script %}
