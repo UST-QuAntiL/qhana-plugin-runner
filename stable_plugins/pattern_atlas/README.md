@@ -4,3 +4,4 @@
 2. Start the plugin-runner using:
    ```bash
    poetry run flask run
+   ```
