@@ -1,8 +1,2 @@
-from . import plugin
+from . import plugin, routes, pattern_atlas_dynamic
 
-try:
-    from . import routes, pattern_atlas_dynamic
-except ImportError as err:
-    import traceback
-
-    traceback.print_exception(err)
