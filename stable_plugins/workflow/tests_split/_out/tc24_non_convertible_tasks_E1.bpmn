@@ -1,0 +1,82 @@
+<?xml version='1.0' encoding='utf-8'?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc24_non_convertible_tasks" targetNamespace="http://qhana.example/testcases">
+  <bpmn:process id="tc24_non_convertible_tasks_E1" name="Extracted Fragment E1" isExecutable="true" camunda:historyTimeToLive="180">
+    <bpmn:startEvent id="StartEvent_1" name="Start">
+      <bpmn:outgoing>Flow_E1_start</bpmn:outgoing>
+    </bpmn:startEvent>
+    <qhana:qHAnaServiceTask id="QHanaTask_Prepare" name="prepare-data">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaName">prepare-data</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.seed">input-seed</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.preparedData">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_E1_start</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </qhana:qHAnaServiceTask>
+    <bpmn:serviceTask id="ServiceTask_Unknown" name="Unknown External Service" camunda:type="external" camunda:topic="missing-plugin-topic">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qinput.value">${qoutput.preparedData}</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.unknownResult">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <qhana:qHAnaServiceTask id="QHanaTask_Finalize" name="finalize-data">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaName">finalize-data</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.data">${qoutput.unknownResult}</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.finalData">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+    </qhana:qHAnaServiceTask>
+    <bpmn:endEvent id="EndEvent_1" name="End">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_E1_start" sourceRef="StartEvent_1" targetRef="QHanaTask_Prepare" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="QHanaTask_Prepare" targetRef="ServiceTask_Unknown" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="ServiceTask_Unknown" targetRef="QHanaTask_Finalize" />
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="QHanaTask_Finalize" targetRef="EndEvent_1" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_tc24_non_convertible_tasks_E1">
+    <bpmndi:BPMNPlane id="BPMNPlane_tc24_non_convertible_tasks_E1" bpmnElement="tc24_non_convertible_tasks_E1">
+      <bpmndi:BPMNShape id="QHanaTask_Prepare_di" bpmnElement="QHanaTask_Prepare">
+        <dc:Bounds x="160" y="168" width="180" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ServiceTask_Unknown_di" bpmnElement="ServiceTask_Unknown">
+        <dc:Bounds x="410" y="168" width="190" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="QHanaTask_Finalize_di" bpmnElement="QHanaTask_Finalize">
+        <dc:Bounds x="670" y="168" width="180" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="920" y="190" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="80" y="190" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="340" y="208" />
+        <di:waypoint x="410" y="208" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
+        <di:waypoint x="600" y="208" />
+        <di:waypoint x="670" y="208" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4">
+        <di:waypoint x="850" y="208" />
+        <di:waypoint x="920" y="208" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E1_start_di" bpmnElement="Flow_E1_start">
+        <di:waypoint x="116" y="208" />
+        <di:waypoint x="160" y="208" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

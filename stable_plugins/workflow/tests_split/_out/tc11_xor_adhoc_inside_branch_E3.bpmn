@@ -1,0 +1,45 @@
+<?xml version='1.0' encoding='utf-8'?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc11_xor_adhoc_inside_branch" targetNamespace="http://qhana.example/testcases">
+  <bpmn:process id="tc11_xor_adhoc_inside_branch_E3" name="Extracted Fragment E3" isExecutable="true" camunda:historyTimeToLive="180">
+    <bpmn:startEvent id="StartEvent_E3" name="Start">
+      <bpmn:outgoing>Flow_E3_start</bpmn:outgoing>
+    </bpmn:startEvent>
+    <qhana:qHAnaServiceTask id="QHanaTask_ApplyWarnings" name="apply-warnings">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaName">apply-warnings</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.meta">${qoutput.contentMeta}</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.moderationResult">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_E3_start</bpmn:incoming>
+      <bpmn:outgoing>Flow_E3_end</bpmn:outgoing>
+    </qhana:qHAnaServiceTask>
+    <bpmn:endEvent id="EndEvent_E3" name="End">
+      <bpmn:incoming>Flow_E3_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_E3_start" sourceRef="StartEvent_E3" targetRef="QHanaTask_ApplyWarnings" />
+    <bpmn:sequenceFlow id="Flow_E3_end" sourceRef="QHanaTask_ApplyWarnings" targetRef="EndEvent_E3" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_tc11_xor_adhoc_inside_branch_E3">
+    <bpmndi:BPMNPlane id="BPMNPlane_tc11_xor_adhoc_inside_branch_E3" bpmnElement="tc11_xor_adhoc_inside_branch_E3">
+      <bpmndi:BPMNShape id="QHanaTask_ApplyWarnings_di" bpmnElement="QHanaTask_ApplyWarnings">
+        <dc:Bounds x="1200" y="160" width="170" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_E3_di" bpmnElement="StartEvent_E3">
+        <dc:Bounds x="1120" y="182" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_E3_di" bpmnElement="EndEvent_E3">
+        <dc:Bounds x="1420" y="182" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_E3_start_di" bpmnElement="Flow_E3_start">
+        <di:waypoint x="1156" y="200" />
+        <di:waypoint x="1200" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E3_end_di" bpmnElement="Flow_E3_end">
+        <di:waypoint x="1370" y="200" />
+        <di:waypoint x="1420" y="200" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

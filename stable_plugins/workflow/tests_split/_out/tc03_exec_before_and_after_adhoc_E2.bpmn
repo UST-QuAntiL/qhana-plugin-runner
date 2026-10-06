@@ -1,0 +1,64 @@
+<?xml version='1.0' encoding='utf-8'?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc03_exec_before_and_after_adhoc" targetNamespace="http://qhana.example/testcases">
+  <bpmn:process id="tc03_exec_before_and_after_adhoc_E2" name="Extracted Fragment E2" isExecutable="true" camunda:historyTimeToLive="180">
+    <bpmn:startEvent id="StartEvent_E2" name="Start">
+      <bpmn:outgoing>Flow_E2_start</bpmn:outgoing>
+    </bpmn:startEvent>
+    <qhana:qHAnaServiceTask id="QHanaTask_Transform" name="transform-dataset">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaName">transform-dataset</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.dataset">${qoutput.annotatedDataset}</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.transformedDataset">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_E2_start</bpmn:incoming>
+      <bpmn:outgoing>Flow_6</bpmn:outgoing>
+    </qhana:qHAnaServiceTask>
+    <qhana:qHAnaServiceTask id="QHanaTask_Save" name="save-dataset">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaName">save-dataset</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.dataset">${qoutput.transformedDataset}</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.savedDataset">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_6</bpmn:incoming>
+      <bpmn:outgoing>Flow_7</bpmn:outgoing>
+    </qhana:qHAnaServiceTask>
+    <bpmn:endEvent id="EndEvent_1" name="End">
+      <bpmn:incoming>Flow_7</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_E2_start" sourceRef="StartEvent_E2" targetRef="QHanaTask_Transform" />
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="QHanaTask_Transform" targetRef="QHanaTask_Save" />
+    <bpmn:sequenceFlow id="Flow_7" sourceRef="QHanaTask_Save" targetRef="EndEvent_1" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_tc03_exec_before_and_after_adhoc_E2">
+    <bpmndi:BPMNPlane id="BPMNPlane_tc03_exec_before_and_after_adhoc_E2" bpmnElement="tc03_exec_before_and_after_adhoc_E2">
+      <bpmndi:BPMNShape id="QHanaTask_Transform_di" bpmnElement="QHanaTask_Transform">
+        <dc:Bounds x="1290" y="183" width="180" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="QHanaTask_Save_di" bpmnElement="QHanaTask_Save">
+        <dc:Bounds x="1520" y="183" width="180" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="1760" y="205" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_E2_di" bpmnElement="StartEvent_E2">
+        <dc:Bounds x="1210" y="205" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_6_di" bpmnElement="Flow_6">
+        <di:waypoint x="1470" y="223" />
+        <di:waypoint x="1520" y="223" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_7_di" bpmnElement="Flow_7">
+        <di:waypoint x="1700" y="223" />
+        <di:waypoint x="1760" y="223" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E2_start_di" bpmnElement="Flow_E2_start">
+        <di:waypoint x="1246" y="223" />
+        <di:waypoint x="1290" y="223" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

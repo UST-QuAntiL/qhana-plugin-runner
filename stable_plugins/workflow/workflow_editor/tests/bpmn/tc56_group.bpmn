@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+  xmlns:qhana="https://github.com/qhana"
+  id="Definitions_tc56_group"
+  targetNamespace="http://qhana.example/testcases">
+  <bpmn:category id="Cat_Phase"><bpmn:categoryValue id="CatVal_Phase" value="Setup Phase" /></bpmn:category>
+  <bpmn:process id="tc56_group" name="TC56 - Group preserved in main" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_1" name="Start"><bpmn:outgoing>Flow_1</bpmn:outgoing></bpmn:startEvent>
+    <bpmn:serviceTask id="ServiceTask_Prep" name="prepare-data"
+                      camunda:type="external" camunda:topic="qhana-task">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaPlugin">placeholder-prep</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.prepared">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+    </bpmn:serviceTask>
+    <bpmn:adHocSubProcess id="AdHoc_Analyze" name="Analysis Block" ordering="Parallel">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+      <qhana:qHAnaServiceTask id="QHanaTask_Score" name="score">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:outputParameter name="qoutput.score">${output}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </qhana:qHAnaServiceTask>
+    </bpmn:adHocSubProcess>
+    <bpmn:endEvent id="EndEvent_1" name="End"><bpmn:incoming>Flow_3</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="ServiceTask_Prep" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="ServiceTask_Prep" targetRef="AdHoc_Analyze" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="AdHoc_Analyze" targetRef="EndEvent_1" />
+    <bpmn:group id="Group_Setup" categoryValueRef="CatVal_Phase" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="tc56_group">
+      <bpmndi:BPMNShape id="Group_Setup_di" bpmnElement="Group_Setup"><dc:Bounds x="60" y="140" width="280" height="160" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1"><dc:Bounds x="80" y="200" width="36" height="36" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ServiceTask_Prep_di" bpmnElement="ServiceTask_Prep"><dc:Bounds x="180" y="178" width="140" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="AdHoc_Analyze_di" bpmnElement="AdHoc_Analyze" isExpanded="true"><dc:Bounds x="380" y="140" width="200" height="160" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="QHanaTask_Score_di" bpmnElement="QHanaTask_Score"><dc:Bounds x="420" y="180" width="120" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1"><dc:Bounds x="620" y="200" width="36" height="36" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1"><di:waypoint x="116" y="218" /><di:waypoint x="180" y="218" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2"><di:waypoint x="320" y="218" /><di:waypoint x="380" y="218" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3"><di:waypoint x="580" y="218" /><di:waypoint x="620" y="218" /></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
