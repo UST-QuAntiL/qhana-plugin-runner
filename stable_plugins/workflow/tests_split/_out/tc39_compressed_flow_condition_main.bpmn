@@ -1,0 +1,100 @@
+<?xml version='1.0' encoding='utf-8'?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_tc39_compressed_flow_condition" targetNamespace="http://qhana.example/testcases">
+  <bpmn:process id="tc39_compressed_flow_condition_main" name="TC39 - Compressed Flow Condition" isExecutable="true" camunda:versionTag="0.2" camunda:historyTimeToLive="180">
+    <bpmn:startEvent id="StartEvent_1" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:exclusiveGateway id="Gateway_Split" name="Decision Split" default="Flow_Default">
+      <bpmn:outgoing>Flow_Cond</bpmn:outgoing>
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_Default</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:adHocSubProcess id="AdHoc_E1_Wrapper" name="Extracted Fragment E1" qhana:fragmentRef="E1">
+      <bpmn:serviceTask id="ServiceTask_E1_Plugin" name="Extracted Fragment E1" camunda:type="external" camunda:topic="plugin.tc39_compressed_flow_condition_E1" />
+      <bpmn:incoming>Flow_Cond</bpmn:incoming>
+      <bpmn:outgoing>Flow_EndA</bpmn:outgoing>
+    </bpmn:adHocSubProcess>
+    <bpmn:adHocSubProcess id="AdHocSubProcess_Manual" name="Manual Branch" ordering="Parallel">
+      <qhana:qHAnaServiceTask id="QHanaTask_Review" name="review-data">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qhanaName">review-data</camunda:inputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </qhana:qHAnaServiceTask>
+      <bpmn:incoming>Flow_Default</bpmn:incoming>
+      <bpmn:outgoing>Flow_EndB</bpmn:outgoing>
+    </bpmn:adHocSubProcess>
+    <bpmn:exclusiveGateway id="Gateway_Merge" name="Merge">
+      <bpmn:incoming>Flow_EndA</bpmn:incoming>
+      <bpmn:incoming>Flow_EndB</bpmn:incoming>
+      <bpmn:outgoing>Flow_Final</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="EndEvent_1" name="End">
+      <bpmn:incoming>Flow_Final</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_Cond" name="If Urgent" sourceRef="Gateway_Split" targetRef="AdHoc_E1_Wrapper">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${urgent == true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="Gateway_Split" />
+    <bpmn:sequenceFlow id="Flow_Default" name="Default" sourceRef="Gateway_Split" targetRef="AdHocSubProcess_Manual" />
+    <bpmn:sequenceFlow id="Flow_EndA" sourceRef="AdHoc_E1_Wrapper" targetRef="Gateway_Merge" />
+    <bpmn:sequenceFlow id="Flow_EndB" sourceRef="AdHocSubProcess_Manual" targetRef="Gateway_Merge" />
+    <bpmn:sequenceFlow id="Flow_Final" sourceRef="Gateway_Merge" targetRef="EndEvent_1" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_tc39_compressed_flow_condition_main">
+    <bpmndi:BPMNPlane id="BPMNPlane_tc39_compressed_flow_condition_main" bpmnElement="tc39_compressed_flow_condition_main">
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="100" y="200" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Split_di" bpmnElement="Gateway_Split">
+        <dc:Bounds x="200" y="193" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="AdHoc_E1_Wrapper_di" bpmnElement="AdHoc_E1_Wrapper" isExpanded="true">
+        <dc:Bounds x="340" y="70" width="370" height="100" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="AdHocSubProcess_Manual_di" bpmnElement="AdHocSubProcess_Manual" isExpanded="true">
+        <dc:Bounds x="350" y="250" width="350" height="150" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="QHanaTask_Review_di" bpmnElement="QHanaTask_Review">
+        <dc:Bounds x="100" y="100" width="100" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Merge_di" bpmnElement="Gateway_Merge">
+        <dc:Bounds x="750" y="193" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="850" y="200" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_Cond_di" bpmnElement="Flow_Cond">
+        <di:waypoint x="250" y="209" />
+        <di:waypoint x="310" y="209" />
+        <di:waypoint x="310" y="170" />
+        <di:waypoint x="371" y="170" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <di:waypoint x="136" y="218" />
+        <di:waypoint x="200" y="218" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Default_di" bpmnElement="Flow_Default">
+        <di:waypoint x="225" y="243" />
+        <di:waypoint x="225" y="325" />
+        <di:waypoint x="350" y="325" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_EndA_di" bpmnElement="Flow_EndA">
+        <di:waypoint x="652" y="170" />
+        <di:waypoint x="701" y="170" />
+        <di:waypoint x="701" y="208" />
+        <di:waypoint x="750" y="208" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_EndB_di" bpmnElement="Flow_EndB">
+        <di:waypoint x="700" y="325" />
+        <di:waypoint x="775" y="325" />
+        <di:waypoint x="775" y="243" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Final_di" bpmnElement="Flow_Final">
+        <di:waypoint x="800" y="218" />
+        <di:waypoint x="850" y="218" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

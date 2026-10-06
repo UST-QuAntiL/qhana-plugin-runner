@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+  xmlns:qhana="https://github.com/qhana"
+  id="Definitions_tc03_exec_before_and_after_adhoc"
+  targetNamespace="http://qhana.example/testcases">
+
+  <bpmn:process
+    id="tc03_exec_before_and_after_adhoc"
+    name="TC03 - Executable before and after ad-hoc"
+    isExecutable="true"
+    camunda:versionTag="0.2">
+
+    <bpmn:startEvent id="StartEvent_1" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:userTask id="UserTask_Input" name="Enter Dataset ID">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+      <bpmn:extensionElements>
+        <camunda:formData>
+          <camunda:formField id="qoutput.datasetId" label="Dataset ID" type="string" />
+        </camunda:formData>
+      </bpmn:extensionElements>
+    </bpmn:userTask>
+
+    <qhana:qHAnaServiceTask id="QHanaTask_Load" name="load-dataset">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaName">load-dataset</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.datasetId">${qoutput.datasetId}</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.loadedDataset">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+    </qhana:qHAnaServiceTask>
+
+    <qhana:qHAnaServiceTask id="QHanaTask_Normalize" name="normalize-dataset">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaName">normalize-dataset</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.dataset">${qoutput.loadedDataset}</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.normalizedDataset">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+    </qhana:qHAnaServiceTask>
+
+    <bpmn:adHocSubProcess id="AdHocSubProcess_1" name="Ad-hoc Inspection Block" ordering="Parallel">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+
+      <qhana:qHAnaServiceTask id="QHanaTask_Inspect" name="inspect-dataset">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qhanaName">inspect-dataset</camunda:inputParameter>
+            <camunda:inputParameter name="qinput.dataset">${qoutput.normalizedDataset}</camunda:inputParameter>
+            <camunda:outputParameter name="qoutput.inspectionResult">${output}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </qhana:qHAnaServiceTask>
+
+      <qhana:qHAnaServiceTask id="QHanaTask_Comment" name="comment-on-dataset">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qhanaName">comment-on-dataset</camunda:inputParameter>
+            <camunda:inputParameter name="qinput.result">${qoutput.inspectionResult}</camunda:inputParameter>
+            <camunda:outputParameter name="qoutput.annotatedDataset">${output}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </qhana:qHAnaServiceTask>
+    </bpmn:adHocSubProcess>
+
+    <qhana:qHAnaServiceTask id="QHanaTask_Transform" name="transform-dataset">
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+      <bpmn:outgoing>Flow_6</bpmn:outgoing>
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaName">transform-dataset</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.dataset">${qoutput.annotatedDataset}</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.transformedDataset">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+    </qhana:qHAnaServiceTask>
+
+    <qhana:qHAnaServiceTask id="QHanaTask_Save" name="save-dataset">
+      <bpmn:incoming>Flow_6</bpmn:incoming>
+      <bpmn:outgoing>Flow_7</bpmn:outgoing>
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaName">save-dataset</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.dataset">${qoutput.transformedDataset}</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.savedDataset">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+    </qhana:qHAnaServiceTask>
+
+    <bpmn:endEvent id="EndEvent_1" name="End">
+      <bpmn:incoming>Flow_7</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="UserTask_Input" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="UserTask_Input" targetRef="QHanaTask_Load" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="QHanaTask_Load" targetRef="QHanaTask_Normalize" />
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="QHanaTask_Normalize" targetRef="AdHocSubProcess_1" />
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="AdHocSubProcess_1" targetRef="QHanaTask_Transform" />
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="QHanaTask_Transform" targetRef="QHanaTask_Save" />
+    <bpmn:sequenceFlow id="Flow_7" sourceRef="QHanaTask_Save" targetRef="EndEvent_1" />
+
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_tc03">
+    <bpmndi:BPMNPlane id="BPMNPlane_tc03" bpmnElement="tc03_exec_before_and_after_adhoc">
+
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="60" y="205" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="UserTask_Input_di" bpmnElement="UserTask_Input">
+        <dc:Bounds x="130" y="183" width="170" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_Load_di" bpmnElement="QHanaTask_Load">
+        <dc:Bounds x="350" y="183" width="170" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_Normalize_di" bpmnElement="QHanaTask_Normalize">
+        <dc:Bounds x="570" y="183" width="170" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="AdHocSubProcess_1_di" bpmnElement="AdHocSubProcess_1" isExpanded="true">
+        <dc:Bounds x="800" y="120" width="430" height="210"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_Inspect_di" bpmnElement="QHanaTask_Inspect">
+        <dc:Bounds x="855" y="190" width="150" height="70"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_Comment_di" bpmnElement="QHanaTask_Comment">
+        <dc:Bounds x="1045" y="190" width="150" height="70"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_Transform_di" bpmnElement="QHanaTask_Transform">
+        <dc:Bounds x="1290" y="183" width="180" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_Save_di" bpmnElement="QHanaTask_Save">
+        <dc:Bounds x="1520" y="183" width="180" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="1760" y="205" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <di:waypoint x="96" y="223"/>
+        <di:waypoint x="130" y="223"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="300" y="223"/>
+        <di:waypoint x="350" y="223"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
+        <di:waypoint x="520" y="223"/>
+        <di:waypoint x="570" y="223"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4">
+        <di:waypoint x="740" y="223"/>
+        <di:waypoint x="800" y="223"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_5_di" bpmnElement="Flow_5">
+        <di:waypoint x="1230" y="223"/>
+        <di:waypoint x="1290" y="223"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_6_di" bpmnElement="Flow_6">
+        <di:waypoint x="1470" y="223"/>
+        <di:waypoint x="1520" y="223"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_7_di" bpmnElement="Flow_7">
+        <di:waypoint x="1700" y="223"/>
+        <di:waypoint x="1760" y="223"/>
+      </bpmndi:BPMNEdge>
+
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</bpmn:definitions>

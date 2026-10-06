@@ -1,0 +1,96 @@
+<?xml version='1.0' encoding='utf-8'?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc10_xor_exec_before_merge_then_adhoc" targetNamespace="http://qhana.example/testcases">
+  <bpmn:process id="tc10_xor_exec_before_merge_then_adhoc_main" name="TC10 - XOR Exec Before Merge Then Adhoc" isExecutable="true" camunda:versionTag="0.2" camunda:historyTimeToLive="180">
+    <bpmn:startEvent id="StartEvent_1" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:adHocSubProcess id="AdHoc_E1_Wrapper" name="Extracted Fragment E1" qhana:fragmentRef="E1">
+      <bpmn:serviceTask id="ServiceTask_E1_Plugin" name="Extracted Fragment E1" camunda:type="external" camunda:topic="plugin.tc10_xor_exec_before_merge_then_adhoc_E1">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:outputParameter name="qoutput.algoResult">${qoutput.algoResult}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </bpmn:serviceTask>
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_5B</bpmn:outgoing>
+    </bpmn:adHocSubProcess>
+    <bpmn:exclusiveGateway id="Gateway_Merge" name="Merge Algorithms">
+      <bpmn:incoming>Flow_5B</bpmn:incoming>
+      <bpmn:outgoing>Flow_6</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:adHocSubProcess id="AdHocSubProcess_Review" name="Post-Process Review" ordering="Parallel">
+      <qhana:qHAnaServiceTask id="QHanaTask_Visualize" name="generate-visualization">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qhanaName">generate-visualization</camunda:inputParameter>
+            <camunda:inputParameter name="qinput.result">${qoutput.algoResult}</camunda:inputParameter>
+            <camunda:outputParameter name="qoutput.visUrl">${output}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </qhana:qHAnaServiceTask>
+      <qhana:qHAnaServiceTask id="QHanaTask_SignOff" name="sign-off-results">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qhanaName">sign-off-results</camunda:inputParameter>
+            <camunda:inputParameter name="qinput.vis">${qoutput.visUrl}</camunda:inputParameter>
+            <camunda:outputParameter name="qoutput.signOff">${output}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </qhana:qHAnaServiceTask>
+      <bpmn:incoming>Flow_6</bpmn:incoming>
+      <bpmn:outgoing>Flow_7</bpmn:outgoing>
+    </bpmn:adHocSubProcess>
+    <bpmn:endEvent id="EndEvent_1" name="End">
+      <bpmn:incoming>Flow_7</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="AdHoc_E1_Wrapper" />
+    <bpmn:sequenceFlow id="Flow_5B" sourceRef="AdHoc_E1_Wrapper" targetRef="Gateway_Merge" />
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="Gateway_Merge" targetRef="AdHocSubProcess_Review" />
+    <bpmn:sequenceFlow id="Flow_7" sourceRef="AdHocSubProcess_Review" targetRef="EndEvent_1" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_tc10_xor_exec_before_merge_then_adhoc_main">
+    <bpmndi:BPMNPlane id="BPMNPlane_tc10_xor_exec_before_merge_then_adhoc_main" bpmnElement="tc10_xor_exec_before_merge_then_adhoc_main">
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="80" y="250" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="AdHoc_E1_Wrapper_di" bpmnElement="AdHoc_E1_Wrapper" isExpanded="true">
+        <dc:Bounds x="150" y="70" width="780" height="400" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Merge_di" bpmnElement="Gateway_Merge" isMarkerVisible="true">
+        <dc:Bounds x="1000" y="243" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="985" y="300" width="85" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="AdHocSubProcess_Review_di" bpmnElement="AdHocSubProcess_Review" isExpanded="true">
+        <dc:Bounds x="1130" y="173" width="420" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="QHanaTask_Visualize_di" bpmnElement="QHanaTask_Visualize">
+        <dc:Bounds x="1180" y="228" width="150" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="QHanaTask_SignOff_di" bpmnElement="QHanaTask_SignOff">
+        <dc:Bounds x="1360" y="228" width="150" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="1630" y="250" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <di:waypoint x="116" y="268" />
+        <di:waypoint x="150" y="268" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_5B_di" bpmnElement="Flow_5B">
+        <di:waypoint x="930" y="268" />
+        <di:waypoint x="1000" y="268" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_6_di" bpmnElement="Flow_6">
+        <di:waypoint x="1070" y="268" />
+        <di:waypoint x="1130" y="268" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_7_di" bpmnElement="Flow_7">
+        <di:waypoint x="1550" y="268" />
+        <di:waypoint x="1630" y="268" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

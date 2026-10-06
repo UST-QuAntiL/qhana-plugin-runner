@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+  xmlns:qhana="https://github.com/qhana"
+  id="Definitions_tc08_xor_exec_vs_adhoc"
+  targetNamespace="http://qhana.example/testcases">
+
+  <bpmn:process
+    id="tc08_xor_exec_vs_adhoc"
+    name="TC08 - XOR Exec vs Adhoc"
+    isExecutable="true"
+    camunda:versionTag="0.2">
+
+    <bpmn:startEvent id="StartEvent_1" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:userTask id="UserTask_Input" name="Enter Loan Application">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+      <bpmn:extensionElements>
+        <camunda:formData>
+          <camunda:formField id="qoutput.applicationData" label="Application Data" type="string" />
+        </camunda:formData>
+      </bpmn:extensionElements>
+    </bpmn:userTask>
+
+    <bpmn:exclusiveGateway id="Gateway_Split" name="Determine Scoring Route" default="Flow_3B">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3A</bpmn:outgoing>
+      <bpmn:outgoing>Flow_3B</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <qhana:qHAnaServiceTask id="QHanaTask_AutoScore" name="auto-risk-scoring">
+      <bpmn:incoming>Flow_3A</bpmn:incoming>
+      <bpmn:outgoing>Flow_4A</bpmn:outgoing>
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaName">auto-risk-scoring</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.data">${qoutput.applicationData}</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.autoScore">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+    </qhana:qHAnaServiceTask>
+
+    <bpmn:adHocSubProcess id="AdHocSubProcess_Manual" name="Manual Risk Assessment" ordering="Parallel">
+      <bpmn:incoming>Flow_3B</bpmn:incoming>
+      <bpmn:outgoing>Flow_4B</bpmn:outgoing>
+
+      <qhana:qHAnaServiceTask id="QHanaTask_ReviewDocs" name="review-documents">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qhanaName">review-documents</camunda:inputParameter>
+            <camunda:inputParameter name="qinput.data">${qoutput.applicationData}</camunda:inputParameter>
+            <camunda:outputParameter name="qoutput.docReview">${output}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </qhana:qHAnaServiceTask>
+
+      <qhana:qHAnaServiceTask id="QHanaTask_ManualScore" name="assign-manual-score">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qhanaName">assign-manual-score</camunda:inputParameter>
+            <camunda:inputParameter name="qinput.review">${qoutput.docReview}</camunda:inputParameter>
+            <camunda:outputParameter name="qoutput.manualScore">${output}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </qhana:qHAnaServiceTask>
+
+    </bpmn:adHocSubProcess>
+
+    <bpmn:exclusiveGateway id="Gateway_Merge" name="Merge Scoring">
+      <bpmn:incoming>Flow_4A</bpmn:incoming>
+      <bpmn:incoming>Flow_4B</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:endEvent id="EndEvent_1" name="End">
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="UserTask_Input" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="UserTask_Input" targetRef="Gateway_Split" />
+
+    <bpmn:sequenceFlow id="Flow_3A" name="Low Amount" sourceRef="Gateway_Split" targetRef="QHanaTask_AutoScore">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${amount &lt; 10000}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+
+    <bpmn:sequenceFlow id="Flow_3B" name="Default (High Amount)" sourceRef="Gateway_Split" targetRef="AdHocSubProcess_Manual" />
+
+    <bpmn:sequenceFlow id="Flow_4A" sourceRef="QHanaTask_AutoScore" targetRef="Gateway_Merge" />
+    <bpmn:sequenceFlow id="Flow_4B" sourceRef="AdHocSubProcess_Manual" targetRef="Gateway_Merge" />
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="Gateway_Merge" targetRef="EndEvent_1" />
+
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_tc08">
+    <bpmndi:BPMNPlane id="BPMNPlane_tc08" bpmnElement="tc08_xor_exec_vs_adhoc">
+
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="80" y="250" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="UserTask_Input_di" bpmnElement="UserTask_Input">
+        <dc:Bounds x="160" y="228" width="170" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Gateway_Split_di" bpmnElement="Gateway_Split" isMarkerVisible="true">
+        <dc:Bounds x="390" y="243" width="50" height="50"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="375" y="210" width="80" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_AutoScore_di" bpmnElement="QHanaTask_AutoScore">
+        <dc:Bounds x="550" y="80" width="170" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="AdHocSubProcess_Manual_di" bpmnElement="AdHocSubProcess_Manual" isExpanded="true">
+        <dc:Bounds x="550" y="325" width="420" height="190"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_ReviewDocs_di" bpmnElement="QHanaTask_ReviewDocs">
+        <dc:Bounds x="600" y="380" width="150" height="70"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_ManualScore_di" bpmnElement="QHanaTask_ManualScore">
+        <dc:Bounds x="780" y="380" width="150" height="70"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Gateway_Merge_di" bpmnElement="Gateway_Merge" isMarkerVisible="true">
+        <dc:Bounds x="1020" y="243" width="50" height="50"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1010" y="300" width="70" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="1120" y="250" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <di:waypoint x="116" y="268"/>
+        <di:waypoint x="160" y="268"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="330" y="268"/>
+        <di:waypoint x="390" y="268"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_3A_di" bpmnElement="Flow_3A">
+        <di:waypoint x="415" y="243"/>
+        <di:waypoint x="415" y="120"/>
+        <di:waypoint x="550" y="120"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="430" y="100" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_3B_di" bpmnElement="Flow_3B">
+        <di:waypoint x="415" y="293"/>
+        <di:waypoint x="415" y="420"/>
+        <di:waypoint x="550" y="420"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="430" y="430" width="90" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_4A_di" bpmnElement="Flow_4A">
+        <di:waypoint x="720" y="120"/>
+        <di:waypoint x="1045" y="120"/>
+        <di:waypoint x="1045" y="243"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_4B_di" bpmnElement="Flow_4B">
+        <di:waypoint x="970" y="420"/>
+        <di:waypoint x="1045" y="420"/>
+        <di:waypoint x="1045" y="293"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_5_di" bpmnElement="Flow_5">
+        <di:waypoint x="1070" y="268"/>
+        <di:waypoint x="1120" y="268"/>
+      </bpmndi:BPMNEdge>
+
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

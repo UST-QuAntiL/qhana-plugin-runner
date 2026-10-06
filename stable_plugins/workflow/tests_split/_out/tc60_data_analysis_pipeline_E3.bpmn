@@ -1,0 +1,47 @@
+<?xml version='1.0' encoding='utf-8'?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="sample-diagram" targetNamespace="http://bpmn.io/schema/bpmn" xsi:schemaLocation="http://www.omg.org/spec/BPMN/20100524/MODEL BPMN20.xsd">
+  <bpmn:process id="DataAnalysisPipeline_E3" name="Extracted Fragment E3" isExecutable="true" camunda:historyTimeToLive="180">
+    <bpmn:startEvent id="StartEvent_E3" name="Start">
+      <bpmn:outgoing>Flow_E3_start</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="Task_SVM" name="SVM Classification" camunda:type="external" camunda:topic="qhana-task">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qinput.dataUrl">${qoutput.encodedData}</camunda:inputParameter>
+          <camunda:inputParameter name="qhanaPlugin">svm</camunda:inputParameter>
+          <camunda:inputParameter name="qhanaPluginVersion">v0.1.1</camunda:inputParameter>
+          <camunda:inputParameter name="qhanaName">SVM Classification</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.classification">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_E3_start</bpmn:incoming>
+      <bpmn:outgoing>Flow_E3_end</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="EndEvent_E3" name="End">
+      <bpmn:incoming>Flow_E3_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_E3_start" sourceRef="StartEvent_E3" targetRef="Task_SVM" />
+    <bpmn:sequenceFlow id="Flow_E3_end" sourceRef="Task_SVM" targetRef="EndEvent_E3" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_DataAnalysisPipeline_E3">
+    <bpmndi:BPMNPlane id="BPMNPlane_DataAnalysisPipeline_E3" bpmnElement="DataAnalysisPipeline_E3">
+      <bpmndi:BPMNShape id="Task_SVM_di" bpmnElement="Task_SVM">
+        <dc:Bounds x="1040" y="320" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_E3_di" bpmnElement="StartEvent_E3">
+        <dc:Bounds x="960" y="342" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_E3_di" bpmnElement="EndEvent_E3">
+        <dc:Bounds x="1190" y="342" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_E3_start_di" bpmnElement="Flow_E3_start">
+        <di:waypoint x="996" y="360" />
+        <di:waypoint x="1040" y="360" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E3_end_di" bpmnElement="Flow_E3_end">
+        <di:waypoint x="1140" y="360" />
+        <di:waypoint x="1190" y="360" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
