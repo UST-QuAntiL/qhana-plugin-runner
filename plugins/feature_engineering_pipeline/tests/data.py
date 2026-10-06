@@ -173,10 +173,10 @@ def make_router_task(
 # numeric attribute. ``beats`` has one missing value, ``year`` must have a value
 # for every entity.
 ENTITIES_CSV = (
-    "ID,href,genre,instrumentation,composer,missing_tax,year,beats\n"
-    "e1,,g1,i1,c1,m1,1800,1;2;3\n"
-    "e2,,g2,i2,c2,m2,1850,4;5;6\n"
-    "e3,,g1,i2,c1,m1,1900,\n"
+    "ID,href,genre,instrumentation,composer,missing_tax,year,beats,lautstaerke\n"
+    "e1,,g1,i1,c1,m1,1800,1;2;3,pp\n"
+    "e2,,g2,i2,c2,m2,1850,4;5;6,ff\n"
+    "e3,,g1,i2,c1,m1,1900,,p\n"
 )
 
 ATTRIBUTE_METADATA = [
@@ -219,6 +219,12 @@ ATTRIBUTE_METADATA = [
         "title": "Not in entities",
         "refTarget": "taxonomies.zip:t_genre.json",
     },
+    {
+        "ID": "lautstaerke",
+        "type": "lautstaerke",
+        "title": "Lautstärke",
+        "refTarget": "taxonomies.zip:t_lautstaerke.json",
+    },
 ]
 
 # ``mapping_raw`` values decide the pipeline recommendation per taxonomy.
@@ -232,7 +238,16 @@ TAXONOMY_MEMBERS = {
         }
     ),
     "t_instrumentation.json": json.dumps(
-        {"entities": [{"ID": "i1", "mapping_raw": ""}, {"ID": "i2", "mapping_raw": ""}]}
+        {
+            "entities": [{"ID": "root", "mapping_raw": ""}, {"ID": "i1", "mapping_raw": ""}, {"ID": "i2", "mapping_raw": ""}],
+            "relations": [{"source": "root", "target": "i1"}, {"source": "i1", "target": "i2"}]
+        }
+    ),
+    "t_lautstaerke.json": json.dumps(
+        {
+            "entities": [{"ID": "root", "mapping_raw": ""}, {"ID": "pp", "mapping_raw": ""},{"ID": "p", "mapping_raw": ""}, {"ID": "f", "mapping_raw": ""}, {"ID": "ff", "mapping_raw": ""}],
+            "relations": [{"source": "root", "target": "pp"},{"source": "root", "target": "p"},{"source": "root", "target": "f"},{"source": "root", "target": "ff"}]
+        }
     ),
 }
 
