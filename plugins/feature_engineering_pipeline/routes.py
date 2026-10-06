@@ -171,19 +171,19 @@ class PluginsView(MethodView):
                     DataMetadata(
                         data_type="relation/element-similarities",
                         content_type=["application/zip"],
-                        required=True,
+                        required=False,
                     ),
                     # Transformer output (optional)
                     DataMetadata(
                         data_type="relation/element-distances",
                         content_type=["application/zip"],
-                        required=True,
+                        required=False,
                     ),
                     # Aggregator output (optional)
                     DataMetadata(
                         data_type="relation/attribute-distances",
                         content_type=["application/zip"],
-                        required=True,
+                        required=False,
                     ),
                     # MDS output = final output
                     DataMetadata(
@@ -199,7 +199,7 @@ class PluginsView(MethodView):
                             "application/json",
                             "application/X-lines+json",
                         ],
-                        required=True,
+                        required=False,
                     ),
                     # Dimension mapping of the vector concat output, labelling
                     # its dimensions with the attributes they came from
@@ -217,12 +217,12 @@ class PluginsView(MethodView):
                     DataMetadata(
                         data_type="custom/pca-metadata",
                         content_type=["application/json"],
-                        required=True,
+                        required=False,
                     ),
                     DataMetadata(
                         data_type="entity/vector",
                         content_type=["text/csv"],
-                        required=True,
+                        required=False,
                     ),
                 ],
             ),
