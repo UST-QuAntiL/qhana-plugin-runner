@@ -3,6 +3,14 @@
 <html>
     <head>
         <link rel="stylesheet" type="text/css" href="{{url_for('static', filename='forms.css')}}" media="screen" />
+        <style>
+            .qhana-dimension-feature {
+                display: block;
+                font-weight: normal;
+                font-size: 0.85em;
+                opacity: 0.8;
+            }
+        </style>
     </head>
 
     <body>
@@ -19,14 +27,52 @@
             </details>
         </div>
 
-        <div id="csv-preview" class="qhana-data-preview qhana-table" style="flex-direction: row; flex-wrap: wrap; 
+        <div id="csv-preview" class="qhana-data-preview qhana-table" style="flex-direction: row; flex-wrap: wrap;
         max-height: 750px; overflow: auto;" hidden>
         </div>
 
         <script src="https://unpkg.com/papaparse@latest/papaparse.min.js"></script>
+        <script src="{{url_for('static', filename='microfrontend.js')}}"></script>
 
         <script>
-        function updatePreview(newUrl) {
+        const dimensionLabelsUrl = "{{ dimension_labels_url }}";
+
+        // Asks the plugin for the feature name of every dimension of the mapping file.
+        // Returns an empty mapping when no file is selected or the file cannot be read,
+        // so the preview stays usable without dimension names.
+        async function loadDimensionLabels(mappingUrl) {
+            if (mappingUrl == null || mappingUrl === "") {
+                return {};
+            }
+            const params = new URLSearchParams();
+            params.set("dimensionMappingUrl", mappingUrl);
+            try {
+                const response = await fetch(`${dimensionLabelsUrl}?${params.toString()}`);
+                if (!response.ok) {
+                    return {};
+                }
+                return await response.json();
+            } catch (error) {
+                console.log(error);
+                return {};
+            }
+        }
+
+        function buildHeaderCell(column, dimensionLabels) {
+            const th = document.createElement("th");
+            th.appendChild(document.createTextNode(column));
+            const feature = dimensionLabels[column];
+            if (feature) {
+                th.setAttribute("title", `Dimension ${column} holds the feature ${feature}`);
+                const featureName = document.createElement("span");
+                featureName.className = "qhana-dimension-feature";
+                featureName.textContent = feature;
+                th.appendChild(featureName);
+            }
+            return th;
+        }
+
+        async function updatePreview(newUrl) {
             const dataPreview = document.querySelector('#csv-preview');
             const options = document.querySelector('#visualization-options');
             if (newUrl == null || newUrl === "") {
@@ -34,8 +80,8 @@
                 options.setAttribute("open", "open");
                 return;
             }
-            
-            console.log(newUrl)
+
+            const dimensionLabels = await loadDimensionLabels(mappingInput.value);
             let csv_header = null;
             const rows = [];
             options.setAttribute("open", "open");
@@ -51,14 +97,11 @@
                     rows.push(results.data);
                 },
                 complete: function() {
-                    console.log(csv_header, rows);
                     const table = document.createElement("table");
                     headerRow = document.createElement("tr");
                     table.appendChild(headerRow)
                     csv_header.forEach(column => {
-                        const th = document.createElement("th");
-                        th.appendChild(document.createTextNode(column));
-                        headerRow.appendChild(th);
+                        headerRow.appendChild(buildHeaderCell(column, dimensionLabels));
                     });
                     rows.forEach(row => {
                         const tr = document.createElement("tr");
@@ -76,12 +119,42 @@
             });
         }
 
-        const dataInput = document.querySelector('input[name=data]');
-        updatePreview(dataInput.value);
-        dataInput.addEventListener("input", (event) => updatePreview(dataInput.value));
-        </script>
+        let requestedRelatedFor = null;
 
-        <script src="{{url_for('static', filename='microfrontend.js')}}"></script>
+        // Asks the parent to fill the dimension mapping input with a file related
+        // to the csv file. The mapping is a sibling output of the step that
+        // produced the csv file, so the search includes the producing step itself.
+        function autoSelectDimensionMapping(dataUrl) {
+            if (!dataUrl || mappingInput.value) {
+                requestedRelatedFor = null;
+                return;
+            }
+            const looksLikeUrl = dataUrl.includes("://") || dataUrl.startsWith("data:");
+            if (!looksLikeUrl || requestedRelatedFor === dataUrl) {
+                return;
+            }
+            requestedRelatedFor = dataUrl;
+            sendMessage({
+                type: "request-related-data-url",
+                inputKey: "dimension_mapping_url",
+                dataUrl: dataUrl,
+                relation: "pre",
+                includeSelf: true,
+                acceptedInputType: "entity/dimension-mapping",
+                userInteraction: false,
+            });
+        }
+
+        const dataInput = document.querySelector('input[name=data]');
+        const mappingInput = document.querySelector('input[name=dimensionMappingUrl]');
+        autoSelectDimensionMapping(dataInput.value);
+        updatePreview(dataInput.value);
+        dataInput.addEventListener("input", (event) => {
+            autoSelectDimensionMapping(dataInput.value);
+            updatePreview(dataInput.value);
+        });
+        mappingInput.addEventListener("input", (event) => updatePreview(dataInput.value));
+        </script>
 
     </body>
 </html>
