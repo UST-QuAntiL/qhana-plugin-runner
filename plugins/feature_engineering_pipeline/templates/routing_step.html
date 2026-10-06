@@ -197,6 +197,26 @@ limitations under the License.
         </dl>
     </fieldset>
 
+     <fieldset class="pipeline-descriptions">
+        <legend>Pipeline Recommendations</legend>
+        <dl>
+            <dt>Wu-Palmer</dt>
+            <dd>
+                Recommended if the taxonomy features a deep, multi-level hierarchy.
+            </dd>
+
+            <dt>One-Hot</dt>
+            <dd>
+                Recommended for flat categories or non-tree structures where hierarchical semantic distance is uniform.
+            </dd>
+
+            <dt>Mapping</dt>
+            <dd>
+                Recommended if the taxonomy contains explicit mapping values (e.g., continuous numerical scales).
+            </dd>
+        </dl>
+    </fieldset>
+
     {% call forms.render_form(target="microfrontend") %}
     {% if attributes %}
     <fieldset>
