@@ -1,0 +1,126 @@
+{
+    "GRAPH_ID": "t_diet",
+    "type": "tree",
+    "ref-target": "taxonomies.zip",
+    "entities": [
+        {
+            "ID": "t_diet_root",
+            "tax_item_name": "Food",
+            "description": "",
+            "mapping": [],
+            "mapping_raw": ""
+        },
+        {
+            "ID": "t_diet_plant",
+            "tax_item_name": "Plant based",
+            "description": "",
+            "mapping": [],
+            "mapping_raw": ""
+        },
+        {
+            "ID": "t_diet_animal",
+            "tax_item_name": "Animal based",
+            "description": "",
+            "mapping": [],
+            "mapping_raw": ""
+        },
+        {
+            "ID": "t_diet_grass",
+            "tax_item_name": "Grass",
+            "description": "",
+            "mapping": [],
+            "mapping_raw": ""
+        },
+        {
+            "ID": "t_diet_leaves",
+            "tax_item_name": "Leaves",
+            "description": "",
+            "mapping": [],
+            "mapping_raw": ""
+        },
+        {
+            "ID": "t_diet_fruit",
+            "tax_item_name": "Fruit",
+            "description": "",
+            "mapping": [],
+            "mapping_raw": ""
+        },
+        {
+            "ID": "t_diet_seeds",
+            "tax_item_name": "Seeds",
+            "description": "",
+            "mapping": [],
+            "mapping_raw": ""
+        },
+        {
+            "ID": "t_diet_meat",
+            "tax_item_name": "Meat",
+            "description": "",
+            "mapping": [],
+            "mapping_raw": ""
+        },
+        {
+            "ID": "t_diet_fish",
+            "tax_item_name": "Fish",
+            "description": "",
+            "mapping": [],
+            "mapping_raw": ""
+        },
+        {
+            "ID": "t_diet_crustaceans",
+            "tax_item_name": "Crustaceans",
+            "description": "",
+            "mapping": [],
+            "mapping_raw": ""
+        },
+        {
+            "ID": "t_diet_insects",
+            "tax_item_name": "Insects",
+            "description": "",
+            "mapping": [],
+            "mapping_raw": ""
+        }
+    ],
+    "relations": [
+        {
+            "source": "t_diet_root",
+            "target": "t_diet_plant"
+        },
+        {
+            "source": "t_diet_root",
+            "target": "t_diet_animal"
+        },
+        {
+            "source": "t_diet_plant",
+            "target": "t_diet_grass"
+        },
+        {
+            "source": "t_diet_plant",
+            "target": "t_diet_leaves"
+        },
+        {
+            "source": "t_diet_plant",
+            "target": "t_diet_fruit"
+        },
+        {
+            "source": "t_diet_plant",
+            "target": "t_diet_seeds"
+        },
+        {
+            "source": "t_diet_animal",
+            "target": "t_diet_meat"
+        },
+        {
+            "source": "t_diet_animal",
+            "target": "t_diet_fish"
+        },
+        {
+            "source": "t_diet_animal",
+            "target": "t_diet_crustaceans"
+        },
+        {
+            "source": "t_diet_animal",
+            "target": "t_diet_insects"
+        }
+    ]
+}
