@@ -16,17 +16,13 @@ from typing import List, Tuple, Dict
 
 import numpy as np
 import torch
-from qiskit import (
-    QuantumCircuit,
-    QuantumRegister,
-    execute,
-    ClassicalRegister,
-    BasicAer,
-    transpile,
-    assemble,
-)
+from qiskit import ClassicalRegister, QuantumCircuit, QuantumRegister, transpile
 from qiskit.circuit import Gate, ControlledGate, Parameter, Instruction
-from qiskit.providers.aer import QasmSimulator
+
+try:
+    from qiskit_aer import Aer
+except ImportError:  # pragma: no cover - optional dependency
+    Aer = None
 
 
 # TODO: measure performance
@@ -94,7 +90,9 @@ class QuantumAutoencoder:
         # measure SWAP test result
         self.train_circ.measure(swap_out_qr[0], swap_out_cr[0])
 
-        self.backend = QasmSimulator()
+        if Aer is None:
+            raise RuntimeError("qiskit-aer is required for hybrid autoencoder backends.")
+        self.backend = Aer.get_backend("qasm_simulator")
         self.transpiled_train_circ = transpile(self.train_circ, backend=self.backend)
 
         # construct the circuit for measuring the embeddings
@@ -174,14 +172,11 @@ class QuantumAutoencoder:
         parameter_binds = self._create_param_binds(
             input_values, self._input_params, encoder_weights, self._encoder_params
         )
-        qobj = assemble(
-            [
-                self.transpiled_train_circ.bind_parameters(value_dict)
-                for value_dict in parameter_binds
-            ]
-        )
-
-        job = self.backend.run(qobj)
+        circuits = [
+            self.transpiled_train_circ.assign_parameters(value_dict)
+            for value_dict in parameter_binds
+        ]
+        job = self.backend.run(circuits, shots=shots)
         counts: List[Dict[str, int]] = job.result().get_counts()
 
         if isinstance(counts, Dict):
@@ -200,12 +195,11 @@ class QuantumAutoencoder:
             input_values, self._input_params, encoder_weights, self._encoder_params
         )
 
-        job = execute(
-            self.embedding_circ,
-            backend=QasmSimulator(),
-            shots=shots,
-            parameter_binds=parameter_binds,
-        )
+        circuits = [
+            self.embedding_circ.assign_parameters(value_dict)
+            for value_dict in parameter_binds
+        ]
+        job = self.backend.run(circuits, shots=shots)
         counts: List[Dict[str, int]] = job.result().get_counts()
 
         if isinstance(counts, Dict):
@@ -234,13 +228,8 @@ class QuantumAutoencoder:
             bind[self._encoder_params1[i]] = encoder_weights[i].item()
             bind[self._encoder_params2[i]] = encoder_weights[i].item()
 
-        qobj = assemble(
-            [
-                self.transpiled_fidelity_circ.bind_parameters(value_dict)
-                for value_dict in [bind]
-            ]
-        )
-        job = self.backend.run(qobj)
+        circuit = self.transpiled_fidelity_circ.assign_parameters(bind)
+        job = self.backend.run(circuit, shots=shots)
 
         counts = job.result().get_counts()
         expectation: float = self._extract_single_qubit_expectations(
@@ -257,12 +246,12 @@ class QuantumAutoencoder:
             input_values, self._input_params, encoder_weights, self._encoder_params
         )
 
-        job = execute(
-            self.quantum_embedding_circ,
-            backend=BasicAer.get_backend("statevector_simulator"),
-            shots=shots,
-            parameter_binds=parameter_binds,
-        )
+        sv_backend = Aer.get_backend("statevector_simulator")
+        circuits = [
+            self.quantum_embedding_circ.assign_parameters(value_dict)
+            for value_dict in parameter_binds
+        ]
+        job = sv_backend.run(circuits, shots=shots)
         result = job.result()
 
         statevectors = [result.get_statevector(i) for i in range(len(result.results))]
@@ -285,13 +274,11 @@ class QuantumAutoencoder:
             input_values, self._input_params, encoder_weights, self._encoder_params
         )
 
-        qobj = assemble(
-            [
-                self.transpiled_recon_circ.bind_parameters(value_dict)
-                for value_dict in parameter_binds
-            ]
-        )
-        job = self.backend.run(qobj)
+        circuits = [
+            self.transpiled_recon_circ.assign_parameters(value_dict)
+            for value_dict in parameter_binds
+        ]
+        job = self.backend.run(circuits, shots=shots)
         counts: List[Dict[str, int]] = job.result().get_counts()
 
         if isinstance(counts, Dict):

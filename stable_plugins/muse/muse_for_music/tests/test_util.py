@@ -1,0 +1,217 @@
+# Copyright 2026 QHAna plugin runner contributors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from typing import Literal
+
+import pytest
+
+from muse_for_music.util import (
+    _parse_taxonomy_mapping,
+    taxonomy_to_entity,
+)
+
+
+def _build_taxonomy(
+    items, na_item=None, kind: Literal["tree", "list"] = "tree", name="Test"
+):
+    entity = {
+        "_links": {"self": {"href": f"http://localhost/api/taxonomies/list/{name}"}},
+        "taxonomy_type": kind,
+        "items": items,
+    }
+    if na_item is not None:
+        entity["na_item"] = na_item
+    return entity
+
+
+def _node(id_, name, mapping=None, children=None):
+    """Build a tree node, omitting ``mapping`` when not provided."""
+    node = {"id": id_, "name": name, "children": children or []}
+    if mapping is not None:
+        node["mapping"] = mapping
+    return node
+
+
+def _by_id(entities):
+    return {e["ID"]: e for e in entities if isinstance(e, dict)}
+
+
+@pytest.mark.parametrize(
+    ("name", "raw", "expected_nums", "expected_error"),
+    [
+        pytest.param("n", "1 2 3", [1.0, 2.0, 3.0], None, id="basic"),
+        pytest.param(
+            "n", "  1   2.5   3 ", [1.0, 2.5, 3.0], None, id="collapses-whitespace"
+        ),
+        pytest.param("n", "", [], None, id="empty-string"),
+        pytest.param("n", "   ", [], None, id="blank-string"),
+        pytest.param("n", "1  2 ", [1.0, 2.0], None, id="skips-empty-tokens"),
+        pytest.param("n", "1  2 bad", [], "n: 1  2 bad", id="invalid-mapping"),
+    ],
+)
+def test_parse_mapping(name, raw, expected_nums, expected_error):
+    nums, error = _parse_taxonomy_mapping(name, raw)
+    assert nums == expected_nums
+    assert error == expected_error
+
+
+def test_tree_mapping_parsed_and_raw_kept():
+    root = _node(1, "root", mapping="1 2 3", children=[])
+    result, warnings = taxonomy_to_entity(_build_taxonomy(root))
+
+    entities = _by_id(result.entities)
+    assert entities["t_Test_1"]["mapping"] == [1.0, 2.0, 3.0]
+    assert entities["t_Test_1"]["mapping_raw"] == "1 2 3"
+    assert warnings is None
+
+
+def test_tree_mapping_padded_to_common_dimension():
+    root = _node(
+        1,
+        "root",
+        mapping="1 2",
+        children=[_node(2, "child", mapping="3 4 5")],
+    )
+    result, warnings = taxonomy_to_entity(_build_taxonomy(root))
+
+    entities = _by_id(result.entities)
+    # widest mapping has 3 entries, so the shorter one is zero padded
+    assert entities["t_Test_1"]["mapping"] == [1.0, 2.0, 0.0]
+    assert entities["t_Test_2"]["mapping"] == [3.0, 4.0, 5.0]
+    # padding does not alter the preserved raw string
+    assert entities["t_Test_1"]["mapping_raw"] == "1 2"
+    assert warnings is None
+
+
+def test_tree_missing_mapping_defaults_to_empty_then_padded():
+    root = _node(
+        1,
+        "root",  # no mapping key at all
+        children=[_node(2, "child", mapping="7 8")],
+    )
+    result, warnings = taxonomy_to_entity(_build_taxonomy(root))
+
+    entities = _by_id(result.entities)
+    assert entities["t_Test_1"]["mapping"] == [0.0, 0.0]
+    assert entities["t_Test_1"]["mapping_raw"] == ""
+    assert entities["t_Test_2"]["mapping"] == [7.0, 8.0]
+    assert warnings is None
+
+
+def test_tree_no_mappings_leaves_empty_lists_unpadded():
+    root = _node(1, "root", children=[_node(2, "child")])
+    result, warnings = taxonomy_to_entity(_build_taxonomy(root))
+
+    entities = _by_id(result.entities)
+    # mapping_dimension is 0, so no padding happens at all
+    assert entities["t_Test_1"]["mapping"] == []
+    assert entities["t_Test_2"]["mapping"] == []
+    assert warnings is None
+
+
+def test_tree_na_item_mapping_parsed_and_padded():
+    root = _node(1, "root", mapping="1 2 3", children=[])
+    na_item = {"id": 99, "name": "na", "mapping": "9"}
+    result, warnings = taxonomy_to_entity(_build_taxonomy(root, na_item=na_item))
+
+    entities = _by_id(result.entities)
+    na = entities["t_Test_na"]
+    assert na["tax_item_name"] == "na"
+    assert na["mapping"] == [9.0, 0.0, 0.0]
+    assert na["mapping_raw"] == "9"
+    # na is linked under the assumed root node
+    assert {"source": "t_Test_1", "target": "t_Test_na"} in result.relations
+    assert warnings is None
+
+
+def test_tree_bad_mapping_token_returns_warning():
+    root = _node(1, "root", mapping="1 bad 3", children=[])
+    _, warnings = taxonomy_to_entity(_build_taxonomy(root))
+
+    assert warnings is not None
+    assert "root" in warnings
+    assert "1 bad 3" in warnings
+
+
+def test_tree_multiple_invalid_mappings_all_appear_in_warning():
+    root = _node(
+        1,
+        "root",
+        mapping="1 bad 3",
+        children=[
+            _node(2, "child_a", mapping="bad 1 2"),
+            _node(3, "child_b", mapping="4 5 also_bad"),
+        ],
+    )
+    _, warnings = taxonomy_to_entity(_build_taxonomy(root))
+
+    assert warnings == (
+        "Invalid mappings for taxonomy t_Test:\n"
+        "  root: 1 bad 3\n"
+        "  child_a: bad 1 2\n"
+        "  child_b: 4 5 also_bad"
+    )
+
+
+def test_list_multiple_invalid_mappings_all_appear_in_warning():
+    items = [
+        {"id": 1, "name": "item_good", "mapping": "1.0 2.0"},
+        {"id": 2, "name": "item_bad_one", "mapping": "3 oops"},
+        {"id": 3, "name": "item_bad_two", "mapping": "nope 7"},
+    ]
+    _, warnings = taxonomy_to_entity(_build_taxonomy(items, kind="list"))
+
+    assert warnings == (
+        "Invalid mappings for taxonomy t_Test:\n"
+        "  item_bad_one: 3 oops\n"
+        "  item_bad_two: nope 7"
+    )
+
+
+def test_list_mapping_parsed_and_padded():
+    items = [
+        {"id": 1, "name": "a", "mapping": "1.5"},
+        {"id": 2, "name": "b", "mapping": "2.5 3.5"},
+    ]
+    result, warnings = taxonomy_to_entity(_build_taxonomy(items, kind="list"))
+
+    entities = _by_id(result.entities)
+    assert entities["t_Test_root"]["tax_item_name"] == "root"
+    assert entities["t_Test_root"]["mapping"] == [0.0, 0.0]
+    assert entities["t_Test_1"]["mapping"] == [1.5, 0.0]
+    assert entities["t_Test_2"]["mapping"] == [2.5, 3.5]
+    assert warnings is None
+
+
+def test_list_na_item_mapping_parsed():
+    items = [{"id": 1, "name": "a", "mapping": "1 2"}]
+    na_item = {"id": 5, "name": "na", "mapping": "4"}
+    result, warnings = taxonomy_to_entity(
+        _build_taxonomy(items, na_item=na_item, kind="list")
+    )
+
+    entities = _by_id(result.entities)
+    assert entities["t_Test_na"]["mapping"] == [4.0, 0.0]
+    assert {"source": "t_Test_root", "target": "t_Test_na"} in result.relations
+    assert warnings is None
+
+
+def test_unknown_taxonomy_type_raises():
+    entity = {
+        "_links": {"self": {"href": "http://localhost/api/taxonomies/tree/Test"}},
+        "taxonomy_type": "graph",
+        "items": [],
+    }
+    with pytest.raises(ValueError, match="Unknown taxonomy type graph"):
+        taxonomy_to_entity(entity)

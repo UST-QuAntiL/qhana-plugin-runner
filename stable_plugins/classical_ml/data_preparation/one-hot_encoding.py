@@ -54,7 +54,6 @@ from qhana_plugin_runner.plugin_utils.zip_utils import get_files_from_zip_url
 import json
 from itertools import count, chain
 
-
 """ 
 This Plugin can be further improved!
 The below comments were taken from a PR review
@@ -211,7 +210,7 @@ class PluginsView(MethodView):
                 data_output=[
                     DataMetadata(
                         data_type="entity/vector",
-                        content_type=["application/csv"],
+                        content_type=["text/csv"],
                         required=True,
                     )
                 ],

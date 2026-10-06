@@ -31,21 +31,31 @@ VQC_BLP = SecurityBlueprint(
     template_folder="templates",
 )
 
-qiskit_ml_version = "0.4.0"
+qiskit_ml_version = "0.9.0"
 
 
 class VQC(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
     description = (
-        "This plugin implements the Variational Quantum Classifier (VQC) by Qiskit [0]. It's currently using version "
+        "This plugin implements the Variational Quantum Classifier (VQC) by "
+        "Qiskit [0]. It's currently using version "
         f"{qiskit_ml_version} of qiskit's machine learning library.\n"
-        "The entity points should be saved in the [entity/vector](https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/entities.html#entity-vector) format "
-        "and labels in the [entity/label](https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/entities.html#entity-label) format. "
-        "Both may be stored in either a csv or a json file. Both can be generated with the ``data-creator`` plugin.\n\n"
+        "The entity points should be saved in the [entity/vector](https://"
+        "qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/"
+        "entities.html#entity-vector) format and labels in the [entity/label]"
+        "(https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/"
+        "examples/entities.html#entity-label) format. Both may be stored in "
+        "either a csv or a json file. Both can be generated with the "
+        "``data-creator`` plugin.\n\n"
         "Source:\n"
-        "[0] [Qiskit documentation, Variational Quantum Classifier](https://qiskit.org/documentation/machine-learning/stubs/qiskit_machine_learning.algorithms.VQC.html#qiskit_machine_learning.algorithms.VQC)\n"
-        "[1] [Havlíček, V., Córcoles, A.D., Temme, K. et al. Supervised learning with quantum-enhanced feature spaces. Nature 567, 209–212 (2019).](https://doi.org/10.1038/s41586-019-0980-2)"
+        "[0] [Qiskit documentation, Variational Quantum Classifier](https://"
+        "qiskit.org/documentation/machine-learning/stubs/"
+        "qiskit_machine_learning.algorithms.VQC.html#qiskit_machine_learning."
+        "algorithms.VQC)\n"
+        "[1] [Havlíček, V., Córcoles, A.D., Temme, K. et al. Supervised learning "
+        "with quantum-enhanced feature spaces. Nature 567, 209–212 (2019).]"
+        "(https://doi.org/10.1038/s41586-019-0980-2)"
     )
     tags = ["QML", "classification", "quantum"]
 
@@ -56,14 +66,21 @@ class VQC(QHAnaPluginBase):
         return VQC_BLP
 
     def get_requirements(self) -> str:
-        return f"qiskit~=0.43\nqiskit-machine-learning~={qiskit_ml_version}\nscikit-learn~=1.1\nmuid~=0.5.3"
+        return (
+            "qiskit~=2.3.0\n"
+            "qiskit-aer~=0.17.2\n"
+            f"qiskit-machine-learning~={qiskit_ml_version}\n"
+            "numpy~=2.4.3\n"
+            "scikit-learn~=1.8.0\n"
+            "muid~=0.5.3"
+        )
 
 
 try:
-    # It is important to import the routes **after** COSTUME_LOADER_BLP and CostumeLoader are defined, because they are
-    # accessed as soon as the routes are imported.
-    from . import routes
+    # Import routes after the blueprint and plugin are defined because they are
+    # accessed as soon as routes are imported.
+    from . import routes  # noqa: F401
 except ImportError:
-    # When running `poetry run flask install`, importing the routes will fail, because the dependencies are not
-    # installed yet.
+    # When running `poetry run flask install`, importing routes fails
+    # because dependencies are not installed yet.
     pass

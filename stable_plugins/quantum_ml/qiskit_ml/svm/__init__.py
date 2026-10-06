@@ -32,7 +32,7 @@ SVM_BLP = SecurityBlueprint(
     template_folder="templates",
 )
 
-sklearn_version = "1.1"
+sklearn_version = "1.8.0"
 
 
 class SVM(QHAnaPluginBase):
@@ -42,18 +42,32 @@ class SVM(QHAnaPluginBase):
         "Classifies data with a support vector machine. This plugin uses the implementation of "
         f"scikit-learn {sklearn_version} [0]. The quantum kernels are from Qiskit [1] and the data maps "
         f"are from Havlíček et al. [2] and Suzuki et al. [3].\n\n"
-        "The entity points should be saved in the [entity/vector](https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/entities.html#entity-vector) format "
-        "and labels in the [entity/label](https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/entities.html#entity-label) format. "
-        "A precomputed kernel matrix should be stored in the [entity/matrix](https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/entities.html#entity-matrix) format. "
-        "All of them may be stored in either a csv or a json file. A set of entity points and labels can be generated with the ``data-creator`` plugin. A precomputed kernel can be "
-        "computed with a quantum kernel estimation plugin, given the entity points.\n\n"
+        "The entity points should be saved in the [entity/vector](https://"
+        "qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/"
+        "entities.html#entity-vector) format and labels in the [entity/label]"
+        "(https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/"
+        "examples/entities.html#entity-label) format. A precomputed kernel "
+        "matrix should be stored in the [entity/matrix](https://"
+        "qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/"
+        "entities.html#entity-matrix) format. All of them may be stored in "
+        "either a csv or a json file. A set of entity points and labels can be "
+        "generated with the ``data-creator`` plugin. A precomputed kernel can "
+        "be computed with a quantum kernel estimation plugin, given the entity "
+        "points.\n\n"
         "Source:\n"
-        "[0] [https://scikit-learn.org/1.1/modules/svm.html#svm](https://scikit-learn.org/1.1/modules/svm.html#svm)\n"
-        "[1] Qiskit's quantum kernels [ZFeatureMap](https://qiskit.org/documentation/stubs/qiskit.circuit.library.ZFeatureMap.html), "
-        "[ZZFeatureMap](https://qiskit.org/documentation/stubs/qiskit.circuit.library.ZZFeatureMap.html) and "
-        "[PauliFeatureMap](https://qiskit.org/documentation/stubs/qiskit.circuit.library.PauliFeatureMap.html)\n"
-        "[2] [Havlíček, V., Córcoles, A.D., Temme, K. et al. Supervised learning with quantum-enhanced feature spaces. Nature 567, 209–212 (2019).](https://doi.org/10.1038/s41586-019-0980-2)\n"
-        "[3] [Suzuki, Y., Yano, H., Gao, Q. et al. Analysis and synthesis of feature map for kernel-based quantum classifier. Quantum Mach. Intell. 2, 9 (2020).](https://doi.org/10.1007/s42484-020-00020-y)"
+        "[0] [https://scikit-learn.org/1.2/modules/svm.html#svm](https://scikit-learn.org/1.2/modules/svm.html#svm)\n"
+        "[1] Qiskit's quantum kernels [ZFeatureMap](https://qiskit.org/"
+        "documentation/stubs/qiskit.circuit.library.ZFeatureMap.html), "
+        "[ZZFeatureMap](https://qiskit.org/documentation/stubs/"
+        "qiskit.circuit.library.ZZFeatureMap.html) and [PauliFeatureMap]"
+        "(https://qiskit.org/documentation/stubs/"
+        "qiskit.circuit.library.PauliFeatureMap.html)\n"
+        "[2] [Havlíček, V., Córcoles, A.D., Temme, K. et al. Supervised learning "
+        "with quantum-enhanced feature spaces. Nature 567, 209–212 (2019).]"
+        "(https://doi.org/10.1038/s41586-019-0980-2)\n"
+        "[3] [Suzuki, Y., Yano, H., Gao, Q. et al. Analysis and synthesis of "
+        "feature map for kernel-based quantum classifier. Quantum Mach. Intell. "
+        "2, 9 (2020).](https://doi.org/10.1007/s42484-020-00020-y)"
     )
 
     tags = ["QML", "ML", "quantum", "classical", "classification", "supervised-learning"]
@@ -65,14 +79,23 @@ class SVM(QHAnaPluginBase):
         return SVM_BLP
 
     def get_requirements(self) -> str:
-        return f"qiskit~=0.43\nqiskit-machine-learning~=0.4.0\nscikit-learn~={sklearn_version}\nplotly~=5.18.0\npandas~=1.5.0\nmuid~=0.5.3"
+        return (
+            "qiskit~=2.3.0\n"
+            "qiskit-aer~=0.17.2\n"
+            "qiskit-machine-learning~=0.9.0\n"
+            "numpy~=2.4.3\n"
+            f"scikit-learn~={sklearn_version}\n"
+            "plotly~=6.6.0\n"
+            "pandas~=2.3.3\n"
+            "muid~=0.5.3"
+        )
 
 
 try:
-    # It is important to import the routes **after** COSTUME_LOADER_BLP and CostumeLoader are defined, because they are
-    # accessed as soon as the routes are imported.
-    from . import routes
+    # Import routes after the blueprint and plugin are defined because they are
+    # accessed as soon as routes are imported.
+    from . import routes  # noqa: F401
 except ImportError:
-    # When running `poetry run flask install`, importing the routes will fail, because the dependencies are not
-    # installed yet.
+    # When running `poetry run flask install`, importing routes fails
+    # because dependencies are not installed yet.
     pass

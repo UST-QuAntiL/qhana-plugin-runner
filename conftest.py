@@ -1,4 +1,4 @@
-# Copyright 2022 QHAna plugin runner contributors.
+# Copyright 2026 QHAna plugin runner contributors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,19 +15,19 @@
 """Tests for the db module of the plugin_utils."""
 
 from logging import INFO
+from pathlib import Path
+
+from dotenv import dotenv_values
 import pytest
-from dotenv import load_dotenv
-
-load_dotenv(".flaskenv")
-load_dotenv(".env")
-
-MODULE_NAME = "qhana_plugin_runner"
-
+from flask import Flask
+from sqlalchemy.pool import StaticPool
 
 from qhana_plugin_runner import create_app
+from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.cli import create_db_function
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.util.config.celery_config import CELERY_PRODUCTION_CONFIG
+
+MODULE_NAME = "qhana_plugin_runner"
 
 DEFAULT_TEST_CONFIG = {
     "SECRET_KEY": "test",
@@ -38,12 +38,31 @@ DEFAULT_TEST_CONFIG = {
     "DEFAULT_LOG_SEVERITY": INFO,
     "DEFAULT_LOG_FORMAT_STYLE": "{",
     "DEFAULT_LOG_FORMAT": "{asctime} [{levelname:^7}] [{module:<30}] {message}    <{funcName}, {lineno}; {pathname}>",
-    "CELERY": CELERY_PRODUCTION_CONFIG,
     "DEFAULT_FILE_STORE": "local_filesystem",
     "FILE_STORE_ROOT_PATH": "files",
     "OPENAPI_VERSION": "3.0.2",
     "OPENAPI_JSON_PATH": "api-spec.json",
     "OPENAPI_URL_PREFIX": "",
+    # ``SERVER_NAME`` lets ``flask.url_for`` build URLs without a request
+    # context, which the route-level tests in plugin test suites rely on.
+    "SERVER_NAME": "localhost.localdomain",
+    # StaticPool keeps a single connection alive across threads so the
+    # in-memory SQLite database is visible from both the test thread and
+    # the worker thread.
+    "SQLALCHEMY_ENGINE_OPTIONS": {
+        "connect_args": {"check_same_thread": False},
+        "poolclass": StaticPool,
+    },
+    "CELERY": {
+        "task_default_queue": "qhana_plugin_runner",
+        "broker_url": "memory://",
+        "result_backend": "cache+memory://",
+        "task_always_eager": False,
+        "broker_connection_retry_on_startup": True,
+    },
+    "PLUGIN_FOLDERS": [
+        f for f in dotenv_values(".flaskenv")["PLUGIN_FOLDERS"].split(":") if f
+    ],
 }
 
 
@@ -59,3 +78,58 @@ def task_data():
         task_data = ProcessingTask(task_name="test-data")
         task_data.save(commit=True)
         yield task_data
+
+
+@pytest.fixture(scope="module")
+def app():
+    """Flask app with the plugin runner and all configured plugins loaded.
+
+    ``create_app`` discovers plugins from ``PLUGIN_FOLDERS`` (set in
+    ``.flaskenv``), so every plugin blueprint is registered automatically
+    once this fixture runs. Module-scoped to amortise the boot cost across
+    test cases in a file.
+    """
+    test_config = dict(DEFAULT_TEST_CONFIG)
+    test_config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
+
+    flask_app = create_app(test_config)
+    with flask_app.app_context():
+        create_db_function(flask_app)
+        yield flask_app
+
+
+@pytest.fixture()
+def client(app: Flask):
+    """Flask test client bound to the plugin-runner app."""
+    return app.test_client()
+
+
+@pytest.fixture(scope="module")
+def broker_app():
+    """App configured with a real Celery broker (in-memory)."""
+    test_config = dict(DEFAULT_TEST_CONFIG)
+    test_config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
+    app = create_app(test_config, silent_log=True)
+    with app.app_context():
+        create_db_function(app)
+        yield app
+
+
+@pytest.fixture(scope="module")
+def celery_worker(broker_app):
+    """Start an in-process Celery worker thread for the test module.
+
+    ``broker_app`` is required so the CELERY singleton is reconfigured
+    against the memory broker before the worker boots. The fixture
+    is module-scoped because spinning the worker up and down per test
+    is slow.
+    """
+    from celery.contrib.testing.worker import start_worker
+
+    with start_worker(  # pyright: ignore[reportGeneralTypeIssues]
+        CELERY,
+        pool="solo",
+        perform_ping_check=False,
+        shutdown_timeout=10,
+    ) as worker:
+        yield worker

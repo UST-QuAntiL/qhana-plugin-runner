@@ -55,12 +55,17 @@ def plot_data(
             hover_name="ID",
             size="size",
             color="label",
+            symbol="label",
         )
     elif dim == 2:
-        fig = px.scatter(df, x="x", y="y", hover_name="ID", size="size", color="label")
+        fig = px.scatter(
+            df, x="x", y="y", hover_name="ID", size="size", color="label", symbol="label"
+        )
     else:
         df["y"] = [0] * len(df["x"])
-        fig = px.scatter(df, x="x", y="y", hover_name="ID", size="size", color="label")
+        fig = px.scatter(
+            df, x="x", y="y", hover_name="ID", size="size", color="label", symbol="label"
+        )
 
     fig.update_layout(
         dict(

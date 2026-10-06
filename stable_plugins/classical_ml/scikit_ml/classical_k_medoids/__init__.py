@@ -12,12 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import sys
 from typing import Optional
 
 from flask import Flask
 
 from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
+
+if sys.platform == "win32":
+    # scikit-learn-extra has no Windows wheel for the Python versions we support
+    # and falls back to a native build that requires the MS C++ Build Tools.
+    # Skip this plugin entirely; users who need it on Windows can install the
+    # build dependencies and run with this guard removed.
+    raise ImportError(
+        "classical-k-medoids is not available on Windows because "
+        "scikit-learn-extra does not currently publish a compatible wheel."
+    )
 
 
 _plugin_name = "classical-k-medoids"
@@ -49,7 +60,7 @@ class ClassicalKMedoids(QHAnaPluginBase):
         return ClassicKMedoids_BLP
 
     def get_requirements(self) -> str:
-        return "plotly~=5.18.0\nscikit-learn-extra~=0.2.0"
+        return "plotly~=6.6.0\nscikit-learn-extra~=0.3.0"
 
 
 try:
