@@ -239,14 +239,32 @@ TAXONOMY_MEMBERS = {
     ),
     "t_instrumentation.json": json.dumps(
         {
-            "entities": [{"ID": "root", "mapping_raw": ""}, {"ID": "i1", "mapping_raw": ""}, {"ID": "i2", "mapping_raw": ""}],
-            "relations": [{"source": "root", "target": "i1"}, {"source": "i1", "target": "i2"}]
+            "entities": [
+                {"ID": "root", "mapping_raw": ""},
+                {"ID": "i1", "mapping_raw": ""},
+                {"ID": "i2", "mapping_raw": ""},
+            ],
+            "relations": [
+                {"source": "root", "target": "i1"},
+                {"source": "i1", "target": "i2"},
+            ],
         }
     ),
     "t_lautstaerke.json": json.dumps(
         {
-            "entities": [{"ID": "root", "mapping_raw": ""}, {"ID": "pp", "mapping_raw": ""},{"ID": "p", "mapping_raw": ""}, {"ID": "f", "mapping_raw": ""}, {"ID": "ff", "mapping_raw": ""}],
-            "relations": [{"source": "root", "target": "pp"},{"source": "root", "target": "p"},{"source": "root", "target": "f"},{"source": "root", "target": "ff"}]
+            "entities": [
+                {"ID": "root", "mapping_raw": ""},
+                {"ID": "pp", "mapping_raw": ""},
+                {"ID": "p", "mapping_raw": ""},
+                {"ID": "f", "mapping_raw": ""},
+                {"ID": "ff", "mapping_raw": ""},
+            ],
+            "relations": [
+                {"source": "root", "target": "pp"},
+                {"source": "root", "target": "p"},
+                {"source": "root", "target": "f"},
+                {"source": "root", "target": "ff"},
+            ],
         }
     ),
 }

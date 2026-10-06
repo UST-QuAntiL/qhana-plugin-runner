@@ -173,16 +173,16 @@ def test_calculate_recommendations_suggests_wu_palmer_without_mappings():
         == WU_PALMER_PLUGIN
     )
 
+
 def test_calculate_recommendations_suggests_one_hot_for_flat_trees():
     assert (
-        calculate_recommendations(_taxonomies_zip(), "t_lautstaerke.json") == ONE_HOT_PLUGIN
+        calculate_recommendations(_taxonomies_zip(), "t_lautstaerke.json")
+        == ONE_HOT_PLUGIN
     )
 
 
 def test_calculate_recommendations_falls_back_for_unreadable_taxonomies():
-    assert (
-        calculate_recommendations(_taxonomies_zip(), "missing.json") == ONE_HOT_PLUGIN
-    )
+    assert calculate_recommendations(_taxonomies_zip(), "missing.json") == ONE_HOT_PLUGIN
 
 
 # --- OUTPUT STORAGE DECISIONS ---
