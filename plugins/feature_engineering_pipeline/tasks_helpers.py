@@ -253,16 +253,14 @@ def calculate_recommendations(taxonomies_zip: ZipFile, zip_path: str) -> str:
     try:
         with taxonomies_zip.open(zip_path) as f:
             tax_data = json.load(f)
-            
+
             entities = tax_data.get("entities", [])
             relations = tax_data.get("relations", [])
 
             # 1. Check for Mapping
-            has_mapping = any(
-                ent.get("mapping_raw", "") != "" for ent in entities
-            )
+            has_mapping = any(ent.get("mapping_raw", "") != "" for ent in entities)
             if has_mapping:
-                return MAPPING_PLUGIN  
+                return MAPPING_PLUGIN
 
             # 2. Build graph to check tree structure and depth
             in_degree = {ent["ID"]: 0 for ent in entities}
@@ -271,7 +269,7 @@ def calculate_recommendations(taxonomies_zip: ZipFile, zip_path: str) -> str:
             for rel in relations:
                 source = rel["source"]
                 target = rel["target"]
-                
+
                 if target in in_degree:
                     in_degree[target] += 1
                 if source in children_map:
@@ -284,18 +282,20 @@ def calculate_recommendations(taxonomies_zip: ZipFile, zip_path: str) -> str:
 
             # Calculate max depth to ensure it is not a "flat" list
             roots = [node for node, deg in in_degree.items() if deg == 0]
-            
+
             def get_max_depth(node):
                 if not children_map.get(node):
                     return 0
-                return 1 + max((get_max_depth(child) for child in children_map[node]), default=0)
+                return 1 + max(
+                    (get_max_depth(child) for child in children_map[node]), default=0
+                )
 
             max_depth = max((get_max_depth(r) for r in roots), default=0)
 
             if max_depth <= 1:
                 return ONE_HOT_PLUGIN
 
-            return WU_PALMER_PLUGIN  
+            return WU_PALMER_PLUGIN
 
     except Exception as e:
         TASK_LOGGER.warning(
