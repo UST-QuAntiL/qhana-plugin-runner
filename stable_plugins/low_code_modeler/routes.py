@@ -9,8 +9,6 @@ from flask.views import MethodView
 from flask.helpers import url_for
 from flask.wrappers import Response
 
-from .schemas import MetadataOfModellSchema, SaveModelParamsSchema
-
 from qhana_plugin_runner.api.plugin_schemas import (
     PluginMetadata,
     PluginMetadataSchema,
