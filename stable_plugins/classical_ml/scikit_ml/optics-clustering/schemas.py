@@ -76,10 +76,10 @@ class InputParametersSchema(FrontendFormBaseSchema):
         required=True,
         allow_none=False,
         data_input_type="entity/vector",
-        data_content_types=["application/json"],
+        data_content_types=["application/json", "application/X-lines+json", "text/csv"],
         metadata={
             "label": "Entity Point URL",
-            "description": "URL to a json file containing the points.",
+            "description": "URL to a json or csv file containing the points.",
             "input_type": "text",
         },
     )

@@ -505,6 +505,7 @@ def test_full_run_with_concatenation_and_pca(server, inline):
     ]
     assert stored_file_names(db_task) == {
         "final_concatenated_vector.csv",
+        "final_concatenated_vector_dimension_mapping.json",
         "final_vector_pca_reduced.csv",
         "pca_metadata.json",
         "pca_plot.html",
@@ -523,7 +524,10 @@ def test_full_run_stops_after_the_concatenation_without_pca(server, inline):
     assert inline.results == [
         "All Pipelines Completed Successfully And Concatenated Vector Created!"
     ]
-    assert stored_file_names(db_task) == {"final_concatenated_vector.csv"}
+    assert stored_file_names(db_task) == {
+        "final_concatenated_vector.csv",
+        "final_concatenated_vector_dimension_mapping.json",
+    }
 
 
 def test_on_retry_logs_without_app_context():
