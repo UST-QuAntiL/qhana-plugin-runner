@@ -16,6 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
+        id: setup-python
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Install Poetry
@@ -26,7 +27,7 @@ jobs:
         uses: actions/cache/restore@v6
         with:
           path: .venv
-          key: venv-runner-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-${{ hashFiles('poetry.lock') }}
+          key: venv-runner-${{ runner.os }}-py${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}
 
       - name: Install dependencies
         run: poetry install --no-interaction --with dev
@@ -36,7 +37,7 @@ jobs:
         uses: actions/cache/save@v6
         with:
           path: .venv
-          key: venv-runner-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-${{ hashFiles('poetry.lock') }}
+          key: venv-runner-${{ runner.os }}-py${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}
 
       - name: Collect plugin requirements
         id: plugin-requirements
@@ -52,7 +53,7 @@ jobs:
         uses: actions/cache/restore@v6
         with:
           path: .venv
-          key: venv-plugins-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-${{ hashFiles('poetry.lock') }}-${{ steps.plugin-requirements.outputs.hash }}
+          key: venv-plugins-${{ runner.os }}-py${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-${{ steps.plugin-requirements.outputs.hash }}
 
       - name: Install plugin dependencies
         if: steps.cache-plugin-venv.outputs.cache-hit != 'true'
@@ -63,7 +64,7 @@ jobs:
         uses: actions/cache/save@v6
         with:
           path: .venv
-          key: venv-plugins-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-${{ hashFiles('poetry.lock') }}-${{ steps.plugin-requirements.outputs.hash }}
+          key: venv-plugins-${{ runner.os }}-py${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-${{ steps.plugin-requirements.outputs.hash }}
 
       - name: Run pytest
         run: poetry run pytest --cov=qhana_plugin_runner --cov-report=html --cov-report=term
