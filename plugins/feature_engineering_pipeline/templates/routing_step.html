@@ -66,11 +66,6 @@ limitations under the License.
         margin: 0;
     }
 
-    .no-settings {
-        margin: 0.2rem 0 0.6rem 0;
-        opacity: 0.75;
-    }
-
     .input-params {
         margin-bottom: 1rem;
     }
@@ -247,13 +242,16 @@ limitations under the License.
         feature-vector dimension. A multi-valued attribute is processed like the Mapping pipeline:
         distances are calculated, aggregated to entity distances, and embedded with MDS into the configured
         number of feature-vector dimensions.
+        Enable normalization in the settings of an attribute to scale its feature-vector dimensions
+        (the value itself for a single-valued attribute) to the configured output range.
     </p>
 
     {% if numeric_attributes %}
     <fieldset>
         <legend>Numeric Attributes</legend>
-        {# A multi-valued attribute carries its own copy of the mapping and MDS settings,
-        submitted as `pipeline_<attribute>__<setting>` like the taxonomy attributes. #}
+        {# A numeric attribute carries its own copy of the normalization settings, a multi-valued one
+        also of the mapping and MDS settings. They are submitted as `pipeline_<attribute>__<setting>`
+        like the settings of the taxonomy attributes. #}
         {%- for attr in numeric_attributes -%}
         {%- set field_name = "pipeline_" + attr -%}
         {%- set settings_id = field_name + "__settings" -%}
@@ -278,8 +276,7 @@ limitations under the License.
             </div>
 
             <div class="attribute-settings" id="{{settings_id}}" hidden>
-                {%- if multi_valued -%}
-                {%- for group in numeric_settings_groups -%}
+                {%- for group in (numeric_settings_groups if multi_valued else single_valued_numeric_settings_groups) -%}
                 {{ components.settings_section(
                     group.title,
                     group.schema,
@@ -290,12 +287,6 @@ limitations under the License.
                     name_prefix=field_name ~ "__"
                 ) }}
                 {%- endfor -%}
-                {%- else -%}
-                <p class="no-settings">
-                    A single-valued attribute is appended to the feature vector without a plugin,
-                    so it has no settings yet.
-                </p>
-                {%- endif -%}
             </div>
         </div>
         {%- endfor -%}

@@ -213,6 +213,7 @@ def persist_generated_file(
     file_name: str,
     file_type: str,
     as_result: bool,
+    mimetype: str = "application/zip",
 ) -> str:
     """Store a file the router generated itself and return its external url.
 
@@ -226,11 +227,11 @@ def persist_generated_file(
 
     if as_result:
         file_info = save_intermediate_results(
-            task_data, retries, task_data.id, file, file_name, file_type
+            task_data, retries, task_data.id, file, file_name, file_type, mimetype
         )
     else:
         file_info = STORE.persist_task_temp_file(
-            task_data.id, file, file_name, mimetype="application/zip"
+            task_data.id, file, file_name, mimetype=mimetype
         )
 
     with current_app.test_request_context(base_url=task_data.data.get("base_url")):

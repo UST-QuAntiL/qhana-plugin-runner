@@ -39,18 +39,21 @@ from qhana_plugin_runner.tasks import (
 
 from . import FEATURE_ENGINEERING_PIPELINE_BLP, FeatureEngineeringPipeline
 from .schemas import (
-    MAPPING_PLUGIN,
     NUMERIC_SETTINGS_GROUPS,
     PCA_PLUGIN,
     PIPELINE_OPTIONS,
     PIPELINE_PLUGINS,
     PIPELINE_SETTINGS_GROUPS,
+    SINGLE_VALUED_NUMERIC_SETTINGS_GROUPS,
+    TAXONOMY_SETTINGS_GROUPS,
     VECTOR_CONCAT_PLUGIN,
+    AttributeSettingsSchema,
     InputParametersSchema,
     MetricEnum,
     PCATypeEnum,
     RoutingStepParametersSchema,
     SolverEnum,
+    expanded_numeric_settings_groups,
     expanded_settings_groups,
     load_settings,
     merge_settings,
@@ -98,10 +101,13 @@ TASK_LOGGER = get_task_logger(__name__)
 
 
 # --- HELPER FUNCTION FOR UIs ---
-def field_groups(groups: tuple[tuple[str, str, tuple[str, ...]], ...]) -> list[dict]:
+def field_groups(
+    groups: tuple[tuple[str, str, tuple[str, ...]], ...],
+    schema=InputParametersSchema,
+) -> list[dict]:
     """Return the template sections for ``(key, title, field names)`` triples."""
     return [
-        {"key": key, "title": title, "schema": InputParametersSchema(only=field_names)}
+        {"key": key, "title": title, "schema": schema(only=field_names)}
         for key, title, field_names in groups
     ]
 
@@ -270,8 +276,9 @@ class MicroFrontend(MethodView):
             fields["solver"].data_key: SolverEnum.auto,
             fields["tol"].data_key: 0,
             fields["iterated_power"].data_key: 0,
+            fields["normalization_output_range_start"].data_key: 0.0,
+            fields["normalization_output_range_end"].data_key: 1.0,
         }
-
         default_values.update(data_dict)
         data_dict = default_values
 
@@ -380,17 +387,12 @@ class RoutingStepFrontend(MethodView):
         input_params = loads(db_task.parameters or "{}")
 
         # A multi-valued numeric attribute runs the distances mapping, so it carries
-        # the settings of that pipeline. A single-valued one has no settings yet.
-        multi_valued_numeric_attributes = [
-            attribute
-            for attribute in numeric_attributes
-            if attribute in multi_valued_numeric
-        ]
-
+        # the settings of that pipeline. Every attribute carries the normalization
+        # settings.
         _, submitted_settings = split_routing_fields(data)
         settings_values = {
             attribute: merge_settings(input_params, submitted_settings.get(attribute, {}))
-            for attribute in (*attributes, *multi_valued_numeric_attributes)
+            for attribute in (*attributes, *numeric_attributes)
         }
         _, settings_errors = split_routing_fields(errors)
 
@@ -399,10 +401,9 @@ class RoutingStepFrontend(MethodView):
                 attribute: expanded_settings_groups(recommendations.get(attribute))
                 for attribute in attributes
             },
-            # The numeric pipeline is fixed, so its sections open like a recommendation.
             **{
-                attribute: expanded_settings_groups(MAPPING_PLUGIN)
-                for attribute in multi_valued_numeric_attributes
+                attribute: expanded_numeric_settings_groups()
+                for attribute in numeric_attributes
             },
         }
 
@@ -417,8 +418,15 @@ class RoutingStepFrontend(MethodView):
                 multi_valued_numeric=multi_valued_numeric,
                 recommendations=recommendations,
                 pipeline_options=PIPELINE_OPTIONS,
-                settings_groups=field_groups(PIPELINE_SETTINGS_GROUPS),
-                numeric_settings_groups=field_groups(NUMERIC_SETTINGS_GROUPS),
+                settings_groups=field_groups(
+                    TAXONOMY_SETTINGS_GROUPS, AttributeSettingsSchema
+                ),
+                numeric_settings_groups=field_groups(
+                    NUMERIC_SETTINGS_GROUPS, AttributeSettingsSchema
+                ),
+                single_valued_numeric_settings_groups=field_groups(
+                    SINGLE_VALUED_NUMERIC_SETTINGS_GROUPS, AttributeSettingsSchema
+                ),
                 expanded_groups=expanded_groups,
                 input_params=input_params,
                 settings_values=settings_values,

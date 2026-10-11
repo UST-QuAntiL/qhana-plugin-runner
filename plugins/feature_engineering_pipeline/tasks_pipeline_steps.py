@@ -37,6 +37,7 @@ from .schemas import (
     FINALIZE_PIPELINE,
     MAPPING_PLUGIN,
     MDS_PLUGIN,
+    NORMALIZATION_PLUGIN,
     NUMERIC_MAPPING_PIPELINE,
     ONE_HOT_PLUGIN,
     PCA_PLUGIN,
@@ -127,6 +128,7 @@ def launch_next_pipeline(task_data: ProcessingTask):
         # the settings of the first step.
         task_data.data.pop("current_settings", None)
         task_data.data.pop("current_pipeline_label", None)
+        task_data.data.pop("current_normalize", None)
 
         # Optional vector concatenation if the user requested it.
         # Afterwards, the optional PCA plugin will be executed
@@ -151,6 +153,7 @@ def launch_next_pipeline(task_data: ProcessingTask):
     task_data.data["current_pipeline"] = next_pipeline
     task_data.data["current_pipeline_label"] = group.get("label", next_pipeline)
     task_data.data["current_settings"] = group.get("settings", {})
+    task_data.data["current_normalize"] = group.get("normalize", False)
     task_data.data[f"{next_pipeline}_attributes"] = "\n".join(group["attributes"])
 
     # Reset progress when starting new pipeline
@@ -161,9 +164,11 @@ def launch_next_pipeline(task_data: ProcessingTask):
         TRANSFORMERS_PLUGIN,
         AGGREGATOR_PLUGIN,
         MDS_PLUGIN,
+        NORMALIZATION_PLUGIN,
     ):
         task_data.data.pop(f"{reused_step}_url", None)
     task_data.data.pop("generated_files", None)
+    task_data.data.pop("normalization_target", None)
 
     # Reset the tracking of webhook events and progress for the new pipeline
     task_data.data["progressed_via"] = {}
@@ -208,6 +213,78 @@ def launch_next_pipeline(task_data: ProcessingTask):
             f"BUG: No pipeline start step for '{next_pipeline}'. Expected one of "
             f"{[WU_PALMER_PLUGIN, MAPPING_PLUGIN, ONE_HOT_PLUGIN, NUMERIC_MAPPING_PIPELINE, FEATURE_VECTOR]}."
         )
+
+
+def _stores_unnormalized_vectors(task_data: ProcessingTask, params: InputParameters):
+    """Return true if the vectors of the running group are stored before normalization.
+
+    A normalized group stores the normalized vectors as its result, so the vectors
+    before normalization are only an intermediate result.
+    """
+    if task_data.data.get("current_normalize"):
+        return params.include_intermediate_results_in_output
+    return should_store_pipeline_vectors(params)
+
+
+def _complete_pipeline(
+    task_data: ProcessingTask, params: InputParameters, vectors_url: str
+):
+    """Hand the vectors of the running group to the concatenation and start the next group."""
+    if params.concat_output:
+        vector_zip_urls = task_data.data.get("vector_zip_urls", [])
+        # A retry must not add a file the router generated itself a second time.
+        generated = task_data.data.get("generated_files", {}).values()
+        if vectors_url not in generated or vectors_url not in vector_zip_urls:
+            vector_zip_urls.append(vectors_url)
+        task_data.data["vector_zip_urls"] = vector_zip_urls
+        task_data.save(commit=True)
+
+    launch_next_pipeline(task_data)
+
+
+def normalization_payload(params: InputParameters, entities_url: str) -> dict:
+    """Return the form data that starts the normalization plugin.
+
+    No attributes are selected, so the plugin normalizes every vector dimension. A
+    vector zip is normalized file by file.
+    """
+
+    def optional(value: float | None):
+        return "" if value is None else value
+
+    return {
+        "entitiesUrl": entities_url,
+        "attributes": "",
+        "inputRangeMin": optional(params.normalization_input_range_min),
+        "inputRangeMax": optional(params.normalization_input_range_max),
+        "outputRangeStart": params.normalization_output_range_start,
+        "outputRangeEnd": params.normalization_output_range_end,
+        "useClipping": str(params.normalization_use_clipping).lower(),
+        "allowMissingValues": str(params.normalization_allow_missing_values).lower(),
+    }
+
+
+def start_vector_normalization(
+    task_data: ProcessingTask,
+    params: InputParameters,
+    vectors_url: str,
+    file_name: str,
+):
+    """
+    Starts the normalization plugin for the vectors of the running pipeline group.
+
+    ``finalize_normalization`` stores the normalized vectors as ``file_name``.
+    """
+    task_data.data["normalization_target"] = {"file_name": file_name}
+    task_data.save(commit=True)
+
+    run_pipeline_step(
+        db_id=task_data.id,
+        task_data=task_data,
+        plugin_name=NORMALIZATION_PLUGIN,
+        logging_name="Normalization",
+        payload=normalization_payload(params, vectors_url),
+    )
 
 
 """Collection of celery tasks for starting plugins that are substeps of the various pipelines managed by the routing plugin."""
@@ -556,7 +633,8 @@ def build_numeric_feature_vector(self, db_id: int):
             for entity, value in zip(entities, column)
         ]
 
-    file_name = f"{FEATURE_VECTOR}_numeric_vectors.zip"
+    label = pipeline_label(task_data)
+    file_name = f"{label}_numeric_vectors.zip"
     first_attempt = file_name not in task_data.data.get("generated_files", {})
     vectors_url = persist_generated_file(
         task_data,
@@ -564,19 +642,22 @@ def build_numeric_feature_vector(self, db_id: int):
         entities_zip(members),
         file_name,
         "entity/vector",
-        as_result=should_store_pipeline_vectors(params),
+        as_result=_stores_unnormalized_vectors(task_data, params),
     )
 
-    if params.concat_output:
-        vector_zip_urls = task_data.data.get("vector_zip_urls", [])
-        if vectors_url not in vector_zip_urls:
-            vector_zip_urls.append(vectors_url)
-        task_data.data["vector_zip_urls"] = vector_zip_urls
     if first_attempt:
         task_data.progress_value += 1
     task_data.save(commit=True)
 
-    launch_next_pipeline(task_data)
+    # Each vector holds the raw value of its attribute, so normalizing the vectors
+    # normalizes the attribute values.
+    if task_data.data.get("current_normalize"):
+        start_vector_normalization(
+            task_data, params, vectors_url, f"{label}_normalized_numeric_vectors.zip"
+        )
+        return
+
+    _complete_pipeline(task_data, params, vectors_url)
 
 
 # --- END OF PIPELINE ---
@@ -609,7 +690,7 @@ def finalize_pipeline(self, db_id: int, source_url: str):
     outputs = requests.get(source_url, timeout=REQUEST_TIMEOUT).json().get("outputs", [])
     final_dists_url = extract_output_url(outputs, "entity/vector")
 
-    if should_store_pipeline_vectors(params):
+    if _stores_unnormalized_vectors(task_data, params):
         save_intermediate_results(
             task_data=task_data,
             retries=self.request.retries,
@@ -619,14 +700,16 @@ def finalize_pipeline(self, db_id: int, source_url: str):
             file_type="entity/vector",
         )
 
-    if params.concat_output:
-        vector_zip_urls = task_data.data.get("vector_zip_urls", [])
-        vector_zip_urls.append(final_dists_url)
-        task_data.data["vector_zip_urls"] = vector_zip_urls
-        task_data.save(commit=True)
+    if task_data.data.get("current_normalize"):
+        start_vector_normalization(
+            task_data,
+            params,
+            final_dists_url,
+            f"{current_pipeline_name}_normalized_mds_vectors.zip",
+        )
+        return
 
-    # trigger next pipeline
-    launch_next_pipeline(task_data)
+    _complete_pipeline(task_data, params, final_dists_url)
 
 
 @CELERY.task(
@@ -657,7 +740,7 @@ def finalize_one_hot(self, db_id: int, source_url: str):
     outputs = requests.get(source_url, timeout=REQUEST_TIMEOUT).json().get("outputs", [])
     vectors_url = extract_output_url(outputs, "entity/vector")
 
-    if should_store_pipeline_vectors(params):
+    if _stores_unnormalized_vectors(task_data, params):
         save_intermediate_results(
             task_data=task_data,
             retries=self.request.retries,
@@ -668,13 +751,62 @@ def finalize_one_hot(self, db_id: int, source_url: str):
             mimetype="text/csv",
         )
 
-    if params.concat_output:
-        vector_zip_urls = task_data.data.get("vector_zip_urls", [])
-        vector_zip_urls.append(vectors_url)
-        task_data.data["vector_zip_urls"] = vector_zip_urls
-        task_data.save(commit=True)
+    if task_data.data.get("current_normalize"):
+        start_vector_normalization(
+            task_data,
+            params,
+            vectors_url,
+            f"{pipeline_label(task_data)}_normalized_vectors.csv",
+        )
+        return
 
-    launch_next_pipeline(task_data)
+    _complete_pipeline(task_data, params, vectors_url)
+
+
+# --- NORMALIZATION (last step of a normalized pipeline group) ---
+@CELERY.task(
+    name=f"{FeatureEngineeringPipeline.instance.identifier}.finalize_normalization",
+    bind=True,
+    base=PipelineTask,
+)
+def finalize_normalization(self, db_id: int, source_url: str):
+    """
+    Stores the normalized vectors of the running pipeline group and starts the next group.
+
+    The plugin returns a vector zip as ``entity/vector`` and a vector csv as
+    ``entity/list``. Both keep the format of the input.
+
+    Args:
+        self: The Celery task instance (bound).
+        db_id (int): The database ID of the ProcessingTask.
+        source_url (str): The URL of the completed normalization task.
+
+    Raises:
+        ValueError: If no 'entity/vector' or 'entity/list' output is present.
+    """
+
+    task_data = ProcessingTask.get_by_id(db_id)
+    params: InputParameters = load_params(task_data)
+    target = task_data.data["normalization_target"]
+
+    outputs = requests.get(source_url, timeout=REQUEST_TIMEOUT).json().get("outputs", [])
+    data_types = {output.get("dataType") for output in outputs}
+    data_type = "entity/vector" if "entity/vector" in data_types else "entity/list"
+    normalized_response = open_url(
+        extract_output_url(outputs, data_type), timeout=REQUEST_TIMEOUT
+    )
+
+    vectors_url = persist_generated_file(
+        task_data,
+        self.request.retries,
+        normalized_response.content,
+        target["file_name"],
+        "entity/vector",
+        as_result=should_store_pipeline_vectors(params),
+        mimetype=get_mimetype(normalized_response),
+    )
+
+    _complete_pipeline(task_data, params, vectors_url)
 
 
 # --- AFTER ALL PIPELINES: Vector concat ---

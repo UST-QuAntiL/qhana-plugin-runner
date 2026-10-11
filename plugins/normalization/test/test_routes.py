@@ -73,3 +73,17 @@ def test_process_still_rejects_equal_output_bounds(client):
     errors = resp.get_json()["errors"]["form"]
     assert errors["outputRangeStart"] == [message]
     assert errors["outputRangeEnd"] == [message]
+
+
+def test_metadata_accepts_entity_zips(client):
+    resp = client.get(url_for(f"{NORMALIZATION_BLP.name}.PluginsView"))
+
+    assert resp.status_code == HTTPStatus.OK
+    entry_point = resp.get_json()["entryPoint"]
+    entities_input = entry_point["dataInput"][0]
+    assert entities_input["dataType"] == "entity/*"
+    assert "application/zip" in entities_input["contentType"]
+    assert {output["dataType"] for output in entry_point["dataOutput"]} == {
+        "entity/list",
+        "entity/vector",
+    }
