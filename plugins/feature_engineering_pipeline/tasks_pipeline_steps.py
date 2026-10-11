@@ -743,26 +743,7 @@ def finalize_vector_concat(self, db_id: int, source_url: str):
     concatenated_vector = extract_output_url(outputs, "entity/vector")
     concatenated_vector_response = open_url(concatenated_vector, timeout=REQUEST_TIMEOUT)
 
-    if params.reduce_dimensions and has_enough_pca_dimensions(
-        task_data, params, concatenated_vector_response
-    ):
-        if params.include_intermediate_results_in_output:
-            save_intermediate_results(
-                task_data=task_data,
-                retries=self.request.retries,
-                db_id=db_id,
-                file=concatenated_vector_response.content,
-                file_name=f"concatenated_vector{extension}",
-                file_type="entity/vector",
-                mimetype=mimetype,
-            )
-        task_data.add_task_log_entry(
-            "Starting PCA plugin to reduce the dimensions of the concatenated vector."
-        )
-        task_data.save(commit=True)
-        start_pca.apply_async(args=[db_id, concatenated_vector])
-        return
-
+    # The unreduced vector is part of the output also if PCA runs afterwards.
     save_intermediate_results(
         task_data=task_data,
         retries=self.request.retries,
@@ -772,6 +753,16 @@ def finalize_vector_concat(self, db_id: int, source_url: str):
         file_type="entity/vector",
         mimetype=mimetype,
     )
+
+    if params.reduce_dimensions and has_enough_pca_dimensions(
+        task_data, params, concatenated_vector_response
+    ):
+        task_data.add_task_log_entry(
+            "Starting PCA plugin to reduce the dimensions of the concatenated vector."
+        )
+        task_data.save(commit=True)
+        start_pca.apply_async(args=[db_id, concatenated_vector])
+        return
 
     save_task_result.delay(
         "All Pipelines Completed Successfully And Concatenated Vector Created!", db_id

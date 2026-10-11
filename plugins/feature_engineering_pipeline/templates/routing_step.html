@@ -311,7 +311,11 @@ limitations under the License.
     <fieldset id="pca-settings">
         <legend>PCA Settings</legend>
         {% if concat_output %}
-        {{ forms.render_fields(pca_schema, values=values, errors=errors) }}
+        {{ forms.render_fields(pca_toggle_schema, values=values, errors=errors) }}
+        {%- set reduce_key = pca_toggle_schema.fields["reduce_dimensions"].data_key %}
+        <div id="pca-fields" {% if not values.get(reduce_key) %}hidden{% endif %}>
+            {{ forms.render_fields(pca_schema, values=values, errors=errors) }}
+        </div>
         {% else %}
         <p>PCA reduces the dimensions of the concatenated vector. Enable "Concat output" in the
             first step to reduce them.</p>
@@ -354,21 +358,14 @@ limitations under the License.
 
 <script>
     const reduceDimensions = document.getElementById("reduce_dimensions");
-
-    function togglePcaFields() {
-        const reduceField = reduceDimensions.closest(".qhana-form-field");
-        document.querySelectorAll("#pca-settings .qhana-form-field").forEach(field => {
-            if (field !== reduceField) {
-                field.hidden = !reduceDimensions.checked;
-            }
-        });
-        window.requestAnimationFrame(reportContentHeight);
-    }
+    const pcaFields = document.getElementById("pca-fields");
 
     // the section is only rendered for a concatenated output
-    if (reduceDimensions != null) {
-        reduceDimensions.addEventListener("change", togglePcaFields);
-        togglePcaFields();
+    if (reduceDimensions != null && pcaFields != null) {
+        reduceDimensions.addEventListener("change", () => {
+            pcaFields.hidden = !reduceDimensions.checked;
+            window.requestAnimationFrame(reportContentHeight);
+        });
     }
 </script>
 {% endblock script %}
