@@ -51,6 +51,15 @@ limitations under the License.
         margin: 0 0 0.5rem 0;
     }
 
+    .pipeline-descriptions p {
+        margin-top: 0;
+        margin-bottom: 0.5em;
+    }
+
+    .pipeline-descriptions p:last-child {
+        margin-left: 1.5em;
+    }
+
     .numeric-description {
         margin-bottom: 0.5rem;
     }
@@ -142,11 +151,16 @@ limitations under the License.
     .attribute-settings .settings-section:last-child {
         margin-bottom: 0.4rem;
     }
+
+    #pca-settings {
+        margin-top: 1rem;
+    }
 </style>
 {% endblock head %}
 
 {% block content %}
 <div class="qhana-microfrontend">
+    {% call forms.render_form(target="microfrontend") %}
     {% if input_params %}
     <fieldset class="input-params">
         <legend>Selected inputs (from step 1)</legend>
@@ -171,28 +185,33 @@ limitations under the License.
 
             <dt>Wu-Palmer</dt>
             <dd>
-                Keeps the taxonomy attribute values unchanged and calculates pairwise Wu-Palmer similarities
+                <p>Keeps the taxonomy attribute values unchanged and calculates pairwise Wu-Palmer similarities
                 from their positions in the taxonomy hierarchy. The similarities are converted to distances,
                 aggregated to entity distances, and embedded with MDS into the configured number of
-                feature-vector dimensions.
-            </dd>
+                feature-vector dimensions.</p>
 
-            <dt>One-Hot</dt>
-            <dd>
-                Encodes the taxonomy values directly as binary feature-vector dimensions.
-                No similarity or distance calculation, aggregation, or MDS is performed.
+                <p><i>Recommended if the taxonomy features a deep, multi-level hierarchy.</i></p>
             </dd>
 
             <dt>Mapping</dt>
             <dd>
-                Calculates distances between the mapped taxonomy values using the configured distance metric.
+                <p>Calculates distances between the mapped taxonomy values using the configured distance metric.
                 The distances are aggregated to entity distances and embedded with MDS into the configured
-                number of feature-vector dimensions.
+                number of feature-vector dimensions.</p>
+
+                <p><i>Recommended if the taxonomy contains explicit mapping values (e.g., continuous numerical scales).</i></p>
+            </dd>
+
+            <dt>One-Hot</dt>
+            <dd>
+                <p>Encodes the taxonomy values directly as binary feature-vector dimensions.
+                No similarity or distance calculation, aggregation, or MDS is performed.</p>
+
+                <p><i>Recommended for flat categories or non-tree structures where hierarchical semantic distance is uniform and no mapping has been specified.</i></p>
             </dd>
         </dl>
     </fieldset>
 
-    {% call forms.render_form(target="microfrontend") %}
     {% if attributes %}
     <fieldset>
         <legend>Taxonomy Attributes</legend>
@@ -295,6 +314,20 @@ limitations under the License.
     <p>No numeric attributes were found in the provided metadata.</p>
     {% endif %}
 
+    <fieldset id="pca-settings">
+        <legend>PCA Settings</legend>
+        {% if concat_output %}
+        {{ forms.render_fields(pca_toggle_schema, values=values, errors=errors) }}
+        {%- set reduce_key = pca_toggle_schema.fields["reduce_dimensions"].data_key %}
+        <div id="pca-fields" {% if not values.get(reduce_key) %}hidden{% endif %}>
+            {{ forms.render_fields(pca_schema, values=values, errors=errors) }}
+        </div>
+        {% else %}
+        <p>PCA reduces the dimensions of the concatenated vector. Enable "Concat output" in the
+            first step to reduce them.</p>
+        {% endif %}
+    </fieldset>
+
     <div class="qhana-form-buttons">
         {{ forms.submit("validate", target="microfrontend")}}
         {{ forms.submit("submit", action=process)}}
@@ -327,5 +360,18 @@ limitations under the License.
             window.requestAnimationFrame(reportContentHeight);
         });
     });
+</script>
+
+<script>
+    const reduceDimensions = document.getElementById("reduce_dimensions");
+    const pcaFields = document.getElementById("pca-fields");
+
+    // the section is only rendered for a concatenated output
+    if (reduceDimensions != null && pcaFields != null) {
+        reduceDimensions.addEventListener("change", () => {
+            pcaFields.hidden = !reduceDimensions.checked;
+            window.requestAnimationFrame(reportContentHeight);
+        });
+    }
 </script>
 {% endblock script %}
