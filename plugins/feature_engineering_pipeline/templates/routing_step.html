@@ -51,6 +51,15 @@ limitations under the License.
         margin: 0 0 0.5rem 0;
     }
 
+    .pipeline-descriptions p {
+        margin-top: 0;
+        margin-bottom: 0.5em;
+    }
+
+    .pipeline-descriptions p:last-child {
+        margin-left: 1.5em;
+    }
+
     .numeric-description {
         margin-bottom: 0.5rem;
     }
@@ -176,43 +185,29 @@ limitations under the License.
 
             <dt>Wu-Palmer</dt>
             <dd>
-                Keeps the taxonomy attribute values unchanged and calculates pairwise Wu-Palmer similarities
+                <p>Keeps the taxonomy attribute values unchanged and calculates pairwise Wu-Palmer similarities
                 from their positions in the taxonomy hierarchy. The similarities are converted to distances,
                 aggregated to entity distances, and embedded with MDS into the configured number of
-                feature-vector dimensions.
-            </dd>
+                feature-vector dimensions.</p>
 
-            <dt>One-Hot</dt>
-            <dd>
-                Encodes the taxonomy values directly as binary feature-vector dimensions.
-                No similarity or distance calculation, aggregation, or MDS is performed.
+                <p><i>Recommended if the taxonomy features a deep, multi-level hierarchy.</i></p>
             </dd>
 
             <dt>Mapping</dt>
             <dd>
-                Calculates distances between the mapped taxonomy values using the configured distance metric.
+                <p>Calculates distances between the mapped taxonomy values using the configured distance metric.
                 The distances are aggregated to entity distances and embedded with MDS into the configured
-                number of feature-vector dimensions.
-            </dd>
-        </dl>
-    </fieldset>
+                number of feature-vector dimensions.</p>
 
-     <fieldset class="pipeline-descriptions">
-        <legend>Pipeline recommendations</legend>
-        <dl>
-            <dt>Wu-Palmer</dt>
-            <dd>
-                Recommended if the taxonomy features a deep, multi-level hierarchy.
+                <p><i>Recommended if the taxonomy contains explicit mapping values (e.g., continuous numerical scales).</i></p>
             </dd>
 
             <dt>One-Hot</dt>
             <dd>
-                Recommended for flat categories or non-tree structures where hierarchical semantic distance is uniform.
-            </dd>
+                <p>Encodes the taxonomy values directly as binary feature-vector dimensions.
+                No similarity or distance calculation, aggregation, or MDS is performed.</p>
 
-            <dt>Mapping</dt>
-            <dd>
-                Recommended if the taxonomy contains explicit mapping values (e.g., continuous numerical scales).
+                <p><i>Recommended for flat categories or non-tree structures where hierarchical semantic distance is uniform and no mapping has been specified.</i></p>
             </dd>
         </dl>
     </fieldset>
