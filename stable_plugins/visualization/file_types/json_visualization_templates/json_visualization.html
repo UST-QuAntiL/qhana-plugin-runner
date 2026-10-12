@@ -88,6 +88,22 @@
             }
         }
 
+        // A mapping describes the dimensions of one specific vector file. Other files of
+        // the same step (e.g. a PCA result next to the concatenated vector) reuse the
+        // dimension names dim0, dim1, ... for other features, so the labels are only
+        // used if the mapping names exactly the dimensions of the entities.
+        function labelsForEntities(dimensionLabels, json) {
+            const first = Array.isArray(json) ? json[0] : null;
+            if (first == null || typeof first !== "object") {
+                return {};
+            }
+            const dimensions = Object.keys(first).filter(key => key !== "ID" && key !== "href");
+            const labelled = Object.keys(dimensionLabels);
+            const matches = labelled.length === dimensions.length
+                && dimensions.every(dimension => Object.hasOwn(dimensionLabels, dimension));
+            return matches ? dimensionLabels : {};
+        }
+
         const attributeLinePattern = /^\s*("(?:[^"\\]|\\.)*"): /;
 
         let currentDimensionLabels = {};
@@ -167,9 +183,12 @@
             const options = document.querySelector('#visualization-options');
 
             colorizeButton.setAttribute("hidden", "");
+
+            const json = JSON.parse(json_str);
+            dimensionLabels = labelsForEntities(dimensionLabels, json);
             currentDimensionLabels = dimensionLabels;
 
-            const prettified_json_str = JSON.stringify(JSON.parse(json_str), null, 4);
+            const prettified_json_str = JSON.stringify(json, null, 4);
 
             dataPreview.textContent = prettified_json_str;
 
@@ -220,6 +239,8 @@
         // Asks the parent to fill the dimension mapping input with a file related
         // to the json file. The mapping is a sibling output of the step that
         // produced the json file, so the search includes the producing step itself.
+        // The relation "pre" also returns the mappings of earlier versions and the
+        // parent takes the first (oldest) one, so only the producing step is searched.
         function autoSelectDimensionMapping(dataUrl) {
             if (!dataUrl || mappingInput.value) {
                 requestedRelatedFor = null;
@@ -234,7 +255,7 @@
                 type: "request-related-data-url",
                 inputKey: "dimension_mapping_url",
                 dataUrl: dataUrl,
-                relation: "pre",
+                relation: "exact",
                 includeSelf: true,
                 acceptedInputType: "entity/dimension-mapping",
                 userInteraction: false,

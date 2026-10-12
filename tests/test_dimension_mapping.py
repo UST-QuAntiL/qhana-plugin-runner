@@ -177,3 +177,35 @@ def test_load_dimension_labels_reads_the_vector_concat_output_verbatim(monkeypat
         "dim1": "color",
         "dim2": "shape",
     }
+
+
+CONCAT_MAPPING = [
+    _mapping_entity("dim0", "color", "dim0"),
+    _mapping_entity("dim1", "shape", "dim0"),
+    _mapping_entity("dim2", "size", "dim0"),
+]
+
+
+def test_labels_for_matching_dimensions(monkeypatch):
+    _serve(monkeypatch, CONCAT_MAPPING)
+
+    assert load_dimension_labels(MAPPING_URL, dimensions=["dim2", "dim0", "dim1"]) == {
+        "dim0": "color",
+        "dim1": "shape",
+        "dim2": "size",
+    }
+
+
+@pytest.mark.parametrize(
+    "dimensions",
+    [
+        ["dim0"],  # a PCA result of the concatenated vector
+        ["dim0", "dim1", "dim2", "dim3"],
+        ["x", "y", "z"],
+        [],
+    ],
+)
+def test_no_labels_for_other_dimensions(monkeypatch, dimensions):
+    _serve(monkeypatch, CONCAT_MAPPING)
+
+    assert load_dimension_labels(MAPPING_URL, dimensions=dimensions) == {}

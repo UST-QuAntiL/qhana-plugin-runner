@@ -58,6 +58,18 @@
             }
         }
 
+        // A mapping describes the dimensions of one specific vector file. Other files of
+        // the same step (e.g. a PCA result next to the concatenated vector) reuse the
+        // dimension names dim0, dim1, ... for other features, so the labels are only
+        // used if the mapping names exactly the dimensions of the file.
+        function labelsForColumns(dimensionLabels, columns) {
+            const dimensions = columns.filter(column => column !== "ID" && column !== "href");
+            const labelled = Object.keys(dimensionLabels);
+            const matches = labelled.length === dimensions.length
+                && dimensions.every(dimension => Object.hasOwn(dimensionLabels, dimension));
+            return matches ? dimensionLabels : {};
+        }
+
         function buildHeaderCell(column, dimensionLabels) {
             const th = document.createElement("th");
             th.appendChild(document.createTextNode(column));
@@ -100,8 +112,9 @@
                     const table = document.createElement("table");
                     headerRow = document.createElement("tr");
                     table.appendChild(headerRow)
+                    const columnLabels = labelsForColumns(dimensionLabels, csv_header);
                     csv_header.forEach(column => {
-                        headerRow.appendChild(buildHeaderCell(column, dimensionLabels));
+                        headerRow.appendChild(buildHeaderCell(column, columnLabels));
                     });
                     rows.forEach(row => {
                         const tr = document.createElement("tr");
@@ -124,6 +137,8 @@
         // Asks the parent to fill the dimension mapping input with a file related
         // to the csv file. The mapping is a sibling output of the step that
         // produced the csv file, so the search includes the producing step itself.
+        // The relation "pre" also returns the mappings of earlier versions and the
+        // parent takes the first (oldest) one, so only the producing step is searched.
         function autoSelectDimensionMapping(dataUrl) {
             if (!dataUrl || mappingInput.value) {
                 requestedRelatedFor = null;
@@ -138,7 +153,7 @@
                 type: "request-related-data-url",
                 inputKey: "dimension_mapping_url",
                 dataUrl: dataUrl,
-                relation: "pre",
+                relation: "exact",
                 includeSelf: true,
                 acceptedInputType: "entity/dimension-mapping",
                 userInteraction: false,
