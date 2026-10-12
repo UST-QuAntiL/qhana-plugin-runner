@@ -94,6 +94,13 @@
   - data-loading
 
     data-synthesizing
+* - [Demo data loader (@v0.1.0)](#demo-data-loader)
+
+    demo-data-loader@v0-1-0
+  - dataloader
+  - data-loading
+
+    demo
 * - [Deploy Workflow (@v0.1.1)](#deploy-workflow)
 
     deploy-workflow@v0-1-1
@@ -905,6 +912,23 @@ A plugin to create datasets.
 |entity/label|application/json|✓|
 |entity/vector|application/json|✓|
 |entity/label|application/json|✓|
+
+
+(demo-data-loader)=
+### Demo data loader (@v0.1.0)
+
+dataloader – data-loading, demo\
+*Path:* {file}`plugins/demo_data_loader/__init__.py`
+
+Loads a small, self contained demo dataset. Provides entities, attribute metadata and taxonomies that cover tree taxonomies, taxonomies with mapping vectors and numeric attributes, so that the 'Feature Engineering Pipeline' plugin can be demonstrated without an external database.
+
+**Outputs:**
+
+| Data Type | Content Type | Always |
+|-----------|--------------| :----: |
+|entity/list|application/json|✓|
+|entity/attribute-metadata|application/json|✓|
+|graph/taxonomy|application/zip|✓|
 
 
 (deploy-workflow)=

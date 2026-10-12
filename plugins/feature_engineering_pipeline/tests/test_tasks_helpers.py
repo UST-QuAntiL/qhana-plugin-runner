@@ -21,6 +21,7 @@ from feature_engineering_pipeline.schemas import (
     MAPPING_PLUGIN,
     MDS_PLUGIN,
     WU_PALMER_PLUGIN,
+    ONE_HOT_PLUGIN,
 )
 from feature_engineering_pipeline.tasks_helpers import (
     CELERY_COUNTDOWN,
@@ -34,7 +35,7 @@ from feature_engineering_pipeline.tasks_helpers import (
     plugin_process_url,
     run_pipeline_step,
     save_intermediate_results,
-    should_store_mds_output,
+    should_store_pipeline_vectors,
     taxonomy_ref,
 )
 from feature_engineering_pipeline.tasks_pipeline_steps import start_wu_palmer
@@ -158,6 +159,7 @@ def test_load_entity_attributes_reads_the_csv_header(monkeypatch):
         "missing_tax",
         "year",
         "beats",
+        "lautstaerke",
     }
 
 
@@ -172,10 +174,15 @@ def test_calculate_recommendations_suggests_wu_palmer_without_mappings():
     )
 
 
-def test_calculate_recommendations_falls_back_for_unreadable_taxonomies():
+def test_calculate_recommendations_suggests_one_hot_for_flat_trees():
     assert (
-        calculate_recommendations(_taxonomies_zip(), "missing.json") == WU_PALMER_PLUGIN
+        calculate_recommendations(_taxonomies_zip(), "t_lautstaerke.json")
+        == ONE_HOT_PLUGIN
     )
+
+
+def test_calculate_recommendations_falls_back_for_unreadable_taxonomies():
+    assert calculate_recommendations(_taxonomies_zip(), "missing.json") == ONE_HOT_PLUGIN
 
 
 # --- OUTPUT STORAGE DECISIONS ---
@@ -190,13 +197,13 @@ def test_calculate_recommendations_falls_back_for_unreadable_taxonomies():
         (True, True, True),
     ],
 )
-def test_should_store_mds_output(concat_output, include_intermediate, expected):
-    """Without concatenation the MDS vectors are the only result of the run."""
+def test_should_store_pipeline_vectors(concat_output, include_intermediate, expected):
+    """Without concatenation the per-pipeline vectors are the only result of the run."""
     params = router_params(
         concatOutput=concat_output,
         includeIntermediateResultsInOutput=include_intermediate,
     )
-    assert should_store_mds_output(params) is expected
+    assert should_store_pipeline_vectors(params) is expected
 
 
 def test_save_intermediate_results_persists_the_file():

@@ -20,6 +20,7 @@ from zipfile import ZipFile
 import requests
 from celery.utils.log import get_task_logger
 from flask.globals import current_app
+from marshmallow import EXCLUDE
 from requests.exceptions import ConnectionError, Timeout
 
 from qhana_plugin_runner.celery import CELERY
@@ -41,7 +42,9 @@ from qhana_plugin_runner.tasks import TASK_DETAILS_CHANGED, save_task_error
 from .schemas import (
     MAPPING_PLUGIN,
     WU_PALMER_PLUGIN,
+    ONE_HOT_PLUGIN,
     InputParameters,
+    InputParametersSchema,
 )
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -150,6 +153,23 @@ def plugin_process_url(task_data: ProcessingTask, plugin: str) -> str:
     return get_plugin_endpoint(task_data.data["plugin_urls"][plugin])
 
 
+def load_params(task_data: ProcessingTask) -> InputParameters:
+    """Return the input parameters that apply to the running pipeline group.
+
+    A group carries the settings it overrides, see ``start_routing_task``.
+    """
+    parameters = json.loads(task_data.parameters or "{}")
+    parameters.update(task_data.data.get("current_settings", {}))
+    return InputParametersSchema(unknown=EXCLUDE).load(parameters)
+
+
+def pipeline_label(task_data: ProcessingTask) -> str:
+    """Return the label of the running pipeline group, used in its result file names."""
+    return task_data.data.get("current_pipeline_label") or task_data.data.get(
+        "current_pipeline", "unknown"
+    )
+
+
 def load_task(db_id: int) -> ProcessingTask:
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
     if task_data is None:
@@ -226,25 +246,62 @@ def calculate_recommendations(taxonomies_zip: ZipFile, zip_path: str) -> str:
     """
     Determines the optimal pipeline recommendation for a given taxonomy file.
 
-    Reads the taxonomy JSON inside the provided ZIP file. If any entity contains
-    non-empty 'mapping_raw' data, it recommends the Mapping plugin. Otherwise,
-    it defaults to the Wu-Palmer plugin.
+    If any entity contains non-empty 'mapping_raw' data, it recommends the Mapping plugin.
+    If the taxonomy is a strict tree with depth greater than 1, it recommends the Wu-Palmer plugin.
+    If the taxonomy is a flat list or has nodes with multiple parents, it recommends the One-Hot plugin.
     """
-    # TODO: Refine the recommendation detection (Template also allows for no recommendation)
-
     try:
         with taxonomies_zip.open(zip_path) as f:
             tax_data = json.load(f)
-            # Check if any entity has a non-empty mapping_raw
-            has_mapping = any(
-                ent.get("mapping_raw", "") != "" for ent in tax_data.get("entities", [])
-            )
-            return MAPPING_PLUGIN if has_mapping else WU_PALMER_PLUGIN
+
+            entities = tax_data.get("entities", [])
+            relations = tax_data.get("relations", [])
+
+            # 1. Check for Mapping
+            has_mapping = any(ent.get("mapping_raw", "") != "" for ent in entities)
+            if has_mapping:
+                return MAPPING_PLUGIN
+
+            # 2. Build graph to check tree structure and depth
+            in_degree = {ent["ID"]: 0 for ent in entities}
+            children_map = {ent["ID"]: [] for ent in entities}
+
+            for rel in relations:
+                source = rel["source"]
+                target = rel["target"]
+
+                if target in in_degree:
+                    in_degree[target] += 1
+                if source in children_map:
+                    children_map[source].append(target)
+
+            # Check if it is a strict tree (no node has > 1 parent)
+            is_strict_tree = all(deg <= 1 for deg in in_degree.values())
+            if not is_strict_tree:
+                return ONE_HOT_PLUGIN
+
+            # Calculate max depth to ensure it is not a "flat" list
+            roots = [node for node, deg in in_degree.items() if deg == 0]
+
+            def get_max_depth(node):
+                if not children_map.get(node):
+                    return 0
+                return 1 + max(
+                    (get_max_depth(child) for child in children_map[node]), default=0
+                )
+
+            max_depth = max((get_max_depth(r) for r in roots), default=0)
+
+            if max_depth <= 1:
+                return ONE_HOT_PLUGIN
+
+            return WU_PALMER_PLUGIN
+
     except Exception as e:
         TASK_LOGGER.warning(
             f"DEBUGGING WARNING: Could not read mapping for {zip_path}: {e}"
         )
-        return WU_PALMER_PLUGIN
+        return ONE_HOT_PLUGIN
 
 
 def run_pipeline_step(
@@ -323,10 +380,12 @@ def run_pipeline_step(
         )
 
 
-def should_store_mds_output(params: InputParameters) -> bool:
+def should_store_pipeline_vectors(params: InputParameters) -> bool:
     """
-    Returns true if the MDS output should be stored or
-    the output should be concatenated and the intermediate results shall be included.
+    Returns true if the feature vectors of a single pipeline are stored as a task result.
+
+    Without concatenation the per-pipeline vectors are the only result of the run. With
+    concatenation they are stored only if intermediate results are included in the output.
     """
     if params.concat_output:
         return params.include_intermediate_results_in_output

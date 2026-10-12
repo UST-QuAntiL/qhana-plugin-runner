@@ -27,6 +27,7 @@ from feature_engineering_pipeline.schemas import (
     MAPPING_PLUGIN,
     MDS_PLUGIN,
     NUMERIC_MAPPING_PIPELINE,
+    ONE_HOT_PLUGIN,
     PCA_PLUGIN,
     PIPELINE_PLUGINS,
     TRANSFORMERS_PLUGIN,
@@ -96,6 +97,21 @@ NUMERIC_ATTRIBUTES = ["year", "beats"]
 MULTI_VALUED_NUMERIC_ATTRIBUTES = ["beats"]
 
 
+def pipeline_group(
+    pipeline: str,
+    attributes: List[str],
+    settings: Optional[dict] = None,
+    label: Optional[str] = None,
+) -> dict:
+    """One entry of the pipeline queue, as ``start_routing_task`` writes it."""
+    return {
+        "pipeline": pipeline,
+        "attributes": list(attributes),
+        "settings": dict(settings or {}),
+        "label": label or pipeline,
+    }
+
+
 def make_router_task(
     *,
     selections: Optional[dict] = None,
@@ -126,19 +142,20 @@ def make_router_task(
     grouped = {
         WU_PALMER_PLUGIN: [a for a, opt in selections.items() if opt == WU_PALMER_PLUGIN],
         MAPPING_PLUGIN: [a for a, opt in selections.items() if opt == MAPPING_PLUGIN],
+        ONE_HOT_PLUGIN: [a for a, opt in selections.items() if opt == ONE_HOT_PLUGIN],
         NUMERIC_MAPPING_PIPELINE: [
             a for a in numeric if a in MULTI_VALUED_NUMERIC_ATTRIBUTES
         ],
         FEATURE_VECTOR: [a for a in numeric if a not in MULTI_VALUED_NUMERIC_ATTRIBUTES],
     }
-    queue: List[str] = []
+    queue: List[dict] = []
     for plugin, attributes in grouped.items():
         if attributes:
             db_task.data[f"{plugin}_attributes"] = "\n".join(attributes)
-            queue.append(plugin)
+            queue.append(pipeline_group(plugin, attributes))
 
     db_task.data["pipeline_queue"] = queue
-    db_task.data["current_pipeline"] = queue[0] if queue else None
+    db_task.data["current_pipeline"] = queue[0]["pipeline"] if queue else None
     db_task.progress_value = 1
 
     if data:
@@ -156,10 +173,10 @@ def make_router_task(
 # numeric attribute. ``beats`` has one missing value, ``year`` must have a value
 # for every entity.
 ENTITIES_CSV = (
-    "ID,href,genre,instrumentation,composer,missing_tax,year,beats\n"
-    "e1,,g1,i1,c1,m1,1800,1;2;3\n"
-    "e2,,g2,i2,c2,m2,1850,4;5;6\n"
-    "e3,,g1,i2,c1,m1,1900,\n"
+    "ID,href,genre,instrumentation,composer,missing_tax,year,beats,lautstaerke\n"
+    "e1,,g1,i1,c1,m1,1800,1;2;3,pp\n"
+    "e2,,g2,i2,c2,m2,1850,4;5;6,ff\n"
+    "e3,,g1,i2,c1,m1,1900,,p\n"
 )
 
 ATTRIBUTE_METADATA = [
@@ -202,6 +219,12 @@ ATTRIBUTE_METADATA = [
         "title": "Not in entities",
         "refTarget": "taxonomies.zip:t_genre.json",
     },
+    {
+        "ID": "lautstaerke",
+        "type": "lautstaerke",
+        "title": "Lautstärke",
+        "refTarget": "taxonomies.zip:t_lautstaerke.json",
+    },
 ]
 
 # ``mapping_raw`` values decide the pipeline recommendation per taxonomy.
@@ -215,7 +238,34 @@ TAXONOMY_MEMBERS = {
         }
     ),
     "t_instrumentation.json": json.dumps(
-        {"entities": [{"ID": "i1", "mapping_raw": ""}, {"ID": "i2", "mapping_raw": ""}]}
+        {
+            "entities": [
+                {"ID": "root", "mapping_raw": ""},
+                {"ID": "i1", "mapping_raw": ""},
+                {"ID": "i2", "mapping_raw": ""},
+            ],
+            "relations": [
+                {"source": "root", "target": "i1"},
+                {"source": "i1", "target": "i2"},
+            ],
+        }
+    ),
+    "t_lautstaerke.json": json.dumps(
+        {
+            "entities": [
+                {"ID": "root", "mapping_raw": ""},
+                {"ID": "pp", "mapping_raw": ""},
+                {"ID": "p", "mapping_raw": ""},
+                {"ID": "f", "mapping_raw": ""},
+                {"ID": "ff", "mapping_raw": ""},
+            ],
+            "relations": [
+                {"source": "root", "target": "pp"},
+                {"source": "root", "target": "p"},
+                {"source": "root", "target": "f"},
+                {"source": "root", "target": "ff"},
+            ],
+        }
     ),
 }
 
@@ -255,16 +305,24 @@ VECTOR_CSV = "ID,dim0,dim1,dim2\nent1,1.0,2.0,3.0\nent2,4.0,5.0,6.0\n"
 PLUGIN_OUTPUT_TYPES = {
     WU_PALMER_PLUGIN: ("relation/element-similarities",),
     MAPPING_PLUGIN: ("relation/element-distances",),
+    ONE_HOT_PLUGIN: ("entity/vector",),
     TRANSFORMERS_PLUGIN: ("relation/element-distances",),
     AGGREGATOR_PLUGIN: ("relation/attribute-distances",),
     MDS_PLUGIN: ("entity/vector",),
-    VECTOR_CONCAT_PLUGIN: ("entity/vector",),
+    VECTOR_CONCAT_PLUGIN: ("entity/vector", "entity/dimension-mapping"),
     PCA_PLUGIN: ("entity/vector", "custom/pca-metadata", "custom/plot"),
 }
+
+DIMENSION_MAPPING_JSON = (
+    '[{"ID": "dim0", "href": "", "inputIndex": 0, "source": "attr1.json", '
+    '"sourceUrl": "http://example.com/vectors.zip", "zipMember": "attr1.json", '
+    '"sourceDimension": "dim0"}]'
+)
 
 _PLAIN_OUTPUTS = {
     "custom/pca-metadata": ("application/json", '{"explained_variance": [0.9]}'),
     "custom/plot": ("text/html", "<html>plot</html>"),
+    "entity/dimension-mapping": ("application/json", DIMENSION_MAPPING_JSON),
 }
 
 _SERVER_INSTANCES = count(1)
@@ -320,7 +378,11 @@ class PluginServer:
         if data_type in _PLAIN_OUTPUTS:
             content_type, text = _PLAIN_OUTPUTS[data_type]
             return MockResponse(href, content_type, text=text)
-        if data_type == "entity/vector" and plugin in (VECTOR_CONCAT_PLUGIN, PCA_PLUGIN):
+        if data_type == "entity/vector" and plugin in (
+            ONE_HOT_PLUGIN,
+            VECTOR_CONCAT_PLUGIN,
+            PCA_PLUGIN,
+        ):
             return MockResponse(href, "text/csv", text=VECTOR_CSV)
         return MockResponse.from_zip(href, {"attr1.json": "{}"})
 

@@ -20,7 +20,7 @@ from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "feature-engineering-pipeline"
-__version__ = "v0.1.7"
+__version__ = "v0.2.2"
 _identifier = plugin_identifier(_plugin_name, __version__)
 _description = (  # TODO
     "Routes entities and separates tree from non-tree taxonomies. "
@@ -39,7 +39,7 @@ class FeatureEngineeringPipeline(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
     description = _description
-    tags = ["preprocessing", "routing"]
+    tags = ["preprocessing", "routing", "feature-engineering"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

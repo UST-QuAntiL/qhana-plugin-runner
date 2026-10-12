@@ -168,6 +168,13 @@ The entities are listed one per output dimension, ordered by dimension index, wi
 Produced by:
 
   * :ref:`vector-concat`
+  * :ref:`feature-engineering-pipeline`
+
+Consumed by:
+
+  * :ref:`cluster-scatter-visualization`
+  * :ref:`csv-visualization`
+  * :ref:`json-visualization`
 
 
 Content Types

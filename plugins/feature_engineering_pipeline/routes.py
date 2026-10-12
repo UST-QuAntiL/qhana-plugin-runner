@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from http import HTTPStatus
-from json import loads
+from json import dumps, loads
 from typing import Mapping
 
 from celery.canvas import chain
@@ -39,14 +39,22 @@ from qhana_plugin_runner.tasks import (
 
 from . import FEATURE_ENGINEERING_PIPELINE_BLP, FeatureEngineeringPipeline
 from .schemas import (
-    PIPELINE_FIELD_PREFIX,
+    MAPPING_PLUGIN,
+    NUMERIC_SETTINGS_GROUPS,
     PIPELINE_OPTIONS,
     PIPELINE_PLUGINS,
+    PIPELINE_SETTINGS_GROUPS,
+    VECTOR_CONCAT_PLUGIN,
     InputParametersSchema,
     MetricEnum,
+    PCAParametersSchema,
     PCATypeEnum,
     RoutingStepParametersSchema,
     SolverEnum,
+    expanded_settings_groups,
+    load_settings,
+    merge_settings,
+    split_routing_fields,
 )
 from .tasks import (
     handle_webhook_task,
@@ -54,9 +62,10 @@ from .tasks import (
     start_routing_task,
 )
 
-# Sections of the micro frontend: (title, field names, expanded by default).
+# Sections of the micro frontend: (key, title, field names).
 INPUT_FIELD_GROUPS = (
     (
+        "basic_data",
         "Basic Data",
         (
             "entities_url",
@@ -64,28 +73,12 @@ INPUT_FIELD_GROUPS = (
             "taxonomies_zip_url",
             "include_intermediate_results_in_output",
         ),
-        True,
     ),
-    ("Wu-Palmer Settings", ("root_is_part_of_hierarchy",), False),
-    ("Mapping Settings", ("distance_metric",), False),
-    ("Transformer Settings", ("transformer",), False),
+    *PIPELINE_SETTINGS_GROUPS,
     (
-        "MDS Settings",
-        ("mds_dimensions", "metric", "n_init", "max_iter", "missing_data_handling"),
-        False,
-    ),
-    ("Vector Concatenation Settings", ("concat_output", "output_format"), True),
-    (
-        "PCA Settings",
-        (
-            "reduce_dimensions",
-            "pca_type",
-            "pca_dimensions",
-            "solver",
-            "tol",
-            "iterated_power",
-        ),
-        False,
+        VECTOR_CONCAT_PLUGIN,
+        "Vector Concatenation Settings",
+        ("concat_output", "output_format"),
     ),
 )
 
@@ -93,6 +86,14 @@ TASK_LOGGER = get_task_logger(__name__)
 
 
 # --- HELPER FUNCTION FOR UIs ---
+def field_groups(groups: tuple[tuple[str, str, tuple[str, ...]], ...]) -> list[dict]:
+    """Return the template sections for ``(key, title, field names)`` triples."""
+    return [
+        {"key": key, "title": title, "schema": InputParametersSchema(only=field_names)}
+        for key, title, field_names in groups
+    ]
+
+
 def render_step(schema, data, errors, process_url):
     return Response(
         render_template(
@@ -158,19 +159,19 @@ class PluginsView(MethodView):
                     DataMetadata(
                         data_type="relation/element-similarities",
                         content_type=["application/zip"],
-                        required=True,
+                        required=False,
                     ),
                     # Transformer output (optional)
                     DataMetadata(
                         data_type="relation/element-distances",
                         content_type=["application/zip"],
-                        required=True,
+                        required=False,
                     ),
                     # Aggregator output (optional)
                     DataMetadata(
                         data_type="relation/attribute-distances",
                         content_type=["application/zip"],
-                        required=True,
+                        required=False,
                     ),
                     # MDS output = final output
                     DataMetadata(
@@ -186,7 +187,14 @@ class PluginsView(MethodView):
                             "application/json",
                             "application/X-lines+json",
                         ],
-                        required=True,
+                        required=False,
+                    ),
+                    # Dimension mapping of the vector concat output, labelling
+                    # its dimensions with the attributes they came from
+                    DataMetadata(
+                        data_type="entity/dimension-mapping",
+                        content_type=["application/json"],
+                        required=False,
                     ),
                     # PCA output (optional final output after vector concat)
                     DataMetadata(
@@ -197,12 +205,12 @@ class PluginsView(MethodView):
                     DataMetadata(
                         data_type="custom/pca-metadata",
                         content_type=["application/json"],
-                        required=True,
+                        required=False,
                     ),
                     DataMetadata(
                         data_type="entity/vector",
                         content_type=["text/csv"],
-                        required=True,
+                        required=False,
                     ),
                 ],
             ),
@@ -252,31 +260,20 @@ class MicroFrontend(MethodView):
             fields["metric"].data_key: MetricEnum.metric_mds,
             fields["n_init"].data_key: 4,
             fields["max_iter"].data_key: 300,
-            fields["pca_type"].data_key: PCATypeEnum.normal,
-            fields["pca_dimensions"].data_key: 1,
-            fields["solver"].data_key: SolverEnum.auto,
-            fields["tol"].data_key: 0,
-            fields["iterated_power"].data_key: 0,
         }
 
         default_values.update(data_dict)
         data_dict = default_values
 
-        groups = [
-            {
-                "title": title,
-                "expanded": expanded,
-                "schema": InputParametersSchema(only=field_names),
-            }
-            for title, field_names, expanded in INPUT_FIELD_GROUPS
-        ]
+        expanded_groups = frozenset(("basic_data", VECTOR_CONCAT_PLUGIN))
 
         return Response(
             render_template(
                 "router_form.html",
                 name=FeatureEngineeringPipeline.instance.name,
                 version=FeatureEngineeringPipeline.instance.version,
-                groups=groups,
+                groups=field_groups(INPUT_FIELD_GROUPS),
+                expanded_groups=expanded_groups,
                 values=data_dict,
                 valid=valid,
                 errors=errors,
@@ -371,6 +368,46 @@ class RoutingStepFrontend(MethodView):
         )
         recommendations = db_task.data.get("recommendations", {})
         input_params = loads(db_task.parameters or "{}")
+        input_fields = InputParametersSchema().fields
+        pca_fields = PCAParametersSchema().fields
+
+        # The submitted form wins over the defaults, an unchecked checkbox is
+        # absent from it and falls back to the default.
+        values = {
+            pca_fields["pca_type"].data_key: PCATypeEnum.normal.name,
+            pca_fields["pca_dimensions"].data_key: 1,
+            pca_fields["solver"].data_key: SolverEnum.auto.name,
+            pca_fields["tol"].data_key: 0,
+            pca_fields["iterated_power"].data_key: 0,
+        }
+        values.update(data)
+
+        # A multi-valued numeric attribute runs the distances mapping, so it carries
+        # the settings of that pipeline. A single-valued one has no settings yet.
+        multi_valued_numeric_attributes = [
+            attribute
+            for attribute in numeric_attributes
+            if attribute in multi_valued_numeric
+        ]
+
+        _, submitted_settings = split_routing_fields(data)
+        settings_values = {
+            attribute: merge_settings(input_params, submitted_settings.get(attribute, {}))
+            for attribute in (*attributes, *multi_valued_numeric_attributes)
+        }
+        _, settings_errors = split_routing_fields(errors)
+
+        expanded_groups = {
+            **{
+                attribute: expanded_settings_groups(recommendations.get(attribute))
+                for attribute in attributes
+            },
+            # The numeric pipeline is fixed, so its sections open like a recommendation.
+            **{
+                attribute: expanded_settings_groups(MAPPING_PLUGIN)
+                for attribute in multi_valued_numeric_attributes
+            },
+        }
 
         return Response(
             render_template(
@@ -378,13 +415,23 @@ class RoutingStepFrontend(MethodView):
                 name=FeatureEngineeringPipeline.instance.name,
                 version=FeatureEngineeringPipeline.instance.version,
                 schema=RoutingStepParametersSchema(),
+                pca_toggle_schema=PCAParametersSchema(only=["reduce_dimensions"]),
+                pca_schema=PCAParametersSchema(exclude=["reduce_dimensions"]),
                 attributes=attributes,
                 numeric_attributes=numeric_attributes,
                 multi_valued_numeric=multi_valued_numeric,
                 recommendations=recommendations,
                 pipeline_options=PIPELINE_OPTIONS,
+                settings_groups=field_groups(PIPELINE_SETTINGS_GROUPS),
+                numeric_settings_groups=field_groups(NUMERIC_SETTINGS_GROUPS),
+                expanded_groups=expanded_groups,
                 input_params=input_params,
-                values=data,
+                settings_values=settings_values,
+                settings_errors=settings_errors,
+                concat_output=bool(
+                    input_params.get(input_fields["concat_output"].data_key)
+                ),
+                values=values,
                 valid=valid,
                 errors=errors,
                 process=url_for(
@@ -415,12 +462,19 @@ class RoutingStepView(MethodView):
         # ``parameters``. ``start_routing_task`` reloads ``parameters`` through
         # ``InputParametersSchema`` which would reject the dynamic
         # ``pipeline_<attribute>`` fields.
-        selections = {
-            key[len(PIPELINE_FIELD_PREFIX) :]: value
-            for key, value in arguments.items()
-            if key.startswith(PIPELINE_FIELD_PREFIX)
-        }
+        selections, submitted_settings = split_routing_fields(arguments)
         db_task.data["routing_selections"] = selections
+        db_task.data["attribute_settings"] = {
+            attribute: load_settings(raw) for attribute, raw in submitted_settings.items()
+        }
+
+        # The PCA settings are part of the input parameters, the pipeline tasks
+        # read them from there. The form only offers them for a concatenated
+        # output, so without concatenation the defaults of the first step stay.
+        input_params = loads(db_task.parameters or "{}")
+        if input_params.get(InputParametersSchema().fields["concat_output"].data_key):
+            input_params.update(PCAParametersSchema().dump(arguments))
+            db_task.parameters = dumps(input_params)
 
         db_task.data["webhook_url"] = url_for(
             f"{FEATURE_ENGINEERING_PIPELINE_BLP.name}.WebhookView",

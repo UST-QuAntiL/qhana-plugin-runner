@@ -147,10 +147,11 @@ def test_preprocessing_finds_the_taxonomy_attributes(monkeypatch):
 
     result = run_task(preprocessing_task, db_id=db_task.id)
 
-    assert result == "Found 2 taxonomy attribute(s)."
+    assert result == "Found 3 taxonomy attribute(s)."
     assert set(reload(db_task).data["taxonomy_attributes"]) == {
         "genre",
         "instrumentation",
+        "lautstaerke",
     }
 
 
@@ -164,6 +165,7 @@ def test_preprocessing_recommends_a_pipeline_per_attribute(monkeypatch):
     assert reload(db_task).data["recommendations"] == {
         "genre": MAPPING_PLUGIN,
         "instrumentation": WU_PALMER_PLUGIN,
+        "lautstaerke": ONE_HOT_PLUGIN,
     }
 
 
@@ -221,7 +223,7 @@ def test_routing_task_counts_every_plugin_it_will_run(
     # the first pipeline of the queue is started right away
     assert [
         db_task.data["current_pipeline"],
-        *db_task.data["pipeline_queue"],
+        *(group["pipeline"] for group in db_task.data["pipeline_queue"]),
     ] == expected_pipelines
     assert db_task.progress_target == expected_target
     assert db_task.progress_value == 1
@@ -250,7 +252,7 @@ def test_routing_task_groups_the_attributes_per_pipeline(monkeypatch):
     assert data[f"{MAPPING_PLUGIN}_attributes"] == "m1"
 
 
-def test_routing_task_reports_unsupported_and_skipped_attributes(monkeypatch):
+def test_routing_task_reports_the_queued_and_skipped_attributes(monkeypatch):
     monkeypatch.setattr(
         "feature_engineering_pipeline.tasks_pipeline_steps.start_wu_palmer.apply_async",
         lambda *args, **kwargs: None,
@@ -262,7 +264,7 @@ def test_routing_task_reports_unsupported_and_skipped_attributes(monkeypatch):
     run_task(start_routing_task, db_id=db_task.id)
 
     task_log = reload(db_task).task_log
-    assert "One-Hot encoding not yet supported" in task_log
+    assert "one-hot encoding pipeline for attributes: ['hot']" in task_log
     assert "None selected attributes skipped: ['skip']" in task_log
 
 
@@ -504,6 +506,8 @@ def test_full_run_with_concatenation_and_pca(server, inline):
         "All Pipelines Completed Successfully And Dimensions Reduced With PCA!"
     ]
     assert stored_file_names(db_task) == {
+        "final_concatenated_vector.csv",
+        "final_concatenated_vector_dimension_mapping.json",
         "final_vector_pca_reduced.csv",
         "pca_metadata.json",
         "pca_plot.html",
@@ -522,7 +526,10 @@ def test_full_run_stops_after_the_concatenation_without_pca(server, inline):
     assert inline.results == [
         "All Pipelines Completed Successfully And Concatenated Vector Created!"
     ]
-    assert stored_file_names(db_task) == {"final_concatenated_vector.csv"}
+    assert stored_file_names(db_task) == {
+        "final_concatenated_vector.csv",
+        "final_concatenated_vector_dimension_mapping.json",
+    }
 
 
 def test_on_retry_logs_without_app_context():
