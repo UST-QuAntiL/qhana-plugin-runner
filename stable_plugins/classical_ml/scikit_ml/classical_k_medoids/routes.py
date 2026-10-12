@@ -61,7 +61,11 @@ class PluginsView(MethodView):
                 data_input=[
                     InputDataMetadata(
                         data_type="entity/vector",
-                        content_type=["text/csv", "application/json"],
+                        content_type=[
+                            "application/json",
+                            "application/X-lines+json",
+                            "text/csv",
+                        ],
                         required=True,
                         parameter="entityPointsUrl",
                     ),

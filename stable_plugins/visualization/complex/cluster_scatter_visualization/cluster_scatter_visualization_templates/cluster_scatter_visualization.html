@@ -33,7 +33,7 @@
 {% block script %}
 {{ super() }}
 <script>
-    let requestedEntityDataFor = null;
+    const requestedRelatedFor = {};
 
     // Resets the iframe without a plot
     function onPlotError() {
@@ -44,31 +44,36 @@
         }
     }
 
-    function autoSelectEntityData(entityUrl, entityDataUrl) {
-        if (!entityUrl || entityDataUrl) {
-            requestedEntityDataFor = null;
+    // Asks the parent to fill an optional input with a file related to the entity url.
+    function autoSelectRelated(entityUrl, currentValue, inputKey, acceptedInputType, includeSelf) {
+        if (!entityUrl || currentValue) {
+            requestedRelatedFor[inputKey] = null;
             return;
         }
         const looksLikeUrl = entityUrl.includes("://") || entityUrl.startsWith("data:");
         if (!looksLikeUrl) {
             return;
         }
-        if (requestedEntityDataFor === entityUrl) {
+        if (requestedRelatedFor[inputKey] === entityUrl) {
             return;
         }
-        requestedEntityDataFor = entityUrl;
-        sendMessage({
+        requestedRelatedFor[inputKey] = entityUrl;
+        const message = {
             type: "request-related-data-url",
             dataUrl: entityUrl,
-            inputKey: "entity_data_url",
+            inputKey: inputKey,
             relation: "pre",
-            acceptedInputType: "entity/*",
+            acceptedInputType: acceptedInputType,
             userInteraction: false,
-        });
+        };
+        if (includeSelf) {
+            message.includeSelf = true;
+        }
+        sendMessage(message);
     }
 
     function setupEventListeners() {
-        ["entityUrl", "clustersUrl", "entityDataUrl"].forEach((inputName) => {
+        ["entityUrl", "clustersUrl", "entityDataUrl", "dimensionMappingUrl"].forEach((inputName) => {
             const input = document.querySelector(`input[name=${inputName}]`);
             if (!input) {
                 return;
@@ -84,8 +89,12 @@
         const entityUrl = document.querySelector('input[name=entityUrl]').value;
         const clustersUrl = document.querySelector('input[name=clustersUrl]').value;
         const entityDataUrl = document.querySelector('input[name=entityDataUrl]').value;
+        const dimensionMappingUrl = document.querySelector('input[name=dimensionMappingUrl]').value;
 
-        autoSelectEntityData(entityUrl, entityDataUrl);
+        autoSelectRelated(entityUrl, entityDataUrl, "entity_data_url", "entity/*", false);
+        // The dimension mapping is a sibling output of the step that produced the
+        // entity points, so the search includes the producing step itself.
+        autoSelectRelated(entityUrl, dimensionMappingUrl, "dimension_mapping_url", "entity/dimension-mapping", true);
 
         // Only an entity Url is required to generate a plot
         if (entityUrl === "" || entityUrl === null) {
@@ -98,6 +107,7 @@
         params.set("entityUrl", entityUrl);
         params.set("clustersUrl", clustersUrl ?? "");
         params.set("entityDataUrl", entityDataUrl ?? "");
+        params.set("dimensionMappingUrl", dimensionMappingUrl ?? "");
         const url = "{{ get_plot_url }}?" + params.toString();
 
         const preview = document.querySelector('.cluster-preview');

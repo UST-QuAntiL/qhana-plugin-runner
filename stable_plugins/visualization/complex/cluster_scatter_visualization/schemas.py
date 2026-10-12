@@ -59,3 +59,21 @@ class ClusterScatterInputParametersSchema(FrontendFormBaseSchema):
             "relation": "pre",
         },
     )
+    dimension_mapping_url = FileUrl(
+        required=False,
+        allow_none=True,
+        data_input_type="entity/dimension-mapping",
+        data_content_types=["application/json"],
+        metadata={
+            "label": "Dimension Mapping URL",
+            "description": (
+                "Optional URL to a dimension mapping file describing where the "
+                "dimensions of the entity points came from. Used to label the plot "
+                "axes with the original feature names."
+            ),
+            "input_type": "text",
+            "related_to": "entity_url",
+            "relation": "pre",
+            "related_include_self": True,
+        },
+    )
