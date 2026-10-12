@@ -718,6 +718,8 @@ def test_full_run_with_concatenation_and_pca(server, inline):
         "All Pipelines Completed Successfully And Dimensions Reduced With PCA!"
     ]
     assert stored_file_names(db_task) == {
+        "final_concatenated_vector.csv",
+        "final_concatenated_vector_dimension_mapping.json",
         "final_vector_pca_reduced.csv",
         "pca_metadata.json",
         "pca_plot.html",

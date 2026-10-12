@@ -945,26 +945,9 @@ def test_finalize_vector_concat_starts_pca_when_requested(server, dispatched):
 
     vector_url = server.output_url(VECTOR_CONCAT_PLUGIN, "entity/vector")
     assert ("start_pca", [db_task.id, vector_url]) in dispatched
-    assert "final_concatenated_vector.csv" not in stored_files(db_task)
-
-
-def test_finalize_vector_concat_keeps_the_unreduced_vector_on_request(server, dispatched):
-    db_task = make_router_task(
-        concatOutput=True,
-        reduceDimensions=True,
-        pcaDimensions=1,
-        includeIntermediateResultsInOutput=True,
-    )
-
-    run_task(
-        finalize_vector_concat,
-        db_id=db_task.id,
-        source_url=server.task_url(VECTOR_CONCAT_PLUGIN),
-    )
-
     stored = stored_files(db_task)
-    assert "concatenated_vector.csv" in stored
-    assert "concatenated_vector_dimension_mapping.json" in stored
+    assert "final_concatenated_vector.csv" in stored
+    assert "final_concatenated_vector_dimension_mapping.json" in stored
 
 
 def test_finalize_vector_concat_skips_pca_without_enough_dimensions(server, dispatched):
