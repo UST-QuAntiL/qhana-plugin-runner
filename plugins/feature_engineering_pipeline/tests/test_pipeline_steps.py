@@ -1017,9 +1017,9 @@ def test_finalize_pca_stores_the_pca_result_before_the_concatenated_vector(
     DB.session.expire_all()
     files = sorted(TaskFile.get_task_result_files(db_task.id), key=lambda f: f.id)
     assert [f.file_name for f in files] == [
-        "final_vector_pca_reduced.csv",
-        "pca_metadata.json",
         "pca_plot.html",
+        "final_vector_pca_reduced.csv",
         "final_concatenated_vector.csv",
         "final_concatenated_vector_dimension_mapping.json",
+        "pca_metadata.json",
     ]

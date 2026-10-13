@@ -1007,23 +1007,8 @@ def finalize_pca(self, db_id: int, source_url: str):
 
     outputs = requests.get(source_url, timeout=REQUEST_TIMEOUT).json().get("outputs", [])
 
-    reduced_vector = extract_output_url(outputs, "entity/vector")
-    STORE.persist_task_result(
-        db_id,
-        open_url(reduced_vector, timeout=REQUEST_TIMEOUT).content,
-        "final_vector_pca_reduced.csv",
-        "entity/vector",
-        "text/csv",
-    )
-
-    pca_metadata = extract_output_url(outputs, "custom/pca-metadata")
-    STORE.persist_task_result(
-        db_id,
-        open_url(pca_metadata, timeout=REQUEST_TIMEOUT).content,
-        "pca_metadata.json",
-        "custom/pca-metadata",
-        "application/json",
-    )
+    # The result files are listed in the order they are stored: the plot, the
+    # reduced vector, the unreduced vector, then the metadata files.
 
     # the plot is only produced for outputs with at most three dimensions
     plot = next((o for o in outputs if o.get("dataType") == "custom/plot"), None)
@@ -1036,7 +1021,16 @@ def finalize_pca(self, db_id: int, source_url: str):
             "text/html",
         )
 
-    # The unreduced vector is part of the output as well, stored after the PCA result.
+    reduced_vector = extract_output_url(outputs, "entity/vector")
+    STORE.persist_task_result(
+        db_id,
+        open_url(reduced_vector, timeout=REQUEST_TIMEOUT).content,
+        "final_vector_pca_reduced.csv",
+        "entity/vector",
+        "text/csv",
+    )
+
+    # The unreduced vector is part of the output as well.
     task_data = ProcessingTask.get_by_id(db_id)
     concat_url = task_data.data[f"{VECTOR_CONCAT_PLUGIN}_url"]
     concat_outputs = (
@@ -1050,6 +1044,15 @@ def finalize_pca(self, db_id: int, source_url: str):
         params=load_params(task_data),
         outputs=concat_outputs,
         vector=open_url(concatenated_vector, timeout=REQUEST_TIMEOUT).content,
+    )
+
+    pca_metadata = extract_output_url(outputs, "custom/pca-metadata")
+    STORE.persist_task_result(
+        db_id,
+        open_url(pca_metadata, timeout=REQUEST_TIMEOUT).content,
+        "pca_metadata.json",
+        "custom/pca-metadata",
+        "application/json",
     )
 
     save_task_result.delay(
