@@ -945,9 +945,8 @@ def test_finalize_vector_concat_starts_pca_when_requested(server, dispatched):
 
     vector_url = server.output_url(VECTOR_CONCAT_PLUGIN, "entity/vector")
     assert ("start_pca", [db_task.id, vector_url]) in dispatched
-    stored = stored_files(db_task)
-    assert "final_concatenated_vector.csv" in stored
-    assert "final_concatenated_vector_dimension_mapping.json" in stored
+    # finalize_pca stores the concatenated vector after the PCA result
+    assert stored_files(db_task) == {}
 
 
 def test_finalize_vector_concat_skips_pca_without_enough_dimensions(server, dispatched):
@@ -964,8 +963,16 @@ def test_finalize_vector_concat_skips_pca_without_enough_dimensions(server, disp
     assert "final_concatenated_vector.csv" in stored_files(db_task)
 
 
+def make_pca_task(server) -> ProcessingTask:
+    return make_router_task(
+        concatOutput=True,
+        reduceDimensions=True,
+        data={f"{VECTOR_CONCAT_PLUGIN}_url": server.task_url(VECTOR_CONCAT_PLUGIN)},
+    )
+
+
 def test_finalize_pca_stores_all_results(server, dispatched):
-    db_task = make_router_task(concatOutput=True, reduceDimensions=True)
+    db_task = make_pca_task(server)
 
     run_task(finalize_pca, db_id=db_task.id, source_url=server.task_url(PCA_PLUGIN))
 
@@ -973,6 +980,11 @@ def test_finalize_pca_stores_all_results(server, dispatched):
     assert stored["final_vector_pca_reduced.csv"].file_type == "entity/vector"
     assert stored["pca_metadata.json"].file_type == "custom/pca-metadata"
     assert stored["pca_plot.html"].file_type == "custom/plot"
+    assert stored["final_concatenated_vector.csv"].file_type == "entity/vector"
+    assert (
+        stored["final_concatenated_vector_dimension_mapping.json"].file_type
+        == "entity/dimension-mapping"
+    )
     assert (
         "save_task_result",
         [
@@ -984,7 +996,7 @@ def test_finalize_pca_stores_all_results(server, dispatched):
 
 def test_finalize_pca_works_without_a_plot(server, dispatched):
     """The PCA plugin only plots results with at most three dimensions."""
-    db_task = make_router_task(concatOutput=True, reduceDimensions=True)
+    db_task = make_pca_task(server)
     outputs = server.outputs(PCA_PLUGIN)
     outputs[:] = [o for o in outputs if o["dataType"] != "custom/plot"]
 
@@ -993,3 +1005,21 @@ def test_finalize_pca_works_without_a_plot(server, dispatched):
     stored = stored_files(db_task)
     assert "pca_plot.html" not in stored
     assert "final_vector_pca_reduced.csv" in stored
+
+
+def test_finalize_pca_stores_the_pca_result_before_the_concatenated_vector(
+    server, dispatched
+):
+    db_task = make_pca_task(server)
+
+    run_task(finalize_pca, db_id=db_task.id, source_url=server.task_url(PCA_PLUGIN))
+
+    DB.session.expire_all()
+    files = sorted(TaskFile.get_task_result_files(db_task.id), key=lambda f: f.id)
+    assert [f.file_name for f in files] == [
+        "final_vector_pca_reduced.csv",
+        "pca_metadata.json",
+        "pca_plot.html",
+        "final_concatenated_vector.csv",
+        "final_concatenated_vector_dimension_mapping.json",
+    ]

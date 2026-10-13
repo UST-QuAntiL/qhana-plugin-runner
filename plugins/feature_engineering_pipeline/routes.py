@@ -262,13 +262,18 @@ class MicroFrontend(MethodView):
         fields = InputParametersSchema().fields
 
         default_values = {
-            fields["mds_dimensions"].data_key: 2,
+            fields["mds_dimensions"].data_key: 1,
             fields["metric"].data_key: MetricEnum.metric_mds,
             fields["n_init"].data_key: 4,
             fields["max_iter"].data_key: 300,
             fields["normalization_output_range_start"].data_key: 0.0,
             fields["normalization_output_range_end"].data_key: 1.0,
         }
+        # An unchecked checkbox is absent from a submitted form, so the checked
+        # default only applies before the form is submitted. A submitted form always
+        # contains the entities url field.
+        if fields["entities_url"].data_key not in data_dict:
+            default_values[fields["concat_output"].data_key] = True
         default_values.update(data_dict)
         data_dict = default_values
 

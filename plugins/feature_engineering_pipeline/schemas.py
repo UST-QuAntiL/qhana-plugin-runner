@@ -216,7 +216,7 @@ class PCAParametersSchema(FrontendFormBaseSchema):
         required=False,
         load_default=False,
         metadata={
-            "label": "Reduce dimensions with PCA",
+            "label": "Reduce dimensions with principal component analysis (PCA)",
             "description": "If checked, the dimensions of the concatenated vector will be reduced.",
             "input_type": "checkbox",
         },
@@ -553,8 +553,10 @@ class InputParametersSchema(PipelineSettingsSchema, PCAParametersSchema):
         load_default=False,
         metadata={
             "label": "Concat output",
-            "description": "If checked, the MDS output of all pipelines will be concatenated to one vector. "
-            "The PCA settings are available at the end of the next step, where the attributes are selected.",
+            "description": "If checked, the multidimensional scaling (MDS) output of all pipelines "
+            "will be concatenated to one vector. The principal component analysis (PCA) "
+            "settings are available at the end of the next step, where the attributes are "
+            "selected.",
             "input_type": "checkbox",
         },
     )
@@ -596,7 +598,7 @@ PIPELINE_SETTINGS_GROUPS = (
     (MAPPING_PLUGIN, "Mapping Settings", ("distance_metric",)),
     (
         MDS_PLUGIN,
-        "MDS Settings",
+        "Multidimensional Scaling (MDS) Settings",
         ("mds_dimensions", "metric", "n_init", "max_iter", "missing_data_handling"),
     ),
     (
