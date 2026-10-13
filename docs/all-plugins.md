@@ -44,27 +44,27 @@
     preprocessing
 
     similarity-calculation
-* - [Classical k Means (@v0.1.1)](#classical-k-means)
+* - [Classical k Means (@v0.1.2)](#classical-k-means)
 
-    classical-k-means@v0-1-1
+    classical-k-means@v0-1-2
   - processing
   - ML
 
     classical
 
     clustering
-* - [Classical k Medoids (@v0.1.1)](#classical-k-medoids)
+* - [Classical k Medoids (@v0.1.2)](#classical-k-medoids)
 
-    classical-k-medoids@v0-1-1
+    classical-k-medoids@v0-1-2
   - processing
   - ML
 
     classical
 
     clustering
-* - [Clustered Scatter Plot Visualization (@v1.0.2)](#cluster-scatter-visualization)
+* - [Clustered Scatter Plot Visualization (@v1.0.4)](#cluster-scatter-visualization)
 
-    cluster-scatter-visualization@v1-0-2
+    cluster-scatter-visualization@v1-0-4
   - visualization
   - cluster
 
@@ -101,6 +101,8 @@
   - data-loading
 
     demo
+
+    feature-engineering
 * - [Deploy Workflow (@v0.1.1)](#deploy-workflow)
 
     deploy-workflow@v0-1-1
@@ -128,11 +130,13 @@
     preprocessing
 
     sample
-* - [Feature Engineering Pipeline (@v0.1.7)](#feature-engineering-pipeline)
+* - [Feature Engineering Pipeline (@v0.2.2)](#feature-engineering-pipeline)
 
-    feature-engineering-pipeline@v0-1-7
+    feature-engineering-pipeline@v0-2-2
   - processing
-  - preprocessing
+  - feature-engineering
+
+    preprocessing
 
     routing
 * - [Histogram Visualization (@v1.0.3)](#histogram-visualization)
@@ -216,6 +220,11 @@
     feature-extraction
 
     music
+* - [Numeric Value Normalization (@v0.2.0)](#numeric-value-normalization)
+
+    numeric-value-normalization@v0-2-0
+  - processing
+  - preprocessing
 * - [One-Hot Encoding (@v0.2.4)](#one-hot-encoding)
 
     one-hot-encoding@v0-2-4
@@ -225,9 +234,9 @@
     one-hot-encoding
 
     preprocessing
-* - [Optics (@v0.1.1)](#optics)
+* - [Optics (@v0.1.2)](#optics)
 
-    optics@v0-1-1
+    optics@v0-1-2
   - processing
   - ML
 
@@ -514,9 +523,9 @@
     csv
 
     json
-* - [csv-visualization (@v0.1.1)](#csv-visualization)
+* - [csv-visualization (@v0.2.1)](#csv-visualization)
 
-    csv-visualization@v0-1-1
+    csv-visualization@v0-2-1
   - visualization
   - csv
 
@@ -565,9 +574,9 @@
     csv
 
     json
-* - [json-visualization (@v0.2.1)](#json-visualization)
+* - [json-visualization (@v0.3.1)](#json-visualization)
 
-    json-visualization@v0-2-1
+    json-visualization@v0-3-1
   - visualization
   - json
 
@@ -622,19 +631,6 @@
     qasm-3
 
     qc-simulator
-* - [pytket_qulacsBackend-simulator (@v1.0.0)](#pytket_qulacsBackend-simulator)
-
-    pytket_qulacsBackend-simulator@v1-0-0
-  - processing
-  - circuit-executor
-
-    pytket_qulacsBackend
-
-    qasm
-
-    qasm-2
-
-    qc-simulator
 * - [qasm-visualization (@v0.3.1)](#qasm-visualization)
 
     qasm-visualization@v0-3-1
@@ -669,14 +665,14 @@
 
 ## Overview
 
-**Used tags:** `ML`, `MUSE`, `MUSE4Music`, `QML`, `bpmn`, `braket_local`, `camunda`, `camunda-engine`, `circuit`, `circuit-demo`, `circuit-executor`, `cirq`, `classical`, `classification`, `cluster`, `clustering`, `confusion-matrix`, `conversion`, `csv`, `data-annotation`, `data-cleaning`, `data-loading`, `data-preparation`, `data-synthesizing`, `demo`, `distance-calculation`, `duckdb`, `embedding`, `encoding`, `feature-engineering`, `feature-extraction`, `filter`, `gradient`, `hello-world`, `histogram`, `join`, `json`, `kernel`, `low-code-modeler`, `manual`, `mapping`, `mariadb`, `minimizer`, `mqt`, `multistep`, `music`, `mysql`, `neural-network`, `nisq-analyzer`, `non-default`, `objective-function`, `one-hot-encoding`, `optimization`, `pennylane`, `postgresql`, `preprocessing`, `pytket_qulacsBackend`, `qasm`, `qasm-2`, `qasm-3`, `qc-executor`, `qc-simulator`, `qiskit`, `quantme`, `quantum`, `rest`, `routing`, `sample`, `scatter`, `similarity-calculation`, `sql`, `supervised-learning`, `utility`, `vector`, `visualization`, `workflow`, `zxcalculus`
+**Used tags:** `ML`, `MUSE`, `MUSE4Music`, `QML`, `bpmn`, `braket_local`, `camunda`, `camunda-engine`, `circuit`, `circuit-demo`, `circuit-executor`, `cirq`, `classical`, `classification`, `cluster`, `clustering`, `confusion-matrix`, `conversion`, `csv`, `data-annotation`, `data-cleaning`, `data-loading`, `data-preparation`, `data-synthesizing`, `demo`, `distance-calculation`, `duckdb`, `embedding`, `encoding`, `feature-engineering`, `feature-extraction`, `filter`, `gradient`, `hello-world`, `histogram`, `join`, `json`, `kernel`, `low-code-modeler`, `manual`, `mapping`, `mariadb`, `minimizer`, `mqt`, `multistep`, `music`, `mysql`, `neural-network`, `nisq-analyzer`, `non-default`, `objective-function`, `one-hot-encoding`, `optimization`, `pennylane`, `postgresql`, `preprocessing`, `qasm`, `qasm-2`, `qasm-3`, `qc-executor`, `qc-simulator`, `qiskit`, `quantme`, `quantum`, `rest`, `routing`, `sample`, `scatter`, `similarity-calculation`, `sql`, `supervised-learning`, `utility`, `vector`, `visualization`, `workflow`, `zxcalculus`
 
 Every type below links to its entry in the list of [allowed data types and content types](data-formats/allowed-types.md).
 
 **Input formats:** [`application/X-lines+json`](#ct-application-x-lines-json), [`application/json`](#ct-application-json), [`application/octet-stream`](#ct-application-octet-stream), [`application/vnd.recordare.musicxml+xml`](#ct-application-vnd-recordare-musicxml-xml), [`application/xml`](#ct-application-xml), [`application/zip`](#ct-application-zip), [`audio/midi`](#ct-audio-midi), [`audio/x-midi`](#ct-audio-x-midi), [`text/csv`](#ct-text-csv), [`text/x-qasm`](#ct-text-x-qasm), [`text/xml`](#ct-text-xml)\
 **Output formats:** [`*`](#ct-wildcard), [`application/X-lines+json`](#ct-application-x-lines-json), [`application/json`](#ct-application-json), [`application/qasm`](#ct-application-qasm), [`application/zip`](#ct-application-zip), [`image/svg+xml`](#ct-image-svg-xml), [`text/csv`](#ct-text-csv), [`text/html`](#ct-text-html), [`text/plain`](#ct-text-plain), [`text/x-qasm`](#ct-text-x-qasm)
 
-**Input datatypes:** [`*`](#dt-wildcard), [`entity/*`](#dt-entity-wildcard), [`entity/attribute-metadata`](#dt-entity-attribute-metadata), [`entity/label`](#dt-entity-label), [`entity/list`](#dt-entity-list), [`entity/matrix`](#dt-entity-matrix), [`entity/shaped_vector`](#dt-entity-shaped-vector), [`entity/vector`](#dt-entity-vector), [`executable/circuit`](#dt-executable-circuit), [`graph/taxonomy`](#dt-graph-taxonomy), [`provenance/execution-options`](#dt-provenance-execution-options), [`relation/attribute-distances`](#dt-relation-attribute-distances), [`relation/attribute-similarities`](#dt-relation-attribute-similarities), [`relation/element-distances`](#dt-relation-element-distances), [`relation/element-similarities`](#dt-relation-element-similarities), [`relation/entity-distances`](#dt-relation-entity-distances)\
+**Input datatypes:** [`*`](#dt-wildcard), [`entity/*`](#dt-entity-wildcard), [`entity/attribute-metadata`](#dt-entity-attribute-metadata), [`entity/dimension-mapping`](#dt-entity-dimension-mapping), [`entity/label`](#dt-entity-label), [`entity/list`](#dt-entity-list), [`entity/matrix`](#dt-entity-matrix), [`entity/shaped_vector`](#dt-entity-shaped-vector), [`entity/vector`](#dt-entity-vector), [`executable/circuit`](#dt-executable-circuit), [`graph/taxonomy`](#dt-graph-taxonomy), [`provenance/execution-options`](#dt-provenance-execution-options), [`relation/attribute-distances`](#dt-relation-attribute-distances), [`relation/attribute-similarities`](#dt-relation-attribute-similarities), [`relation/element-distances`](#dt-relation-element-distances), [`relation/element-similarities`](#dt-relation-element-similarities), [`relation/entity-distances`](#dt-relation-entity-distances)\
 **Output datatypes:** [`*`](#dt-wildcard), [`circuit`](#dt-circuit), [`custom/clusters`](#dt-custom-clusters), [`custom/hello-world-output`](#dt-custom-hello-world-output), [`custom/kernel-matrix`](#dt-custom-kernel-matrix), [`custom/nisq-analyzer-result`](#dt-custom-nisq-analyzer-result), [`custom/pca-metadata`](#dt-custom-pca-metadata), [`custom/plot`](#dt-custom-plot), [`entity/*`](#dt-entity-wildcard), [`entity/attribute-metadata`](#dt-entity-attribute-metadata), [`entity/dimension-mapping`](#dt-entity-dimension-mapping), [`entity/label`](#dt-entity-label), [`entity/list`](#dt-entity-list), [`entity/vector`](#dt-entity-vector), [`executable/circuit`](#dt-executable-circuit), [`graph/taxonomy`](#dt-graph-taxonomy), [`image/html`](#dt-image-html), [`plot`](#dt-plot), [`provenance/execution-options`](#dt-provenance-execution-options), [`provenance/trace`](#dt-provenance-trace), [`qnn-weights`](#dt-qnn-weights), [`relation/attribute-distances`](#dt-relation-attribute-distances), [`relation/attribute-similarities`](#dt-relation-attribute-similarities), [`relation/element-distances`](#dt-relation-element-distances), [`relation/element-similarities`](#dt-relation-element-similarities), [`relation/entity-distances`](#dt-relation-entity-distances), [`representative-circuit`](#dt-representative-circuit), [`table/html`](#dt-table-html), [`txt`](#dt-txt), [`vqc-metadata`](#dt-vqc-metadata)
 
 ## Plugins
@@ -785,7 +781,7 @@ Transforms attribute similarities to attribute distances.
 
 
 (classical-k-means)=
-### Classical k Means (@v0.1.1)
+### Classical k Means (@v0.1.2)
 
 processing – ML, classical, clustering\
 *Path:* {file}`stable_plugins/classical_ml/scikit_ml/classical_k_means/__init__.py`
@@ -797,7 +793,7 @@ The entity points should be saved in the [entity/vector](https://qhana-plugin-ru
 
 | Data Type | Content Type | Required |
 |-----------|--------------| :------: |
-|entity/vector|application/json, text/csv|✓|
+|entity/vector|application/json, application/X-lines+json, text/csv|✓|
 
 
 **Outputs:**
@@ -809,7 +805,7 @@ The entity points should be saved in the [entity/vector](https://qhana-plugin-ru
 
 
 (classical-k-medoids)=
-### Classical k Medoids (@v0.1.1)
+### Classical k Medoids (@v0.1.2)
 
 processing – ML, classical, clustering\
 *Path:* {file}`stable_plugins/classical_ml/scikit_ml/classical_k_medoids/__init__.py`
@@ -821,7 +817,7 @@ The entity points should be saved in the [entity/vector](https://qhana-plugin-ru
 
 | Data Type | Content Type | Required |
 |-----------|--------------| :------: |
-|entity/vector|text/csv, application/json|✓|
+|entity/vector|application/json, application/X-lines+json, text/csv|✓|
 
 
 **Outputs:**
@@ -833,7 +829,7 @@ The entity points should be saved in the [entity/vector](https://qhana-plugin-ru
 
 
 (cluster-scatter-visualization)=
-### Clustered Scatter Plot Visualization (@v1.0.2)
+### Clustered Scatter Plot Visualization (@v1.0.4)
 
 visualization – cluster, scatter, visualization\
 *Path:* {file}`stable_plugins/visualization/complex/cluster_scatter_visualization/__init__.py`
@@ -847,6 +843,7 @@ A visualization plugin that creates a scatter plot using the provided data. When
 |entity/vector|application/json, text/csv|✓|
 |entity/label|application/json, text/csv|╳|
 |entity/*|application/json, text/csv|╳|
+|entity/dimension-mapping|application/json|╳|
 
 
 **Outputs:**
@@ -917,7 +914,7 @@ A plugin to create datasets.
 (demo-data-loader)=
 ### Demo data loader (@v0.1.0)
 
-dataloader – data-loading, demo\
+dataloader – data-loading, demo, feature-engineering\
 *Path:* {file}`plugins/demo_data_loader/__init__.py`
 
 Loads a small, self contained demo dataset. Provides entities, attribute metadata and taxonomies that cover tree taxonomies, taxonomies with mapping vectors and numeric attributes, so that the 'Feature Engineering Pipeline' plugin can be demonstrated without an external database.
@@ -984,9 +981,9 @@ Loads and filters entities from a file that contains a list of entities.
 
 
 (feature-engineering-pipeline)=
-### Feature Engineering Pipeline (@v0.1.7)
+### Feature Engineering Pipeline (@v0.2.2)
 
-processing – preprocessing, routing\
+processing – feature-engineering, preprocessing, routing\
 *Path:* {file}`plugins/feature_engineering_pipeline/__init__.py`
 
 Routes entities and separates tree from non-tree taxonomies. Takes Muse4Music data and provides different routing options for the entities and taxonomies.
@@ -1004,14 +1001,15 @@ Routes entities and separates tree from non-tree taxonomies. Takes Muse4Music da
 
 | Data Type | Content Type | Always |
 |-----------|--------------| :----: |
-|relation/element-similarities|application/zip|✓|
-|relation/element-distances|application/zip|✓|
-|relation/attribute-distances|application/zip|✓|
+|relation/element-similarities|application/zip|╳|
+|relation/element-distances|application/zip|╳|
+|relation/attribute-distances|application/zip|╳|
 |entity/vector|application/zip|✓|
-|entity/vector|text/csv, application/json, application/X-lines+json|✓|
+|entity/vector|text/csv, application/json, application/X-lines+json|╳|
+|entity/dimension-mapping|application/json|╳|
 |custom/plot|text/html|╳|
-|custom/pca-metadata|application/json|✓|
-|entity/vector|text/csv|✓|
+|custom/pca-metadata|application/json|╳|
+|entity/vector|text/csv|╳|
 
 
 (histogram-visualization)=
@@ -1201,6 +1199,46 @@ Extracts stable feature vectors from MusicXML, MXL, and MIDI sources. The vector
 |entity/list|application/json|✓|
 
 
+(numeric-value-normalization)=
+### Numeric Value Normalization (@v0.2.0)
+
+processing – preprocessing\
+*Path:* {file}`plugins/normalization/__init__.py`
+
+Normalizes selected numeric entity attributes from an input range to an output range.
+
+For each selected value $x$, the normalized value $y$ is calculated as:
+
+$$
+y = y_{min} + \frac{x - x_{min}}{x_{max} - x_{min}} \cdot (y_{max} - y_{min})
+$$
+
+The input range can be determined automatically for each attribute or supplied manually.
+
+The output range may be inverted (for example $y_{min} = 1$ and $y_{max} = 0$) to invert the
+normalized values.
+
+The input can also be a zip archive of vector files, for example the `entity/vector` output
+of the MDS plugin. Each file holds the vectors of all entities for one attribute (an
+`entity/vector` list as JSON, JSON lines or CSV). Each vector dimension is normalized per
+file, and the result is a zip archive with the same file names and formats.
+
+**Inputs:**
+
+| Data Type | Content Type | Required |
+|-----------|--------------| :------: |
+|entity/*|application/json, application/X-lines+json, text/csv, application/zip|✓|
+|entity/attribute-metadata|application/json, application/X-lines+json, text/csv|╳|
+
+
+**Outputs:**
+
+| Data Type | Content Type | Always |
+|-----------|--------------| :----: |
+|entity/list|application/json, application/X-lines+json, text/csv|╳|
+|entity/vector|application/zip|╳|
+
+
 (one-hot-encoding)=
 ### One-Hot Encoding (@v0.2.4)
 
@@ -1226,19 +1264,19 @@ Converts Data to One-Hot Encodings
 
 
 (optics)=
-### Optics (@v0.1.1)
+### Optics (@v0.1.2)
 
 processing – ML, classical, clustering\
 *Path:* {file}`stable_plugins/classical_ml/scikit_ml/optics-clustering/__init__.py`
 
-Clusters data with the OPTICS algorithm. The plugin uses the implementation by scikit-learn v1.1. More information about the algorithm can be found [here](https://scikit-learn.org/stable/modules/generated/sklearn.cluster.OPTICS.html#sklearn.cluster.OPTICS).
+Clusters data with the OPTICS algorithm. The plugin uses the implementation by scikit-learn v1.8.0. More information about the algorithm can be found [here](https://scikit-learn.org/stable/modules/generated/sklearn.cluster.OPTICS.html#sklearn.cluster.OPTICS).
 The entity points should be saved in the [entity/vector](https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/entities.html#entity-vector) format and they may be stored in either a csv or a json file. The ``data-creator`` plugin can generate some entity points.
 
 **Inputs:**
 
 | Data Type | Content Type | Required |
 |-----------|--------------| :------: |
-|entity/vector|application/json|✓|
+|entity/vector|application/json, application/X-lines+json, text/csv|✓|
 
 
 **Outputs:**
@@ -1294,7 +1332,7 @@ processing – feature-engineering, preprocessing\
 *Path:* {file}`stable_plugins/classical_ml/scikit_ml/pca/__init__.py`
 
 The PCA Plugin reduces the number of dimensions by computing the principle components.
-The new orthonormal basis consists of the k first principle components. The methods implemented here are from scikit-learn. Currently this plugin uses scikit-learn version 1.1.
+The new orthonormal basis consists of the k first principle components. The methods implemented here are from scikit-learn. Currently this plugin uses scikit-learn version 1.8.0.
 
 The entity points should be saved in the [entity/vector](https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/entities.html#entity-vector) format and they may be stored in either a csv or a json file. The ``data-creator`` plugin can generate some entity points.
 
@@ -1345,7 +1383,7 @@ Allows execution of quantum circuits using IBM Quantum backends.
 processing – QML, kernel, mapping, quantum\
 *Path:* {file}`stable_plugins/quantum_ml/qiskit_ml/qiskit_quantum_kernel_estimation/__init__.py`
 
-Produces a kernel matrix from a quantum kernel. Specifically qiskit's feature maps are used, combined with qiskit_machine_learning.kernels.QuantumKernel. These feature maps are ZFeatureMap, ZZFeatureMap, PauliFeatureMap from qiskit.circuit.library. These feature maps all use the proposed kernel by Havlíček [0]. The following versions were used `qiskit~=2.2.3` and `qiskit-machine-learning~=0.8.0`.
+Produces a kernel matrix from a quantum kernel. Specifically qiskit's feature maps are used, combined with qiskit_machine_learning.kernels.QuantumKernel. These feature maps are ZFeatureMap, ZZFeatureMap, PauliFeatureMap from qiskit.circuit.library. These feature maps all use the proposed kernel by Havlíček [0]. The following versions were used `qiskit~=2.3.0` and `qiskit-machine-learning~=0.9.0`.
 
 The entity points should be saved in the [entity/vector](https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/entities.html#entity-vector) format. They may be stored in either a csv or a json file. The plugin ``data-creator`` can generate these entities.
 
@@ -1492,7 +1530,7 @@ Source:
 processing – QML, classification, quantum\
 *Path:* {file}`stable_plugins/quantum_ml/qiskit_ml/variational_quantum_classifier/__init__.py`
 
-This plugin implements the Variational Quantum Classifier (VQC) by Qiskit [0]. It's currently using version 0.4.0 of qiskit's machine learning library.
+This plugin implements the Variational Quantum Classifier (VQC) by Qiskit [0]. It's currently using version 0.9.0 of qiskit's machine learning library.
 The entity points should be saved in the [entity/vector](https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/entities.html#entity-vector) format and labels in the [entity/label](https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/entities.html#entity-label) format. Both may be stored in either a csv or a json file. Both can be generated with the ``data-creator`` plugin.
 
 Source:
@@ -1572,7 +1610,7 @@ Source:
 
 | Data Type | Content Type | Required |
 |-----------|--------------| :------: |
-|entity/vector|application/json, text/csv|✓|
+|entity/vector|application/json, application/X-lines+json, text/csv|✓|
 
 
 **Outputs:**
@@ -1633,12 +1671,12 @@ Allows to manage sql databases and use them as a source.
 processing – ML, QML, classical, classification, quantum, supervised-learning\
 *Path:* {file}`stable_plugins/quantum_ml/qiskit_ml/svm/__init__.py`
 
-Classifies data with a support vector machine. This plugin uses the implementation of scikit-learn 1.1 [0]. The quantum kernels are from Qiskit [1] and the data maps are from Havlíček et al. [2] and Suzuki et al. [3].
+Classifies data with a support vector machine. This plugin uses the implementation of scikit-learn 1.8.0 [0]. The quantum kernels are from Qiskit [1] and the data maps are from Havlíček et al. [2] and Suzuki et al. [3].
 
 The entity points should be saved in the [entity/vector](https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/entities.html#entity-vector) format and labels in the [entity/label](https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/entities.html#entity-label) format. A precomputed kernel matrix should be stored in the [entity/matrix](https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/entities.html#entity-matrix) format. All of them may be stored in either a csv or a json file. A set of entity points and labels can be generated with the ``data-creator`` plugin. A precomputed kernel can be computed with a quantum kernel estimation plugin, given the entity points.
 
 Source:
-[0] [https://scikit-learn.org/1.1/modules/svm.html#svm](https://scikit-learn.org/1.1/modules/svm.html#svm)
+[0] [https://scikit-learn.org/1.2/modules/svm.html#svm](https://scikit-learn.org/1.2/modules/svm.html#svm)
 [1] Qiskit's quantum kernels [ZFeatureMap](https://qiskit.org/documentation/stubs/qiskit.circuit.library.ZFeatureMap.html), [ZZFeatureMap](https://qiskit.org/documentation/stubs/qiskit.circuit.library.ZZFeatureMap.html) and [PauliFeatureMap](https://qiskit.org/documentation/stubs/qiskit.circuit.library.PauliFeatureMap.html)
 [2] [Havlíček, V., Córcoles, A.D., Temme, K. et al. Supervised learning with quantum-enhanced feature spaces. Nature 567, 209–212 (2019).](https://doi.org/10.1038/s41586-019-0980-2)
 [3] [Suzuki, Y., Yano, H., Gao, Q. et al. Analysis and synthesis of feature map for kernel-based quantum classifier. Quantum Mach. Intell. 2, 9 (2020).](https://doi.org/10.1007/s42484-020-00020-y)
@@ -1956,7 +1994,7 @@ Convert CSV files to JSON.
 
 
 (csv-visualization)=
-### csv-visualization (@v0.1.1)
+### csv-visualization (@v0.2.1)
 
 visualization – csv, visualization\
 *Path:* {file}`stable_plugins/visualization/file_types/csv_visualization.py`
@@ -2075,7 +2113,7 @@ Convert JSON files to CSV.
 
 
 (json-visualization)=
-### json-visualization (@v0.2.1)
+### json-visualization (@v0.3.1)
 
 visualization – json, visualization\
 *Path:* {file}`stable_plugins/visualization/file_types/json_visualization.py`
@@ -2159,32 +2197,6 @@ processing – circuit-executor, pennylane, qasm, qasm-2, qasm-3, qc-simulator\
 *Path:* {file}`plugins/circuit_executors/pennylane_defaultqubit.py`
 
 Allows execution of quantum circuits using a simulator packaged with qiskit.
-
-**Inputs:**
-
-| Data Type | Content Type | Required |
-|-----------|--------------| :------: |
-|executable/circuit|text/x-qasm|✓|
-|provenance/execution-options|text/csv, application/json, application/X-lines+json|╳|
-
-
-**Outputs:**
-
-| Data Type | Content Type | Always |
-|-----------|--------------| :----: |
-|entity/vector|application/json|✓|
-|entity/vector|application/json|╳|
-|provenance/trace|application/json|✓|
-|provenance/execution-options|application/json|✓|
-
-
-(pytket_qulacsBackend-simulator)=
-### pytket_qulacsBackend-simulator (@v1.0.0)
-
-processing – circuit-executor, pytket_qulacsBackend, qasm, qasm-2, qc-simulator\
-*Path:* {file}`plugins/circuit_executors/pytket_Qulacs.py`
-
-Allows execution of quantum circuits using a simulator packaged with pytket_qulacsBackend.
 
 **Inputs:**
 

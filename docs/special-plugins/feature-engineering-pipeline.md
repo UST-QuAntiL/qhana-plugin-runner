@@ -25,22 +25,25 @@ The Feature Engineering Pipeline takes an entity list as input and provides dyna
 
 ### Plugins Used
 **Wu-Palmer Pipeline:**
-1. [Wu-Palmer](../all-plugins.md#wu-palmer-similarities-v025) 
-2. [Similarities to Distances Transformer](../all-plugins.md#attribute-similarities-to-attribute-distances-transformers-v023) 
-3. [Aggregator](../all-plugins.md#aggregators-v022) 
-4. [MDS (Multidimensional Scaling)](../all-plugins.md#multidimensional-scaling-mds-v023)
+1. {ref}`wu-palmer`
+2. {ref}`attr-sim-to-attr-dist-transformers`
+3. {ref}`distance-aggregator`
+4. {ref}`mds`
+5. (Optional) {ref}`numeric-value-normalization`
 
 **Mapping Pipeline:**
-1. [Mapping to Distance](../all-plugins.md#taxanomy-mapping-to-distances-v030)
-2. [Aggregator](../all-plugins.md#aggregators-v022) 
-3. [MDS (Multidimensional Scaling)](../all-plugins.md#multidimensional-scaling-mds-v023)
+1. {ref}`mapping-distances`
+2. {ref}`distance-aggregator`
+3. {ref}`mds`
+4. (Optional) {ref}`numeric-value-normalization`
 
 **One-Hot Encoding Pipeline**
-1. [One-Hot Encoding](../all-plugins.md#one-hot-encoding-v024)
+1. {ref}`one-hot-encoding`
+2. (Optional) {ref}`numeric-value-normalization`
 
 **Finalization**
-1. [Vector Concatination](../all-plugins.md#vector-concationation-plugin-v014)
-2. [PCA (Principle Component Analysis)](../all-plugins.md#principle-component-analysis-pca-v023)
+1. {ref}`vector-concat`
+2. {ref}`pca`
 
 
 ## Developing
