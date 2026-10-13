@@ -394,6 +394,41 @@ def should_store_pipeline_vectors(params: InputParameters) -> bool:
         return True
 
 
+def stores_unnormalized_vectors(
+    task_data: ProcessingTask, params: InputParameters
+) -> bool:
+    """Return true if the vectors of the running group are stored before normalization.
+
+    A normalized group stores the normalized vectors as its result, so the vectors
+    before normalization are only an intermediate result.
+    """
+    if task_data.data.get("current_normalize"):
+        return params.include_intermediate_results_in_output
+    return should_store_pipeline_vectors(params)
+
+
+def normalization_payload(params: InputParameters, entities_url: str) -> dict:
+    """Return the form data that starts the normalization plugin.
+
+    No attributes are selected, so the plugin normalizes every vector dimension. A
+    vector zip is normalized file by file.
+    """
+
+    def optional(value: float | None) -> float | str:
+        return "" if value is None else value
+
+    return {
+        "entitiesUrl": entities_url,
+        "attributes": "",
+        "inputRangeMin": optional(params.normalization_input_range_min),
+        "inputRangeMax": optional(params.normalization_input_range_max),
+        "outputRangeStart": params.normalization_output_range_start,
+        "outputRangeEnd": params.normalization_output_range_end,
+        "useClipping": str(params.normalization_use_clipping).lower(),
+        "allowMissingValues": str(params.normalization_allow_missing_values).lower(),
+    }
+
+
 def save_intermediate_results(
     task_data: ProcessingTask,
     retries: int,
