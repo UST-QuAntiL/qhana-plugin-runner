@@ -491,8 +491,10 @@ class AttributeSettingsSchema(PipelineSettingsSchema):
         load_default=False,
         metadata={
             "label": "Normalize",
-            "description": "If checked, the feature-vector dimensions of this attribute are normalized "
-            "before they are concatenated. A single-valued numeric attribute is normalized directly.",
+            "description": "Unchecked by default, so the feature-vector dimensions of this attribute keep "
+            "their original scale. If checked, they are normalized to the configured output range "
+            "before they are concatenated. For a single-valued numeric attribute, this normalizes "
+            "the attribute value itself.",
             "input_type": "checkbox",
         },
     )

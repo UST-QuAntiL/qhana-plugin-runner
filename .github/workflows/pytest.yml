@@ -2,13 +2,13 @@ name: Tests
 
 on:
   push:
-    branches: [main,enpro2026-main]
+    branches: [main]
   pull_request:
 
 env:
   # keep the virtualenv inside the workspace so it can be cached by path
   POETRY_VIRTUALENVS_IN_PROJECT: "true"
-  PYTHON_VERSION: "3.10"
+  PYTHON_VERSION: "3.14"
 
 jobs:
   pytest:

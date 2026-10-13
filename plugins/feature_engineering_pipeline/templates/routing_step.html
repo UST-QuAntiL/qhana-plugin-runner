@@ -60,8 +60,10 @@ limitations under the License.
         margin-left: 1.5em;
     }
 
-    .numeric-description {
-        margin-bottom: 0.5rem;
+    .pipeline-descriptions p.pipeline-option-note {
+        margin: 0;
+        padding-top: 0.5rem;
+        border-top: 1px solid rgba(var(--line, 128, 128, 128), 0.4);
     }
 
     .attribute-row .numeric-include {
@@ -256,14 +258,27 @@ limitations under the License.
     <p>No taxonomy attributes were found in the provided metadata.</p>
     {% endif %}
 
-    <p class="numeric-description">
-        Select the numeric attributes to include. A single-valued attribute is appended directly as one
-        feature-vector dimension. A multi-valued attribute is processed like the Mapping pipeline:
-        distances are calculated, aggregated to entity distances, and embedded with MDS into the configured
-        number of feature-vector dimensions.
-        Enable normalization in the settings of an attribute to scale its feature-vector dimensions
-        (the value itself for a single-valued attribute) to the configured output range.
-    </p>
+    <p>Select the numeric attributes to include:</p>
+
+    <fieldset class="pipeline-descriptions">
+        <legend>Numeric attribute processing</legend>
+        <dl>
+            <dt>Single-valued</dt>
+            <dd>Appends the value directly as one feature-vector dimension.</dd>
+
+            <dt>Multi-valued</dt>
+            <dd>Processed like the Mapping pipeline. Distances between the values are calculated,
+                aggregated to entity distances, and embedded with MDS into the configured number of
+                feature-vector dimensions.</dd>
+        </dl>
+
+        <p class="pipeline-option-note">
+            <strong>Normalization</strong> applies to single- and multi-valued attributes and is
+            <strong>disabled by default</strong>, so the values keep their original scale.
+            Check "Normalize" in the settings of an attribute to scale its feature-vector dimensions
+            (the value itself for a single-valued attribute) to the configured output range.
+        </p>
+    </fieldset>
 
     {% if numeric_attributes %}
     <fieldset>

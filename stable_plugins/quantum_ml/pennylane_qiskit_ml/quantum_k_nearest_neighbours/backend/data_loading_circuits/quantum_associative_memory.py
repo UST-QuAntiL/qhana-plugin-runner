@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import pennylane as qml
+from pennylane.exceptions import QuantumFunctionError
 import numpy as np
 from typing import List
 from ..ccnot import adaptive_ccnot
@@ -81,7 +82,7 @@ class QAM:
                 additional_wires is None
                 or len(additional_wires) < additional_bits.shape[1]
             ):
-                raise qml.QuantumFunctionError(
+                raise QuantumFunctionError(
                     "The number of additional wires must be at least the same as the dimension of the additional bits."
                 )
 

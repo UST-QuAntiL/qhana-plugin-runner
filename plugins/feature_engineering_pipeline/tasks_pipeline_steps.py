@@ -55,11 +55,13 @@ from .tasks_helpers import (
     extract_output_url,
     has_enough_pca_dimensions,
     load_params,
+    normalization_payload,
     persist_generated_file,
     pipeline_label,
     run_pipeline_step,
     save_intermediate_results,
     should_store_pipeline_vectors,
+    stores_unnormalized_vectors,
 )
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -218,20 +220,9 @@ def launch_next_pipeline(task_data: ProcessingTask):
         )
 
 
-def _stores_unnormalized_vectors(task_data: ProcessingTask, params: InputParameters):
-    """Return true if the vectors of the running group are stored before normalization.
-
-    A normalized group stores the normalized vectors as its result, so the vectors
-    before normalization are only an intermediate result.
-    """
-    if task_data.data.get("current_normalize"):
-        return params.include_intermediate_results_in_output
-    return should_store_pipeline_vectors(params)
-
-
 def _complete_pipeline(
     task_data: ProcessingTask, params: InputParameters, vectors_url: str
-):
+) -> None:
     """Hand the vectors of the running group to the concatenation and start the next group."""
     if params.concat_output:
         vector_zip_urls = task_data.data.get("vector_zip_urls", [])
@@ -245,34 +236,12 @@ def _complete_pipeline(
     launch_next_pipeline(task_data)
 
 
-def normalization_payload(params: InputParameters, entities_url: str) -> dict:
-    """Return the form data that starts the normalization plugin.
-
-    No attributes are selected, so the plugin normalizes every vector dimension. A
-    vector zip is normalized file by file.
-    """
-
-    def optional(value: float | None):
-        return "" if value is None else value
-
-    return {
-        "entitiesUrl": entities_url,
-        "attributes": "",
-        "inputRangeMin": optional(params.normalization_input_range_min),
-        "inputRangeMax": optional(params.normalization_input_range_max),
-        "outputRangeStart": params.normalization_output_range_start,
-        "outputRangeEnd": params.normalization_output_range_end,
-        "useClipping": str(params.normalization_use_clipping).lower(),
-        "allowMissingValues": str(params.normalization_allow_missing_values).lower(),
-    }
-
-
 def start_vector_normalization(
     task_data: ProcessingTask,
     params: InputParameters,
     vectors_url: str,
     file_name: str,
-):
+) -> None:
     """
     Starts the normalization plugin for the vectors of the running pipeline group.
 
@@ -645,7 +614,7 @@ def build_numeric_feature_vector(self, db_id: int):
         entities_zip(members),
         file_name,
         "entity/vector",
-        as_result=_stores_unnormalized_vectors(task_data, params),
+        as_result=stores_unnormalized_vectors(task_data, params),
     )
 
     if first_attempt:
@@ -693,7 +662,7 @@ def finalize_pipeline(self, db_id: int, source_url: str):
     outputs = requests.get(source_url, timeout=REQUEST_TIMEOUT).json().get("outputs", [])
     final_dists_url = extract_output_url(outputs, "entity/vector")
 
-    if _stores_unnormalized_vectors(task_data, params):
+    if stores_unnormalized_vectors(task_data, params):
         save_intermediate_results(
             task_data=task_data,
             retries=self.request.retries,
@@ -743,7 +712,7 @@ def finalize_one_hot(self, db_id: int, source_url: str):
     outputs = requests.get(source_url, timeout=REQUEST_TIMEOUT).json().get("outputs", [])
     vectors_url = extract_output_url(outputs, "entity/vector")
 
-    if _stores_unnormalized_vectors(task_data, params):
+    if stores_unnormalized_vectors(task_data, params):
         save_intermediate_results(
             task_data=task_data,
             retries=self.request.retries,
