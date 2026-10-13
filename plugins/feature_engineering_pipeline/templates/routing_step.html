@@ -329,7 +329,7 @@ limitations under the License.
     <p>No numeric attributes were found in the provided metadata.</p>
     {% endif %}
 
-    <details id="pca-settings" class="settings-section" {% if concat_output %}open{% endif %}>
+    <details id="pca-settings" class="settings-section" open>
         <summary>Principal Component Analysis (PCA) Settings</summary>
         {% if concat_output %}
         {{ forms.render_fields(pca_toggle_schema, values=values, errors=errors) }}
