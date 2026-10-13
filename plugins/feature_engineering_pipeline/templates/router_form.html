@@ -1,0 +1,42 @@
+<!--
+Copyright 2026 QHAna plugin runner contributors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+{% extends "simple_template.html" %}
+{% import "pipeline_settings_section.html" as components %}
+
+{% block head %}
+{{ super() }}
+{{ components.settings_section_styles() }}
+{% endblock head %}
+
+{% block content %}
+<div class="qhana-microfrontend">
+    {% call forms.render_form(target="microfrontend") %}
+    {% for group in groups %}
+    {{ components.settings_section(group.title, group.schema, values=values, errors=errors, expanded=(group.key in expanded_groups)) }}
+    {% endfor %}
+    <div class="qhana-form-buttons">
+        {{ forms.submit("validate", target="microfrontend") }}
+        {{ forms.submit("submit", action=process) }}
+    </div>
+    {% endcall %}
+</div>
+{% endblock content %}
+
+{% block script %}
+{{ super() }}
+{{ components.settings_section_script() }}
+{% endblock script %}

@@ -23,7 +23,7 @@ from qhana_plugin_runner.util.plugins import QHAnaPluginBase
 from qhana_plugin_runner.util.plugins import plugin_identifier
 
 _plugin_name = "histogram-visualization"
-__version__ = "v1.0.1"
+__version__ = "v1.0.3"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 VIS_BLP = SecurityBlueprint(
@@ -36,7 +36,7 @@ VIS_BLP = SecurityBlueprint(
 
 
 class HistogramVisualization(QHAnaPluginBase):
-    name = "Histogram Visualization"
+    name = _plugin_name
     version = __version__
     description = (
         "A visualization plugin for creating Historgrams using the counts of different labels."
@@ -51,13 +51,7 @@ class HistogramVisualization(QHAnaPluginBase):
         return VIS_BLP
 
     def get_requirements(self) -> str:
-        return (
-            "pylatexenc~=2.10\n"
-            "kaleido~=1.2.0\n"
-            "muid~=0.5.3\n"
-            "pandas~=2.3.3\n"
-            "plotly~=6.6.0"
-        )
+        return "pylatexenc~=2.10\n" "kaleido~=1.2.0\n" "pandas~=2.3.3\n" "plotly~=6.6.0"
 
 
 try:

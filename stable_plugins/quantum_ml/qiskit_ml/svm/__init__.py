@@ -21,7 +21,7 @@ from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 
 _plugin_name = "svm"
-__version__ = "v0.1.1"
+__version__ = "v0.1.2"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -87,7 +87,6 @@ class SVM(QHAnaPluginBase):
             f"scikit-learn~={sklearn_version}\n"
             "plotly~=6.6.0\n"
             "pandas~=2.3.3\n"
-            "muid~=0.5.3"
         )
 
 

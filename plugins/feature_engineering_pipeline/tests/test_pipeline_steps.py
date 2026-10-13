@@ -1,0 +1,1025 @@
+# Copyright 2026 QHAna plugin runner contributors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Tests for the individual pipeline steps.
+
+The execution of a step itself is covered by the ``run_pipeline_step`` tests in
+``test_tasks_helpers.py``. What is verified here is the extra logic of each
+step: the payload it builds (checked against the schema of the plugin that
+receives it), which intermediate results it stores, and how it advances the
+pipeline state.
+"""
+
+import json
+from importlib import import_module
+from types import SimpleNamespace
+from zipfile import ZipFile
+
+import pytest
+from marshmallow import EXCLUDE
+
+from qhana_plugin_runner.db import DB
+from qhana_plugin_runner.db.models.tasks import ProcessingTask, TaskFile
+from qhana_plugin_runner.storage import STORE
+from feature_engineering_pipeline.schemas import (
+    AGGREGATOR_PLUGIN,
+    FEATURE_VECTOR,
+    FINALIZE_PIPELINE,
+    INCLUDE_NUMERIC,
+    MAPPING_PLUGIN,
+    MDS_PLUGIN,
+    NUMERIC_MAPPING_PIPELINE,
+    ONE_HOT_PLUGIN,
+    PCA_PLUGIN,
+    TRANSFORMERS_PLUGIN,
+    VECTOR_CONCAT_PLUGIN,
+    WU_PALMER_PLUGIN,
+)
+from feature_engineering_pipeline.tasks_pipeline_steps import (
+    OUTPUT_FORMATS,
+    PCA_DEFAULTS,
+    build_numeric_feature_vector,
+    finalize_one_hot,
+    finalize_pca,
+    finalize_pipeline,
+    finalize_vector_concat,
+    launch_next_pipeline,
+    start_aggregator,
+    start_mapping,
+    start_mds,
+    start_numeric_distances,
+    start_one_hot,
+    start_pca,
+    start_transformers,
+    start_vector_concat,
+    start_wu_palmer,
+)
+from feature_engineering_pipeline.tests.data import (
+    ENTITIES_URL,
+    METADATA_URL,
+    TAXONOMIES_URL,
+    PluginServer,
+    capture_pipeline_step,
+    capture_task_errors,
+    make_router_task,
+    pipeline_group,
+)
+
+from tests.utils import MockResponse, run_task
+
+pytestmark = pytest.mark.usefixtures("celery_worker")
+
+# The schema each sub-plugin uses to load the posted form data.
+PLUGIN_SCHEMAS = {
+    WU_PALMER_PLUGIN: ("wu_palmer", "InputParametersSchema"),
+    MAPPING_PLUGIN: ("mapping_distances.schemas", "InputParametersSchema"),
+    ONE_HOT_PLUGIN: ("one_hot_encoding", "InputParametersSchema"),
+    TRANSFORMERS_PLUGIN: ("transformer.schemas", "InputParametersSchema"),
+    AGGREGATOR_PLUGIN: ("aggregator.schemas", "InputParametersSchema"),
+    MDS_PLUGIN: ("attribute_mds.schemas", "InputParametersSchema"),
+    VECTOR_CONCAT_PLUGIN: ("vector_concat.schemas", "VectorConcatSchema"),
+    PCA_PLUGIN: ("pca.schemas", "InputParametersSchema"),
+}
+
+
+@pytest.fixture
+def server(monkeypatch) -> PluginServer:
+    return PluginServer().install(monkeypatch)
+
+
+@pytest.fixture
+def steps(monkeypatch) -> list:
+    return capture_pipeline_step(monkeypatch)
+
+
+@pytest.fixture
+def task_errors(monkeypatch) -> list:
+    return capture_task_errors(monkeypatch)
+
+
+@pytest.fixture
+def dispatched(monkeypatch) -> list:
+    """Record follow-up dispatches instead of running them on the worker."""
+    calls = []
+
+    def _recorder(name):
+        def _apply_async(args=None, **kwargs):
+            calls.append((name, list(args or [])))
+
+        return _apply_async
+
+    for name in (
+        "start_wu_palmer",
+        "start_mapping",
+        "start_one_hot",
+        "start_numeric_distances",
+        "build_numeric_feature_vector",
+        "start_vector_concat",
+        "start_pca",
+    ):
+        monkeypatch.setattr(
+            f"feature_engineering_pipeline.tasks_pipeline_steps.{name}",
+            SimpleNamespace(apply_async=_recorder(name)),
+        )
+
+    monkeypatch.setattr(
+        "feature_engineering_pipeline.tasks_pipeline_steps.save_task_result",
+        SimpleNamespace(
+            delay=lambda *args: calls.append(("save_task_result", list(args)))
+        ),
+    )
+    return calls
+
+
+def payload_for(steps: list, plugin: str) -> dict:
+    for call in steps:
+        if call["plugin_name"] == plugin:
+            return call["payload"]
+    raise AssertionError(f"No pipeline step started for {plugin}: {steps}")
+
+
+def assert_payload_matches_plugin_schema(plugin: str, payload: dict):
+    """The receiving plugin loads the form with ``unknown=EXCLUDE``.
+
+    A key that does not match a ``data_key`` is therefore dropped without any
+    error, which is why the unknown keys are rejected explicitly here.
+    """
+    module_name, schema_name = PLUGIN_SCHEMAS[plugin]
+    schema_class = getattr(import_module(module_name), schema_name)
+    schema = schema_class()
+
+    known_keys = {field.data_key for field in schema.fields.values()}
+    assert (
+        set(payload) <= known_keys
+    ), f"{plugin} would silently ignore {set(payload) - known_keys}"
+
+    schema_class(unknown=EXCLUDE).load(payload)
+
+
+def stored_files(db_task: ProcessingTask) -> dict:
+    DB.session.expire_all()
+    return {f.file_name: f for f in TaskFile.get_task_result_files(db_task.id)}
+
+
+def task_files(db_task: ProcessingTask) -> dict:
+    """All files of the task, temporary files included."""
+    DB.session.expire_all()
+    return {f.file_name: f for f in ProcessingTask.get_by_id(db_task.id).outputs}
+
+
+def zip_member(file_info: TaskFile, member: str):
+    with STORE.open(file_info) as file, ZipFile(file) as archive:
+        return json.loads(archive.read(member))
+
+
+def reload(db_task: ProcessingTask) -> ProcessingTask:
+    DB.session.expire_all()
+    return ProcessingTask.get_by_id(db_task.id)
+
+
+# --- PAYLOADS ---
+
+
+def test_wu_palmer_payload(server, steps):
+    db_task = make_router_task()
+
+    run_task(start_wu_palmer, db_id=db_task.id)
+
+    payload = payload_for(steps, WU_PALMER_PLUGIN)
+    assert payload == {
+        "entitiesUrl": ENTITIES_URL,
+        "entitiesMetadataUrl": METADATA_URL,
+        "taxonomiesZipUrl": TAXONOMIES_URL,
+        "attributes": "attr1",
+        "rootIsPartOfHierarchy": "false",
+    }
+    assert_payload_matches_plugin_schema(WU_PALMER_PLUGIN, payload)
+
+
+def test_wu_palmer_payload_forwards_the_hierarchy_setting(server, steps):
+    db_task = make_router_task(rootIsPartOfHierarchy=True)
+
+    run_task(start_wu_palmer, db_id=db_task.id)
+
+    assert payload_for(steps, WU_PALMER_PLUGIN)["rootIsPartOfHierarchy"] == "true"
+
+
+def test_mapping_payload(server, steps):
+    db_task = make_router_task(distanceMetric="cosine")
+
+    run_task(start_mapping, db_id=db_task.id)
+
+    payload = payload_for(steps, MAPPING_PLUGIN)
+    assert payload == {
+        "entitiesUrl": ENTITIES_URL,
+        "entitiesMetadataUrl": METADATA_URL,
+        "taxonomiesZipUrl": TAXONOMIES_URL,
+        "attributes": "attr2",
+        "distanceMetric": "cosine",
+    }
+    assert_payload_matches_plugin_schema(MAPPING_PLUGIN, payload)
+
+
+def test_one_hot_payload(server, steps):
+    db_task = make_router_task(selections={"attr3": ONE_HOT_PLUGIN})
+
+    run_task(start_one_hot, db_id=db_task.id)
+
+    payload = payload_for(steps, ONE_HOT_PLUGIN)
+    assert payload == {
+        "entitiesUrl": ENTITIES_URL,
+        "entitiesMetadataUrl": METADATA_URL,
+        "taxonomiesZipUrl": TAXONOMIES_URL,
+        "attributes": "attr3",
+    }
+    assert_payload_matches_plugin_schema(ONE_HOT_PLUGIN, payload)
+
+
+def test_payload_uses_the_settings_of_the_running_group(server, steps):
+    """The routing step can override the settings of the first step per attribute."""
+    db_task = make_router_task(
+        rootIsPartOfHierarchy=False,
+        data={"current_settings": {"rootIsPartOfHierarchy": True}},
+    )
+
+    run_task(start_wu_palmer, db_id=db_task.id)
+
+    assert payload_for(steps, WU_PALMER_PLUGIN)["rootIsPartOfHierarchy"] == "true"
+
+
+def test_transformers_payload(server, steps):
+    db_task = make_router_task(transformer="gaussian_inverse")
+
+    run_task(
+        start_transformers,
+        db_id=db_task.id,
+        source_url=server.task_url(WU_PALMER_PLUGIN),
+    )
+
+    payload = payload_for(steps, TRANSFORMERS_PLUGIN)
+    assert payload == {
+        "similaritiesUrl": server.output_url(
+            WU_PALMER_PLUGIN, "relation/element-similarities"
+        ),
+        "attributes": "attr1",
+        "transformer": "gaussian_inverse",
+    }
+    assert_payload_matches_plugin_schema(TRANSFORMERS_PLUGIN, payload)
+
+
+def test_aggregator_payload(server, steps):
+    db_task = make_router_task()
+
+    run_task(
+        start_aggregator,
+        db_id=db_task.id,
+        source_url=server.task_url(TRANSFORMERS_PLUGIN),
+    )
+
+    payload = payload_for(steps, AGGREGATOR_PLUGIN)
+    assert payload == {
+        "entitiesUrl": ENTITIES_URL,
+        "elementDistancesUrl": server.output_url(
+            TRANSFORMERS_PLUGIN, "relation/element-distances"
+        ),
+    }
+    assert_payload_matches_plugin_schema(AGGREGATOR_PLUGIN, payload)
+
+
+def test_mds_payload(server, steps):
+    db_task = make_router_task(
+        mdsDimensions=3, metric="nonmetric_mds", nInit=8, maxIter=42
+    )
+
+    run_task(start_mds, db_id=db_task.id, source_url=server.task_url(AGGREGATOR_PLUGIN))
+
+    payload = payload_for(steps, MDS_PLUGIN)
+    assert payload == {
+        "attributeDistancesUrl": server.output_url(
+            AGGREGATOR_PLUGIN, "relation/attribute-distances"
+        ),
+        "dimensions": 3,
+        "metric": "nonmetric_mds",
+        "nInit": 8,
+        "maxIter": 42,
+        "missingDataHandling": "mean",
+    }
+    assert_payload_matches_plugin_schema(MDS_PLUGIN, payload)
+
+
+def test_vector_concat_payload(server, steps):
+    urls = [
+        "http://localhost:5005/files/10/a.zip",
+        "http://localhost:5005/files/11/b.zip",
+    ]
+    db_task = make_router_task(
+        concatOutput=True, outputFormat="json", data={"vector_zip_urls": urls}
+    )
+
+    run_task(start_vector_concat, db_id=db_task.id)
+
+    payload = payload_for(steps, VECTOR_CONCAT_PLUGIN)
+    assert payload == {
+        "urls": "\n".join(urls),
+        "outputFormat": "json",
+        "outputSuffix": "final_concatenated_vector",
+    }
+    assert_payload_matches_plugin_schema(VECTOR_CONCAT_PLUGIN, payload)
+
+
+def test_pca_payload(server, steps):
+    vector_url = server.output_url(VECTOR_CONCAT_PLUGIN, "entity/vector")
+    db_task = make_router_task(
+        concatOutput=True,
+        reduceDimensions=True,
+        pcaType="kernel",
+        pcaDimensions=2,
+        solver="randomized",
+        tol=0.5,
+        iteratedPower=7,
+    )
+
+    run_task(start_pca, db_id=db_task.id, vector_url=vector_url)
+
+    payload = payload_for(steps, PCA_PLUGIN)
+    assert payload == {
+        **PCA_DEFAULTS,
+        "entityPointsUrl": vector_url,
+        "pcaType": "kernel",
+        "dimensions": 2,
+        "solver": "randomized",
+        "tol": 0.5,
+        "iteratedPower": 7,
+    }
+    assert_payload_matches_plugin_schema(PCA_PLUGIN, payload)
+
+
+def test_pca_defaults_cover_every_parameter_the_form_omits(app):
+    """The PCA schema has no defaults, so the router has to send every field."""
+    schema = getattr(import_module("pca.schemas"), "InputParametersSchema")()
+    required = {field.data_key for field in schema.fields.values() if field.required}
+    sent_by_router = set(PCA_DEFAULTS) | {
+        "entityPointsUrl",
+        "pcaType",
+        "dimensions",
+        "solver",
+        "tol",
+        "iteratedPower",
+    }
+    assert required <= sent_by_router
+
+
+# --- INTERMEDIATE RESULTS ---
+
+
+def test_steps_store_no_intermediate_results_by_default(server, steps):
+    db_task = make_router_task()
+
+    run_task(
+        start_transformers,
+        db_id=db_task.id,
+        source_url=server.task_url(WU_PALMER_PLUGIN),
+    )
+
+    assert stored_files(db_task) == {}
+
+
+# --- CALLING THE SUB-PLUGINS ---
+
+# (pipeline, step, plugin that ran before, data type consumed, payload key,
+#  plugin the step starts, name of the stored intermediate result)
+PIPELINE_CHAIN = [
+    (
+        WU_PALMER_PLUGIN,
+        start_transformers,
+        WU_PALMER_PLUGIN,
+        "relation/element-similarities",
+        "similaritiesUrl",
+        TRANSFORMERS_PLUGIN,
+        "wu_palmer_similarities.zip",
+    ),
+    (
+        WU_PALMER_PLUGIN,
+        start_aggregator,
+        TRANSFORMERS_PLUGIN,
+        "relation/element-distances",
+        "elementDistancesUrl",
+        AGGREGATOR_PLUGIN,
+        "wu_palmer_element_distances.zip",
+    ),
+    (
+        WU_PALMER_PLUGIN,
+        start_mds,
+        AGGREGATOR_PLUGIN,
+        "relation/attribute-distances",
+        "attributeDistancesUrl",
+        MDS_PLUGIN,
+        "wu_palmer_attribute_distances.zip",
+    ),
+    (
+        MAPPING_PLUGIN,
+        start_aggregator,
+        MAPPING_PLUGIN,
+        "relation/element-distances",
+        "elementDistancesUrl",
+        AGGREGATOR_PLUGIN,
+        "mapping_element_distances.zip",
+    ),
+    (
+        MAPPING_PLUGIN,
+        start_mds,
+        AGGREGATOR_PLUGIN,
+        "relation/attribute-distances",
+        "attributeDistancesUrl",
+        MDS_PLUGIN,
+        "mapping_attribute_distances.zip",
+    ),
+    (
+        NUMERIC_MAPPING_PIPELINE,
+        start_aggregator,
+        MAPPING_PLUGIN,
+        "relation/element-distances",
+        "elementDistancesUrl",
+        AGGREGATOR_PLUGIN,
+        "numeric_mapping_element_distances.zip",
+    ),
+    (
+        NUMERIC_MAPPING_PIPELINE,
+        start_mds,
+        AGGREGATOR_PLUGIN,
+        "relation/attribute-distances",
+        "attributeDistancesUrl",
+        MDS_PLUGIN,
+        "numeric_mapping_attribute_distances.zip",
+    ),
+]
+
+
+@pytest.mark.parametrize(
+    "pipeline,step,source_plugin,data_type,payload_key,started_plugin,file_name",
+    PIPELINE_CHAIN,
+    ids=[
+        "wu_palmer: wu-palmer -> transformers",
+        "wu_palmer: transformers -> aggregator",
+        "wu_palmer: aggregator -> mds",
+        "mapping: mapping -> aggregator",
+        "mapping: aggregator -> mds",
+        "numeric_mapping: mapping -> aggregator",
+        "numeric_mapping: aggregator -> mds",
+    ],
+)
+def test_step_hands_the_previous_output_to_the_next_plugin(
+    server,
+    pipeline,
+    step,
+    source_plugin,
+    data_type,
+    payload_key,
+    started_plugin,
+    file_name,
+):
+    """Every step of both pipelines, from the predecessor's result to the next call."""
+    db_task = make_router_task(
+        includeIntermediateResultsInOutput=True, data={"current_pipeline": pipeline}
+    )
+
+    run_task(step, db_id=db_task.id, source_url=server.task_url(source_plugin))
+
+    # the step picks the output it needs out of the predecessor's results ...
+    assert server.post_count(started_plugin) == 1
+    assert server.payload(started_plugin)[payload_key] == server.output_url(
+        source_plugin, data_type
+    )
+    # ... remembers where the started sub-task will report back ...
+    started_url = server.task_url(started_plugin)
+    assert reload(db_task).data[f"{started_plugin}_url"] == started_url
+    assert server.subscriptions[-1]["result_url"] == started_url
+    # ... and keeps the consumed data as an intermediate result
+    stored = stored_files(db_task)[file_name]
+    assert stored.file_type == data_type
+    assert stored.mimetype == "application/zip"
+
+
+def test_missing_plugin_output_fails_the_step(server, steps, task_errors):
+    """The mapping task publishes distances, not the expected similarities."""
+    db_task = make_router_task()
+
+    with pytest.raises(ValueError, match="relation/element-similarities"):
+        run_task(
+            start_transformers,
+            db_id=db_task.id,
+            source_url=server.task_url(MAPPING_PLUGIN),
+        )
+
+    assert [error["db_id"] for error in task_errors] == [db_task.id]
+
+
+# --- NUMERIC ATTRIBUTES ---
+
+FEATURE_VECTOR_FILE = f"{FEATURE_VECTOR}_numeric_vectors.zip"
+
+
+def test_build_numeric_feature_vector_writes_one_dimension_per_attribute(
+    server, dispatched
+):
+    db_task = make_router_task(
+        selections={"year": INCLUDE_NUMERIC}, data={"pipeline_queue": []}
+    )
+
+    run_task(build_numeric_feature_vector, db_id=db_task.id)
+
+    stored = stored_files(db_task)[FEATURE_VECTOR_FILE]
+    assert stored.file_type == "entity/vector"
+    assert zip_member(stored, "year.json") == [
+        {"ID": "e1", "href": "", "dim0": 1800.0},
+        {"ID": "e2", "href": "", "dim0": 1850.0},
+        {"ID": "e3", "href": "", "dim0": 1900.0},
+    ]
+    assert reload(db_task).progress_value == 2
+    assert (
+        "save_task_result",
+        ["All Pipelines Completed Successfully!", db_task.id],
+    ) in dispatched
+
+
+def test_build_numeric_feature_vector_hands_a_temp_file_to_the_concatenation(
+    server, dispatched
+):
+    db_task = make_router_task(
+        selections={"year": INCLUDE_NUMERIC},
+        concatOutput=True,
+        data={"pipeline_queue": []},
+    )
+
+    run_task(build_numeric_feature_vector, db_id=db_task.id)
+
+    assert stored_files(db_task) == {}
+    temp_file = task_files(db_task)[FEATURE_VECTOR_FILE]
+    assert temp_file.file_type == "temp-file"
+    (url,) = reload(db_task).data["vector_zip_urls"]
+    assert f"/files/{temp_file.id}/" in url
+    assert ("start_vector_concat", [db_task.id]) in dispatched
+
+
+def test_build_numeric_feature_vector_keeps_the_vectors_as_intermediate_result(
+    server, dispatched
+):
+    db_task = make_router_task(
+        selections={"year": INCLUDE_NUMERIC},
+        concatOutput=True,
+        includeIntermediateResultsInOutput=True,
+        data={"pipeline_queue": []},
+    )
+
+    run_task(build_numeric_feature_vector, db_id=db_task.id)
+
+    assert FEATURE_VECTOR_FILE in stored_files(db_task)
+
+
+def test_build_numeric_feature_vector_rejects_an_entity_without_a_value(
+    server, dispatched, task_errors
+):
+    server.files[ENTITIES_URL] = MockResponse(
+        ENTITIES_URL, "text/csv", text="ID,href,year,beats\ne1,,1800,\ne2,,,\n"
+    )
+    db_task = make_router_task(selections={"year": INCLUDE_NUMERIC})
+
+    with pytest.raises(ValueError, match="'year' has no numeric value .* 'e2'"):
+        run_task(build_numeric_feature_vector, db_id=db_task.id)
+
+    assert [error["db_id"] for error in task_errors] == [db_task.id]
+    assert dispatched == []
+
+
+def test_numeric_distances_payload(server, steps):
+    """Numeric attributes are delegated to mapping_distances, like taxonomy ones."""
+    db_task = make_router_task(
+        selections={"beats": INCLUDE_NUMERIC}, distanceMetric="cosine"
+    )
+
+    run_task(start_numeric_distances, db_id=db_task.id)
+
+    payload = payload_for(steps, MAPPING_PLUGIN)
+    assert payload == {
+        "entitiesUrl": ENTITIES_URL,
+        "entitiesMetadataUrl": METADATA_URL,
+        "taxonomiesZipUrl": TAXONOMIES_URL,
+        "attributes": "beats",
+        "distanceMetric": "cosine",
+    }
+    assert_payload_matches_plugin_schema(MAPPING_PLUGIN, payload)
+
+
+# --- FINALIZING A SINGLE PIPELINE ---
+
+
+def test_finalize_pipeline_stores_the_mds_vectors(server, dispatched):
+    db_task = make_router_task(data={"current_pipeline": WU_PALMER_PLUGIN})
+
+    run_task(finalize_pipeline, db_id=db_task.id, source_url=server.task_url(MDS_PLUGIN))
+
+    stored = stored_files(db_task)[f"{WU_PALMER_PLUGIN}_mds_vectors.zip"]
+    assert stored.file_type == "entity/vector"
+
+
+def test_finalize_pipeline_names_the_mds_vectors_after_the_group(server, dispatched):
+    """Groups of the same pipeline must not overwrite each other's results."""
+    db_task = make_router_task(
+        data={
+            "current_pipeline": WU_PALMER_PLUGIN,
+            "current_pipeline_label": f"{WU_PALMER_PLUGIN}_2",
+        }
+    )
+
+    run_task(finalize_pipeline, db_id=db_task.id, source_url=server.task_url(MDS_PLUGIN))
+
+    assert f"{WU_PALMER_PLUGIN}_2_mds_vectors.zip" in stored_files(db_task)
+
+
+def test_launch_next_pipeline_applies_the_settings_of_the_group(dispatched):
+    group = pipeline_group(
+        WU_PALMER_PLUGIN, ["g1", "g2"], {"transformer": "square_inverse"}, "wu_palmer_2"
+    )
+    db_task = make_router_task(data={"pipeline_queue": [group]})
+
+    launch_next_pipeline(db_task)
+
+    assert db_task.data["current_settings"] == {"transformer": "square_inverse"}
+    assert db_task.data["current_pipeline_label"] == "wu_palmer_2"
+    assert db_task.data[f"{WU_PALMER_PLUGIN}_attributes"] == "g1\ng2"
+
+
+def test_launch_next_pipeline_drops_the_group_settings_at_the_end(dispatched):
+    """Vector concatenation and PCA are not part of a pipeline group."""
+    db_task = make_router_task(
+        concatOutput=True,
+        data={
+            "pipeline_queue": [],
+            "current_settings": {"mdsDimensions": 5},
+            "current_pipeline_label": "wu_palmer_2",
+        },
+    )
+
+    launch_next_pipeline(db_task)
+
+    assert "current_settings" not in db_task.data
+    assert "current_pipeline_label" not in db_task.data
+
+
+def test_finalize_pipeline_skips_the_mds_vectors_when_concatenating(server, dispatched):
+    """With concatenation the MDS vectors are only an intermediate result."""
+    db_task = make_router_task(
+        concatOutput=True, data={"current_pipeline": WU_PALMER_PLUGIN}
+    )
+
+    run_task(finalize_pipeline, db_id=db_task.id, source_url=server.task_url(MDS_PLUGIN))
+
+    assert stored_files(db_task) == {}
+
+
+def test_finalize_pipeline_collects_the_vector_urls_for_the_concatenation(
+    server, dispatched
+):
+    db_task = make_router_task(
+        concatOutput=True, data={"current_pipeline": WU_PALMER_PLUGIN}
+    )
+
+    run_task(finalize_pipeline, db_id=db_task.id, source_url=server.task_url(MDS_PLUGIN))
+
+    assert reload(db_task).data["vector_zip_urls"] == [
+        server.output_url(MDS_PLUGIN, "entity/vector")
+    ]
+
+
+def test_finalize_pipeline_starts_the_next_pipeline(server, dispatched):
+    db_task = make_router_task(
+        data={"pipeline_queue": [pipeline_group(MAPPING_PLUGIN, ["attr2"])]}
+    )
+
+    run_task(finalize_pipeline, db_id=db_task.id, source_url=server.task_url(MDS_PLUGIN))
+
+    assert ("start_mapping", [db_task.id]) in dispatched
+    assert reload(db_task).data["current_pipeline"] == MAPPING_PLUGIN
+
+
+def test_finalize_one_hot_stores_the_encoded_vectors(server, dispatched):
+    db_task = make_router_task(
+        selections={"attr3": ONE_HOT_PLUGIN}, data={"current_pipeline": ONE_HOT_PLUGIN}
+    )
+
+    run_task(
+        finalize_one_hot, db_id=db_task.id, source_url=server.task_url(ONE_HOT_PLUGIN)
+    )
+
+    stored = stored_files(db_task)[f"{ONE_HOT_PLUGIN}_vectors.csv"]
+    assert stored.file_type == "entity/vector"
+    assert stored.mimetype == "text/csv"
+
+
+def test_finalize_one_hot_collects_the_vector_urls_for_the_concatenation(
+    server, dispatched
+):
+    db_task = make_router_task(
+        selections={"attr3": ONE_HOT_PLUGIN},
+        concatOutput=True,
+        data={"current_pipeline": ONE_HOT_PLUGIN},
+    )
+
+    run_task(
+        finalize_one_hot, db_id=db_task.id, source_url=server.task_url(ONE_HOT_PLUGIN)
+    )
+
+    assert stored_files(db_task) == {}
+    assert reload(db_task).data["vector_zip_urls"] == [
+        server.output_url(ONE_HOT_PLUGIN, "entity/vector")
+    ]
+
+
+# --- PIPELINE ORCHESTRATION ---
+
+
+def test_launch_next_pipeline_pops_the_queue(dispatched):
+    db_task = make_router_task(
+        data={
+            "pipeline_queue": [
+                pipeline_group(WU_PALMER_PLUGIN, ["attr1"]),
+                pipeline_group(MAPPING_PLUGIN, ["attr2"]),
+            ]
+        }
+    )
+
+    launch_next_pipeline(db_task)
+
+    assert db_task.data["current_pipeline"] == WU_PALMER_PLUGIN
+    assert db_task.data[f"{WU_PALMER_PLUGIN}_attributes"] == "attr1"
+    assert [group["pipeline"] for group in db_task.data["pipeline_queue"]] == [
+        MAPPING_PLUGIN
+    ]
+    assert ("start_wu_palmer", [db_task.id]) in dispatched
+
+
+def test_launch_next_pipeline_resets_the_reused_step_urls(dispatched):
+    """The transformer, aggregator and MDS steps run once per pipeline."""
+    stale = {
+        f"{plugin}_url": "http://localhost/old/"
+        for plugin in (
+            WU_PALMER_PLUGIN,
+            MAPPING_PLUGIN,
+            TRANSFORMERS_PLUGIN,
+            AGGREGATOR_PLUGIN,
+            MDS_PLUGIN,
+        )
+    }
+    stale["generated_files"] = {"old.zip": "http://localhost/old.zip"}
+    db_task = make_router_task(
+        data={
+            "pipeline_queue": [pipeline_group(MAPPING_PLUGIN, ["attr2"])],
+            "progressed_via": {"a": "webhook"},
+            "webhook_seen": {"a": "2026-01-01"},
+            **stale,
+        }
+    )
+
+    launch_next_pipeline(db_task)
+
+    assert not [key for key in stale if key in db_task.data]
+    assert db_task.data["progressed_via"] == {}
+    assert db_task.data["webhook_seen"] == {}
+
+
+@pytest.mark.parametrize(
+    "pipeline,start_task",
+    [
+        (NUMERIC_MAPPING_PIPELINE, "start_numeric_distances"),
+        (FEATURE_VECTOR, "build_numeric_feature_vector"),
+    ],
+)
+def test_launch_next_pipeline_starts_the_numeric_pipelines(
+    dispatched, pipeline, start_task
+):
+    db_task = make_router_task(
+        data={"pipeline_queue": [pipeline_group(pipeline, ["attr1"])]}
+    )
+
+    launch_next_pipeline(db_task)
+
+    assert db_task.data["current_pipeline"] == pipeline
+    assert (start_task, [db_task.id]) in dispatched
+
+
+def test_launch_next_pipeline_starts_the_one_hot_pipeline(dispatched):
+    db_task = make_router_task(
+        data={"pipeline_queue": [pipeline_group(ONE_HOT_PLUGIN, ["attr3"])]}
+    )
+
+    launch_next_pipeline(db_task)
+
+    assert db_task.data["current_pipeline"] == ONE_HOT_PLUGIN
+    assert ("start_one_hot", [db_task.id]) in dispatched
+
+
+def test_launch_next_pipeline_rejects_a_pipeline_without_a_start_step(dispatched):
+    """Without a start step no webhook can arrive, so the task would stall silently."""
+    db_task = make_router_task(
+        data={"pipeline_queue": [pipeline_group("unknown_pipeline", ["attr1"])]}
+    )
+
+    with pytest.raises(ValueError, match="No pipeline start step for 'unknown_pipeline'"):
+        launch_next_pipeline(db_task)
+
+    assert dispatched == []
+
+
+def test_launch_next_pipeline_starts_the_concatenation_when_the_queue_is_empty(
+    dispatched,
+):
+    db_task = make_router_task(concatOutput=True, data={"pipeline_queue": []})
+
+    launch_next_pipeline(db_task)
+
+    assert db_task.data["current_pipeline"] == FINALIZE_PIPELINE
+    assert ("start_vector_concat", [db_task.id]) in dispatched
+
+
+def test_launch_next_pipeline_finishes_the_task_without_concatenation(dispatched):
+    db_task = make_router_task(data={"pipeline_queue": []})
+
+    launch_next_pipeline(db_task)
+
+    assert (
+        "save_task_result",
+        ["All Pipelines Completed Successfully!", db_task.id],
+    ) in dispatched
+
+
+def test_launch_next_pipeline_warns_about_duplicate_outputs(dispatched):
+    db_task = make_router_task(data={"pipeline_queue": []})
+    for _ in range(2):
+        STORE.persist_task_result(
+            db_task.id, b"x", "duplicate.zip", "entity/vector", "application/zip"
+        )
+
+    launch_next_pipeline(db_task)
+
+    assert "Output contains duplicates: ['duplicate.zip']" in reload(db_task).task_log
+
+
+# --- VECTOR CONCATENATION AND PCA ---
+
+
+@pytest.mark.parametrize("output_format", sorted(OUTPUT_FORMATS))
+def test_finalize_vector_concat_stores_the_final_vector(
+    server, dispatched, output_format
+):
+    extension, mimetype = OUTPUT_FORMATS[output_format]
+    db_task = make_router_task(concatOutput=True, outputFormat=output_format)
+
+    run_task(
+        finalize_vector_concat,
+        db_id=db_task.id,
+        source_url=server.task_url(VECTOR_CONCAT_PLUGIN),
+    )
+
+    stored = stored_files(db_task)[f"final_concatenated_vector{extension}"]
+    assert stored.file_type == "entity/vector"
+    assert stored.mimetype == mimetype
+    assert (
+        "save_task_result",
+        [
+            "All Pipelines Completed Successfully And Concatenated Vector Created!",
+            db_task.id,
+        ],
+    ) in dispatched
+
+
+def test_finalize_vector_concat_stores_the_dimension_mapping(server, dispatched):
+    db_task = make_router_task(concatOutput=True)
+
+    run_task(
+        finalize_vector_concat,
+        db_id=db_task.id,
+        source_url=server.task_url(VECTOR_CONCAT_PLUGIN),
+    )
+
+    stored = stored_files(db_task)["final_concatenated_vector_dimension_mapping.json"]
+    assert stored.file_type == "entity/dimension-mapping"
+    assert stored.mimetype == "application/json"
+
+
+def test_finalize_vector_concat_works_without_a_dimension_mapping(server, dispatched):
+    """Vector concat versions without a mapping output must still finalize."""
+    outputs = server.outputs(VECTOR_CONCAT_PLUGIN)
+    outputs[:] = [o for o in outputs if o["dataType"] != "entity/dimension-mapping"]
+    db_task = make_router_task(concatOutput=True)
+
+    run_task(
+        finalize_vector_concat,
+        db_id=db_task.id,
+        source_url=server.task_url(VECTOR_CONCAT_PLUGIN),
+    )
+
+    stored = stored_files(db_task)
+    assert "final_concatenated_vector.csv" in stored
+    assert "final_concatenated_vector_dimension_mapping.json" not in stored
+
+
+def test_finalize_vector_concat_starts_pca_when_requested(server, dispatched):
+    db_task = make_router_task(concatOutput=True, reduceDimensions=True, pcaDimensions=1)
+
+    run_task(
+        finalize_vector_concat,
+        db_id=db_task.id,
+        source_url=server.task_url(VECTOR_CONCAT_PLUGIN),
+    )
+
+    vector_url = server.output_url(VECTOR_CONCAT_PLUGIN, "entity/vector")
+    assert ("start_pca", [db_task.id, vector_url]) in dispatched
+    # finalize_pca stores the concatenated vector after the PCA result
+    assert stored_files(db_task) == {}
+
+
+def test_finalize_vector_concat_skips_pca_without_enough_dimensions(server, dispatched):
+    """The stub vector has three dimensions, so reducing to three is pointless."""
+    db_task = make_router_task(concatOutput=True, reduceDimensions=True, pcaDimensions=3)
+
+    run_task(
+        finalize_vector_concat,
+        db_id=db_task.id,
+        source_url=server.task_url(VECTOR_CONCAT_PLUGIN),
+    )
+
+    assert not [call for call in dispatched if call[0] == "start_pca"]
+    assert "final_concatenated_vector.csv" in stored_files(db_task)
+
+
+def make_pca_task(server) -> ProcessingTask:
+    return make_router_task(
+        concatOutput=True,
+        reduceDimensions=True,
+        data={f"{VECTOR_CONCAT_PLUGIN}_url": server.task_url(VECTOR_CONCAT_PLUGIN)},
+    )
+
+
+def test_finalize_pca_stores_all_results(server, dispatched):
+    db_task = make_pca_task(server)
+
+    run_task(finalize_pca, db_id=db_task.id, source_url=server.task_url(PCA_PLUGIN))
+
+    stored = stored_files(db_task)
+    assert stored["final_vector_pca_reduced.csv"].file_type == "entity/vector"
+    assert stored["pca_metadata.json"].file_type == "custom/pca-metadata"
+    assert stored["pca_plot.html"].file_type == "custom/plot"
+    assert stored["final_concatenated_vector.csv"].file_type == "entity/vector"
+    assert (
+        stored["final_concatenated_vector_dimension_mapping.json"].file_type
+        == "entity/dimension-mapping"
+    )
+    assert (
+        "save_task_result",
+        [
+            "All Pipelines Completed Successfully And Dimensions Reduced With PCA!",
+            db_task.id,
+        ],
+    ) in dispatched
+
+
+def test_finalize_pca_works_without_a_plot(server, dispatched):
+    """The PCA plugin only plots results with at most three dimensions."""
+    db_task = make_pca_task(server)
+    outputs = server.outputs(PCA_PLUGIN)
+    outputs[:] = [o for o in outputs if o["dataType"] != "custom/plot"]
+
+    run_task(finalize_pca, db_id=db_task.id, source_url=server.task_url(PCA_PLUGIN))
+
+    stored = stored_files(db_task)
+    assert "pca_plot.html" not in stored
+    assert "final_vector_pca_reduced.csv" in stored
+
+
+def test_finalize_pca_stores_the_pca_result_before_the_concatenated_vector(
+    server, dispatched
+):
+    db_task = make_pca_task(server)
+
+    run_task(finalize_pca, db_id=db_task.id, source_url=server.task_url(PCA_PLUGIN))
+
+    DB.session.expire_all()
+    files = sorted(TaskFile.get_task_result_files(db_task.id), key=lambda f: f.id)
+    assert [f.file_name for f in files] == [
+        "pca_plot.html",
+        "final_vector_pca_reduced.csv",
+        "final_concatenated_vector.csv",
+        "final_concatenated_vector_dimension_mapping.json",
+        "pca_metadata.json",
+    ]

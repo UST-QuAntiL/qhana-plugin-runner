@@ -1,0 +1,1060 @@
+# Copyright 2026 QHAna plugin runner contributors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import requests
+from celery.utils.log import get_task_logger
+
+from qhana_plugin_runner.celery import CELERY
+from qhana_plugin_runner.db.models.tasks import ProcessingTask, TaskFile
+from qhana_plugin_runner.plugin_utils.dimension_mapping import (
+    DIMENSION_MAPPING_DATA_TYPE,
+)
+from qhana_plugin_runner.plugin_utils.entity_marshalling import (
+    ensure_dict,
+    load_entities,
+)
+from qhana_plugin_runner.requests import get_mimetype, open_url
+from qhana_plugin_runner.storage import STORE
+from qhana_plugin_runner.tasks import save_task_result
+
+from . import FeatureEngineeringPipeline
+from .numeric_attributes import (
+    collect_values,
+    entities_zip,
+    require_complete_column,
+)
+from .schemas import (
+    AGGREGATOR_PLUGIN,
+    FEATURE_VECTOR,
+    FINALIZE_PIPELINE,
+    MAPPING_PLUGIN,
+    MDS_PLUGIN,
+    NORMALIZATION_PLUGIN,
+    NUMERIC_MAPPING_PIPELINE,
+    ONE_HOT_PLUGIN,
+    PCA_PLUGIN,
+    TRANSFORMERS_PLUGIN,
+    VECTOR_CONCAT_PLUGIN,
+    WU_PALMER_PLUGIN,
+    InputParameters,
+)
+from .tasks_helpers import (
+    REQUEST_TIMEOUT,
+    PipelineTask,
+    extract_output_url,
+    has_enough_pca_dimensions,
+    load_params,
+    normalization_payload,
+    persist_generated_file,
+    pipeline_label,
+    run_pipeline_step,
+    save_intermediate_results,
+    should_store_pipeline_vectors,
+    stores_unnormalized_vectors,
+)
+
+TASK_LOGGER = get_task_logger(__name__)
+
+OUTPUT_FORMATS = {
+    "csv": (".csv", "text/csv"),
+    "json": (".json", "application/json"),
+    "lines": (".jsonl", "application/X-lines+json"),
+}
+
+# Parameters the PCA plugin requires but the router form does not expose.
+# The values mirror the defaults of the PCA micro frontend.
+PCA_DEFAULTS = {
+    "batchSize": 1,
+    "sparsityAlpha": 1,
+    "ridgeAlpha": 0.01,
+    "kernel": "linear",
+    "kernelUrl": "",  # the PCA schema requires the key; an empty string is read as None
+    "degree": 3,
+    "kernelGamma": 0.1,
+    "kernelCoef": 1,
+    "maxItr": 1000,
+}
+
+
+# --- PIPELINE ORCHESTRATION ---
+def _log_duplicate_outputs(task_data: ProcessingTask):
+    """Report result files stored twice. Only for logging purposes."""
+    contains = set()
+    duplicates = []
+    for file_record in TaskFile.get_task_result_files(task_data.id):
+        file_name = file_record.file_name
+        if file_name not in contains:
+            contains.add(file_name)
+        else:
+            duplicates.append(file_name)
+    if duplicates:
+        error_msg = f"BUG: Output contains duplicates: {duplicates}."
+        TASK_LOGGER.warning(error_msg)
+        task_data.add_task_log_entry(error_msg, commit=True)
+
+
+def launch_next_pipeline(task_data: ProcessingTask):
+    """
+    Orchestrates the execution of pending pipelines within the routing queue.
+
+    Retrieves the pipeline queue from the task data, pops the next scheduled
+    pipeline group, and triggers its corresponding Celery task (e.g., Wu-Palmer or
+    Mapping). A group holds the attributes that run together, the settings they
+    override and the label of their result files. If the queue is empty, it evaluates
+    the user parameters to either trigger the Vector Concatenation plugin or
+    gracefully finalize the task.
+
+    Args:
+        task_data (ProcessingTask): The current task instance containing the pipeline
+            queue, routing selections, and saved parameters.
+
+    See Also:
+        - start_routing_task: Where the queue is initially populated.
+        - start_vector_concat: Triggered if concat_output is True.
+    """
+
+    queue = task_data.data.get("pipeline_queue", [])
+
+    if not queue:
+        _log_duplicate_outputs(task_data)
+
+        # The steps that follow are not part of a pipeline group, so they run with
+        # the settings of the first step.
+        task_data.data.pop("current_settings", None)
+        task_data.data.pop("current_pipeline_label", None)
+        task_data.data.pop("current_normalize", None)
+
+        # Optional vector concatenation if the user requested it.
+        # Afterwards, the optional PCA plugin will be executed
+        params: InputParameters = load_params(task_data)
+        if params.concat_output:
+            task_data.add_task_log_entry(
+                "Starting Vector concat plugin after all pipelines completed successfully."
+            )
+            task_data.data["current_pipeline"] = FINALIZE_PIPELINE
+            task_data.save(commit=True)
+
+            start_vector_concat.apply_async(args=[task_data.id])
+            return
+
+        save_task_result.delay("All Pipelines Completed Successfully!", task_data.id)
+        return
+
+    # Pop the next pipeline group and update state
+    group = queue.pop(0)
+    next_pipeline = group["pipeline"]
+    task_data.data["pipeline_queue"] = queue
+    task_data.data["current_pipeline"] = next_pipeline
+    task_data.data["current_pipeline_label"] = group.get("label", next_pipeline)
+    task_data.data["current_settings"] = group.get("settings", {})
+    task_data.data["current_normalize"] = group.get("normalize", False)
+    task_data.data[f"{next_pipeline}_attributes"] = "\n".join(group["attributes"])
+
+    # Reset progress when starting new pipeline
+    for reused_step in (
+        WU_PALMER_PLUGIN,
+        MAPPING_PLUGIN,
+        ONE_HOT_PLUGIN,
+        TRANSFORMERS_PLUGIN,
+        AGGREGATOR_PLUGIN,
+        MDS_PLUGIN,
+        NORMALIZATION_PLUGIN,
+    ):
+        task_data.data.pop(f"{reused_step}_url", None)
+    task_data.data.pop("generated_files", None)
+    task_data.data.pop("normalization_target", None)
+
+    # Reset the tracking of webhook events and progress for the new pipeline
+    task_data.data["progressed_via"] = {}
+    task_data.data["webhook_seen"] = {}
+
+    # Route to the correct starting step
+    if next_pipeline == WU_PALMER_PLUGIN:
+        task_data.add_task_log_entry(
+            "Starting Wu-Palmer Pipeline. Includes: Wu-Palmer, Transformer, Aggregator, MDS"
+        )
+        task_data.save(commit=True)
+        start_wu_palmer.apply_async(args=[task_data.id])
+    elif next_pipeline == MAPPING_PLUGIN:
+        task_data.add_task_log_entry(
+            "Starting Mapping Pipeline. Includes: Mapping-Distances, Aggregator, MDS"
+        )
+        task_data.save(commit=True)
+        start_mapping.apply_async(args=[task_data.id])
+    elif next_pipeline == ONE_HOT_PLUGIN:
+        task_data.add_task_log_entry(
+            "Starting One-Hot Pipeline. Includes: One-Hot Encoding"
+        )
+        task_data.save(commit=True)
+        start_one_hot.apply_async(args=[task_data.id])
+    elif next_pipeline == NUMERIC_MAPPING_PIPELINE:
+        task_data.add_task_log_entry(
+            "Starting Numeric Mapping Pipeline. Includes: Mapping Distances, "
+            "Aggregator, MDS"
+        )
+        task_data.save(commit=True)
+        start_numeric_distances.apply_async(args=[task_data.id])
+    elif next_pipeline == FEATURE_VECTOR:
+        task_data.add_task_log_entry(
+            "Adding the single-valued numeric attributes to the feature vector."
+        )
+        task_data.save(commit=True)
+        build_numeric_feature_vector.apply_async(args=[task_data.id])
+    else:
+        # Without a matching starting step the task would stall silently, as no
+        # further webhook can arrive to progress the queue.
+        raise ValueError(
+            f"BUG: No pipeline start step for '{next_pipeline}'. Expected one of "
+            f"{[WU_PALMER_PLUGIN, MAPPING_PLUGIN, ONE_HOT_PLUGIN, NUMERIC_MAPPING_PIPELINE, FEATURE_VECTOR]}."
+        )
+
+
+def _complete_pipeline(
+    task_data: ProcessingTask, params: InputParameters, vectors_url: str
+) -> None:
+    """Hand the vectors of the running group to the concatenation and start the next group."""
+    if params.concat_output:
+        vector_zip_urls = task_data.data.get("vector_zip_urls", [])
+        # A retry must not add a file the router generated itself a second time.
+        generated = task_data.data.get("generated_files", {}).values()
+        if vectors_url not in generated or vectors_url not in vector_zip_urls:
+            vector_zip_urls.append(vectors_url)
+        task_data.data["vector_zip_urls"] = vector_zip_urls
+        task_data.save(commit=True)
+
+    launch_next_pipeline(task_data)
+
+
+def start_vector_normalization(
+    task_data: ProcessingTask,
+    params: InputParameters,
+    vectors_url: str,
+    file_name: str,
+) -> None:
+    """
+    Starts the normalization plugin for the vectors of the running pipeline group.
+
+    ``finalize_normalization`` stores the normalized vectors as ``file_name``.
+    """
+    task_data.data["normalization_target"] = {"file_name": file_name}
+    task_data.save(commit=True)
+
+    run_pipeline_step(
+        db_id=task_data.id,
+        task_data=task_data,
+        plugin_name=NORMALIZATION_PLUGIN,
+        logging_name="Normalization",
+        payload=normalization_payload(params, vectors_url),
+    )
+
+
+"""Collection of celery tasks for starting plugins that are substeps of the various pipelines managed by the routing plugin."""
+
+
+# --- WU-PALMER TASK ---
+@CELERY.task(
+    name=f"{FeatureEngineeringPipeline.instance.identifier}.start_wu_palmer",
+    bind=True,
+    base=PipelineTask,
+)
+def start_wu_palmer(self, db_id: int):
+    """
+    Initiates the Wu-Palmer plugin as the first step in the Wu-Palmer pipeline.
+
+    Loads the saved input parameters and extracts the required URLs (entities, metadata,
+    and taxonomies) to construct the payload. It then delegates the execution to
+    `run_pipeline_step`.
+
+    Args:
+        self: The Celery task instance (bound).
+        db_id (int): The database ID of the ProcessingTask.
+    """
+
+    task_data = ProcessingTask.get_by_id(db_id)
+    params: InputParameters = load_params(task_data)
+    payload = {
+        "entitiesUrl": params.entities_url,
+        "entitiesMetadataUrl": params.entities_metadata_url,
+        "taxonomiesZipUrl": params.taxonomies_zip_url,
+        "attributes": task_data.data[f"{WU_PALMER_PLUGIN}_attributes"],
+        "rootIsPartOfHierarchy": str(params.root_is_part_of_hierarchy).lower(),
+    }
+
+    run_pipeline_step(
+        db_id=db_id,
+        task_data=task_data,
+        plugin_name=WU_PALMER_PLUGIN,
+        logging_name="Wu-Palmer",
+        payload=payload,
+    )
+
+
+# --- MAPPING TASK ---
+@CELERY.task(
+    name=f"{FeatureEngineeringPipeline.instance.identifier}.start_mapping",
+    bind=True,
+    base=PipelineTask,
+)
+def start_mapping(self, db_id: int):
+    """
+    Initiates the Mapping plugin as the first step in the Mapping pipeline.
+
+    Loads the saved input parameters and extracts the required URLs (entities, metadata,
+    and taxonomies) to construct the payload. It then delegates the execution to
+    `run_pipeline_step`.
+
+    Args:
+        self: The Celery task instance (bound).
+        db_id (int): The database ID of the ProcessingTask.
+    """
+
+    task_data = ProcessingTask.get_by_id(db_id)
+    params: InputParameters = load_params(task_data)
+    payload = {
+        "entitiesUrl": params.entities_url,
+        "entitiesMetadataUrl": params.entities_metadata_url,
+        "taxonomiesZipUrl": params.taxonomies_zip_url,
+        "attributes": task_data.data[f"{MAPPING_PLUGIN}_attributes"],
+        "distanceMetric": params.distance_metric.name,
+    }
+
+    run_pipeline_step(
+        db_id=db_id,
+        task_data=task_data,
+        plugin_name=MAPPING_PLUGIN,
+        logging_name="Mapping Distances",
+        payload=payload,
+    )
+
+
+# --- ONE-HOT TASK ---
+@CELERY.task(
+    name=f"{FeatureEngineeringPipeline.instance.identifier}.start_one_hot",
+    bind=True,
+    base=PipelineTask,
+)
+def start_one_hot(self, db_id: int):
+    """
+    Initiates the one-hot encoding plugin, the only step of the one-hot pipeline.
+
+    The plugin encodes the taxonomy values of the attributes directly as a
+    feature vector, so neither the aggregator nor MDS follows.
+
+    Args:
+        self: The Celery task instance (bound).
+        db_id (int): The database ID of the ProcessingTask.
+    """
+
+    task_data = ProcessingTask.get_by_id(db_id)
+    params: InputParameters = load_params(task_data)
+    payload = {
+        "entitiesUrl": params.entities_url,
+        "entitiesMetadataUrl": params.entities_metadata_url,
+        "taxonomiesZipUrl": params.taxonomies_zip_url,
+        "attributes": task_data.data[f"{ONE_HOT_PLUGIN}_attributes"],
+    }
+
+    run_pipeline_step(
+        db_id=db_id,
+        task_data=task_data,
+        plugin_name=ONE_HOT_PLUGIN,
+        logging_name="One-Hot Encoding",
+        payload=payload,
+    )
+
+
+# --- TRANSFORMER TASK ---
+@CELERY.task(
+    name=f"{FeatureEngineeringPipeline.instance.identifier}.start_transformers",
+    bind=True,
+    base=PipelineTask,
+)
+def start_transformers(self, db_id: int, source_url: str):
+    """
+    Initiates the element_sim-to-element_dist-transformers plugin.
+
+    It fetches the element similarities output from the previous step's source URL,
+    optionally persists the intermediate zip file to the storage, and triggers
+    the transformer sub-plugin.
+
+    Args:
+        self: The Celery task instance (bound).
+        db_id (int): The database ID of the ProcessingTask.
+        source_url (str): The URL of the completed previous task to fetch outputs from.
+
+    Raises:
+        ValueError: If the required 'relation/element-similarities' output is missing.
+    """
+
+    task_data = ProcessingTask.get_by_id(db_id)
+    outputs = requests.get(source_url, timeout=REQUEST_TIMEOUT).json().get("outputs", [])
+    element_sims_url = extract_output_url(outputs, "relation/element-similarities")
+    params: InputParameters = load_params(task_data)
+
+    if params.include_intermediate_results_in_output:
+        save_intermediate_results(
+            task_data=task_data,
+            retries=self.request.retries,
+            db_id=db_id,
+            file=open_url(element_sims_url).content,
+            file_name=f"{pipeline_label(task_data)}_similarities.zip",
+            file_type="relation/element-similarities",
+        )
+
+    payload = {
+        "similaritiesUrl": element_sims_url,
+        "attributes": task_data.data[f"{WU_PALMER_PLUGIN}_attributes"],
+        "transformer": params.transformer.name,
+    }
+
+    run_pipeline_step(
+        db_id=db_id,
+        task_data=task_data,
+        plugin_name=TRANSFORMERS_PLUGIN,
+        logging_name="Transformers",
+        payload=payload,
+    )
+
+
+# --- AGGREGATOR TASK ---
+@CELERY.task(
+    name=f"{FeatureEngineeringPipeline.instance.identifier}.start_aggregator",
+    bind=True,
+    base=PipelineTask,
+)
+def start_aggregator(self, db_id: int, source_url: str):
+    """
+    Initiates the attribute-distance-aggregator plugin.
+
+    Fetches the element distances output from the previous step's source URL,
+    optionally persists the intermediate zip file to the storage, and triggers
+    the aggregator sub-plugin.
+
+    Args:
+        self: The Celery task instance (bound).
+        db_id (int): The database ID of the ProcessingTask.
+        source_url (str): The URL of the completed previous task to fetch outputs from.
+
+    Raises:
+        ValueError: If the required 'relation/element-distances' output is missing.
+    """
+
+    task_data = ProcessingTask.get_by_id(db_id)
+    outputs = requests.get(source_url, timeout=REQUEST_TIMEOUT).json().get("outputs", [])
+    element_dists_url = extract_output_url(outputs, "relation/element-distances")
+    params: InputParameters = load_params(task_data)
+
+    if params.include_intermediate_results_in_output:
+        prefix = pipeline_label(task_data)
+        save_intermediate_results(
+            task_data=task_data,
+            retries=self.request.retries,
+            db_id=db_id,
+            file=open_url(element_dists_url).content,
+            file_name=f"{prefix}_element_distances.zip",
+            file_type="relation/element-distances",
+        )
+
+    payload = {
+        "entitiesUrl": params.entities_url,
+        "elementDistancesUrl": element_dists_url,
+    }
+
+    run_pipeline_step(
+        db_id=db_id,
+        task_data=task_data,
+        plugin_name=AGGREGATOR_PLUGIN,
+        logging_name="Aggregator",
+        payload=payload,
+    )
+
+
+# --- MDS TASK ---
+@CELERY.task(
+    name=f"{FeatureEngineeringPipeline.instance.identifier}.start_mds",
+    bind=True,
+    base=PipelineTask,
+)
+def start_mds(self, db_id: int, source_url: str):
+    """
+    Initiates the attribute-distance-mds plugin.
+
+    Fetches the attribute distances output from the previous step's source URL,
+    optionally persists the intermediate zip file to the storage, and triggers
+    the MDS sub-plugin.
+
+    Args:
+        self: The Celery task instance (bound).
+        db_id (int): The database ID of the ProcessingTask.
+        source_url (str): The URL of the completed previous task to fetch outputs from.
+
+    Raises:
+        ValueError: If the required 'relation/attribute-distances' output is missing.
+    """
+
+    task_data = ProcessingTask.get_by_id(db_id)
+    outputs = requests.get(source_url, timeout=REQUEST_TIMEOUT).json().get("outputs", [])
+    attr_dists_url = extract_output_url(outputs, "relation/attribute-distances")
+    params: InputParameters = load_params(task_data)
+
+    if params.include_intermediate_results_in_output:
+        prefix = pipeline_label(task_data)
+        save_intermediate_results(
+            task_data=task_data,
+            retries=self.request.retries,
+            db_id=db_id,
+            file=open_url(attr_dists_url).content,
+            file_name=f"{prefix}_attribute_distances.zip",
+            file_type="relation/attribute-distances",
+        )
+
+    run_pipeline_step(
+        db_id=db_id,
+        task_data=task_data,
+        plugin_name=MDS_PLUGIN,
+        logging_name="MDS",
+        payload={
+            "attributeDistancesUrl": attr_dists_url,
+            "dimensions": params.mds_dimensions,
+            "metric": params.metric.name,
+            "nInit": params.n_init,
+            "maxIter": params.max_iter,
+            "missingDataHandling": params.missing_data_handling.name,
+        },
+    )
+
+
+# --- NUMERIC ATTRIBUTES ---
+@CELERY.task(
+    name=f"{FeatureEngineeringPipeline.instance.identifier}.start_numeric_distances",
+    bind=True,
+    base=PipelineTask,
+)
+def start_numeric_distances(self, db_id: int):
+    """
+    Initiates the Mapping plugin for the multi-valued numeric attributes, the
+    same way ``start_mapping`` does for taxonomy attributes. Aggregator and
+    MDS follow next, as in the taxonomy mapping pipeline.
+
+    Args:
+        self: The Celery task instance (bound).
+        db_id (int): The database ID of the ProcessingTask.
+    """
+
+    task_data = ProcessingTask.get_by_id(db_id)
+    params: InputParameters = load_params(task_data)
+    payload = {
+        "entitiesUrl": params.entities_url,
+        "entitiesMetadataUrl": params.entities_metadata_url,
+        "taxonomiesZipUrl": params.taxonomies_zip_url,
+        "attributes": task_data.data[f"{NUMERIC_MAPPING_PIPELINE}_attributes"],
+        "distanceMetric": params.distance_metric.name,
+    }
+
+    run_pipeline_step(
+        db_id=db_id,
+        task_data=task_data,
+        plugin_name=MAPPING_PLUGIN,
+        logging_name="Mapping Distances (numeric)",
+        payload=payload,
+    )
+
+
+@CELERY.task(
+    name=f"{FeatureEngineeringPipeline.instance.identifier}.build_numeric_feature_vector",
+    bind=True,
+    base=PipelineTask,
+)
+def build_numeric_feature_vector(self, db_id: int):
+    """
+    Writes the single-valued numeric attributes as one-dimensional vectors.
+
+    Args:
+        self: The Celery task instance (bound).
+        db_id (int): The database ID of the ProcessingTask.
+
+    Raises:
+        ValueError: If an attribute has no value for an entity.
+    """
+
+    task_data = ProcessingTask.get_by_id(db_id)
+    params: InputParameters = load_params(task_data)
+    attributes = task_data.data[f"{FEATURE_VECTOR}_attributes"].splitlines()
+    with open_url(params.entities_url) as response:
+        entities = list(ensure_dict(load_entities(response, get_mimetype(response))))
+
+    members = {}
+    for attribute in attributes:
+        values = collect_values(entities, attribute)
+        column = require_complete_column(
+            [entity["ID"] for entity in entities], values, attribute
+        )
+        members[attribute] = [
+            {"ID": entity["ID"], "href": "", "dim0": value}
+            for entity, value in zip(entities, column)
+        ]
+
+    label = pipeline_label(task_data)
+    file_name = f"{label}_numeric_vectors.zip"
+    first_attempt = file_name not in task_data.data.get("generated_files", {})
+    vectors_url = persist_generated_file(
+        task_data,
+        self.request.retries,
+        entities_zip(members),
+        file_name,
+        "entity/vector",
+        as_result=stores_unnormalized_vectors(task_data, params),
+    )
+
+    if first_attempt:
+        task_data.progress_value += 1
+    task_data.save(commit=True)
+
+    # Each vector holds the raw value of its attribute, so normalizing the vectors
+    # normalizes the attribute values.
+    if task_data.data.get("current_normalize"):
+        start_vector_normalization(
+            task_data, params, vectors_url, f"{label}_normalized_numeric_vectors.zip"
+        )
+        return
+
+    _complete_pipeline(task_data, params, vectors_url)
+
+
+# --- END OF PIPELINE ---
+@CELERY.task(
+    name=f"{FeatureEngineeringPipeline.instance.identifier}.finalize_pipeline",
+    bind=True,
+    base=PipelineTask,
+)
+def finalize_pipeline(self, db_id: int, source_url: str):
+    """
+    Finalizes the pipeline after MDS execution.
+    Optionally writes the final MDS vectors to storage.
+    Triggers the next pipeline in the queue or finalizes the task.
+
+    Args:
+        self: The Celery task instance (bound).
+        db_id (int): The database ID of the ProcessingTask.
+        source_url (str): The URL of the completed previous task to fetch outputs from.
+
+    Raises:
+        ValueError: If the required 'entity/vector' output is missing.
+    """
+
+    task_data = ProcessingTask.get_by_id(db_id)
+    params: InputParameters = load_params(task_data)
+
+    current_pipeline_name = pipeline_label(task_data)
+    TASK_LOGGER.info(f"DEBUGGING: Finishing the Pipeline '{current_pipeline_name}'")
+
+    outputs = requests.get(source_url, timeout=REQUEST_TIMEOUT).json().get("outputs", [])
+    final_dists_url = extract_output_url(outputs, "entity/vector")
+
+    if stores_unnormalized_vectors(task_data, params):
+        save_intermediate_results(
+            task_data=task_data,
+            retries=self.request.retries,
+            db_id=db_id,
+            file=open_url(final_dists_url).content,
+            file_name=f"{current_pipeline_name}_mds_vectors.zip",
+            file_type="entity/vector",
+        )
+
+    if task_data.data.get("current_normalize"):
+        start_vector_normalization(
+            task_data,
+            params,
+            final_dists_url,
+            f"{current_pipeline_name}_normalized_mds_vectors.zip",
+        )
+        return
+
+    _complete_pipeline(task_data, params, final_dists_url)
+
+
+@CELERY.task(
+    name=f"{FeatureEngineeringPipeline.instance.identifier}.finalize_one_hot",
+    bind=True,
+    base=PipelineTask,
+)
+def finalize_one_hot(self, db_id: int, source_url: str):
+    """
+    Finalizes the one-hot pipeline after the encoding plugin finished.
+
+    The one-hot plugin writes the feature vectors as a single csv file instead of
+    the zip the MDS pipelines produce, so the vectors are stored and handed to the
+    concatenation under their own name.
+
+    Args:
+        self: The Celery task instance (bound).
+        db_id (int): The database ID of the ProcessingTask.
+        source_url (str): The URL of the completed previous task to fetch outputs from.
+
+    Raises:
+        ValueError: If the required 'entity/vector' output is missing.
+    """
+
+    task_data = ProcessingTask.get_by_id(db_id)
+    params: InputParameters = load_params(task_data)
+
+    outputs = requests.get(source_url, timeout=REQUEST_TIMEOUT).json().get("outputs", [])
+    vectors_url = extract_output_url(outputs, "entity/vector")
+
+    if stores_unnormalized_vectors(task_data, params):
+        save_intermediate_results(
+            task_data=task_data,
+            retries=self.request.retries,
+            db_id=db_id,
+            file=open_url(vectors_url).content,
+            file_name=f"{pipeline_label(task_data)}_vectors.csv",
+            file_type="entity/vector",
+            mimetype="text/csv",
+        )
+
+    if task_data.data.get("current_normalize"):
+        start_vector_normalization(
+            task_data,
+            params,
+            vectors_url,
+            f"{pipeline_label(task_data)}_normalized_vectors.csv",
+        )
+        return
+
+    _complete_pipeline(task_data, params, vectors_url)
+
+
+# --- NORMALIZATION (last step of a normalized pipeline group) ---
+@CELERY.task(
+    name=f"{FeatureEngineeringPipeline.instance.identifier}.finalize_normalization",
+    bind=True,
+    base=PipelineTask,
+)
+def finalize_normalization(self, db_id: int, source_url: str):
+    """
+    Stores the normalized vectors of the running pipeline group and starts the next group.
+
+    The plugin returns a vector zip as ``entity/vector`` and a vector csv as
+    ``entity/list``. Both keep the format of the input.
+
+    Args:
+        self: The Celery task instance (bound).
+        db_id (int): The database ID of the ProcessingTask.
+        source_url (str): The URL of the completed normalization task.
+
+    Raises:
+        ValueError: If no 'entity/vector' or 'entity/list' output is present.
+    """
+
+    task_data = ProcessingTask.get_by_id(db_id)
+    params: InputParameters = load_params(task_data)
+    target = task_data.data["normalization_target"]
+
+    outputs = requests.get(source_url, timeout=REQUEST_TIMEOUT).json().get("outputs", [])
+    data_types = {output.get("dataType") for output in outputs}
+    data_type = "entity/vector" if "entity/vector" in data_types else "entity/list"
+    normalized_response = open_url(
+        extract_output_url(outputs, data_type), timeout=REQUEST_TIMEOUT
+    )
+
+    vectors_url = persist_generated_file(
+        task_data,
+        self.request.retries,
+        normalized_response.content,
+        target["file_name"],
+        "entity/vector",
+        as_result=should_store_pipeline_vectors(params),
+        mimetype=get_mimetype(normalized_response),
+    )
+
+    _complete_pipeline(task_data, params, vectors_url)
+
+
+# --- AFTER ALL PIPELINES: Vector concat ---
+@CELERY.task(
+    name=f"{FeatureEngineeringPipeline.instance.identifier}.start_vector_concat",
+    bind=True,
+    base=PipelineTask,
+)
+def start_vector_concat(self, db_id: int):
+    """
+    Concatenates the vector outputs from all successfully executed pipelines.
+
+    Called after all pipelines in the queue are exhausted. It retrieves all saved
+    MDS vector ZIP URLs, optionally stores them as intermediate results, and sends
+    a payload containing the newline-separated URLs to the vector-concat plugin.
+
+    Args:
+        self: The Celery task instance (bound).
+        db_id (int): The database ID of the ProcessingTask.
+    """
+
+    task_data = ProcessingTask.get_by_id(db_id)
+
+    params: InputParameters = load_params(task_data)
+    vector_zip_urls = task_data.data.get("vector_zip_urls", [])
+
+    payload = {
+        "urls": "\n".join(vector_zip_urls),
+        "outputFormat": params.output_format,
+        "outputSuffix": "final_concatenated_vector",
+    }
+
+    run_pipeline_step(
+        db_id=db_id,
+        task_data=task_data,
+        plugin_name=VECTOR_CONCAT_PLUGIN,
+        logging_name="Vector concat",
+        payload=payload,
+    )
+
+
+# --- AFTER ALL PIPELINES: finalize vector concat ---
+@CELERY.task(
+    name=f"{FeatureEngineeringPipeline.instance.identifier}.finalize_vector_concat",
+    bind=True,
+    base=PipelineTask,
+)
+def finalize_vector_concat(self, db_id: int, source_url: str):
+    """
+    Once all pipelines have completed and the vector concat plugin has finished, this task finalizes the process.
+
+    Args:
+        self: The Celery task instance (bound).
+        db_id (int): The database ID of the ProcessingTask.
+        source_url (str): The URL of the completed previous task to fetch outputs from.
+
+    Raises:
+        ValueError: If the required 'entity/vector' output is missing.
+
+    """
+    task_data = ProcessingTask.get_by_id(db_id)
+    params: InputParameters = load_params(task_data)
+
+    outputs = requests.get(source_url, timeout=REQUEST_TIMEOUT).json().get("outputs", [])
+    concatenated_vector = extract_output_url(outputs, "entity/vector")
+    concatenated_vector_response = open_url(concatenated_vector, timeout=REQUEST_TIMEOUT)
+
+    if params.reduce_dimensions and has_enough_pca_dimensions(
+        task_data, params, concatenated_vector_response
+    ):
+        # The PCA result is the requested output, so finalize_pca stores it before
+        # the unreduced vector and its dimension mapping.
+        task_data.add_task_log_entry(
+            "Starting PCA plugin to reduce the dimensions of the concatenated vector."
+        )
+        task_data.save(commit=True)
+        start_pca.apply_async(args=[db_id, concatenated_vector])
+        return
+
+    save_concatenated_vector(
+        task_data=task_data,
+        retries=self.request.retries,
+        db_id=db_id,
+        params=params,
+        outputs=outputs,
+        vector=concatenated_vector_response.content,
+    )
+
+    save_task_result.delay(
+        "All Pipelines Completed Successfully And Concatenated Vector Created!", db_id
+    )
+
+
+def save_concatenated_vector(
+    task_data: ProcessingTask,
+    retries: int,
+    db_id: int,
+    params: InputParameters,
+    outputs: list,
+    vector: bytes,
+):
+    """Persist the concatenated vector and its dimension mapping.
+
+    Args:
+        task_data (ProcessingTask): the router task, used for duplicate logging.
+        retries (int): the retry count of the calling task.
+        db_id (int): the database id of the router task.
+        params (InputParameters): the input parameters that select the output format.
+        outputs (list): the outputs of the finished vector concat task.
+        vector (bytes): the content of the concatenated vector file.
+    """
+    extension, mimetype = OUTPUT_FORMATS.get(params.output_format, OUTPUT_FORMATS["csv"])
+    save_intermediate_results(
+        task_data=task_data,
+        retries=retries,
+        db_id=db_id,
+        file=vector,
+        file_name=f"final_concatenated_vector{extension}",
+        file_type="entity/vector",
+        mimetype=mimetype,
+    )
+    save_dimension_mapping(
+        task_data=task_data,
+        retries=retries,
+        db_id=db_id,
+        outputs=outputs,
+        file_name="final_concatenated_vector_dimension_mapping.json",
+    )
+
+
+def save_dimension_mapping(
+    task_data: ProcessingTask,
+    retries: int,
+    db_id: int,
+    outputs: list,
+    file_name: str,
+):
+    """Persist the dimension mapping of a vector concat result.
+
+    The mapping records which input file every dimension of the concatenated
+    vector came from, so visualization plugins can label the dimensions with
+    the original attribute names. Vector concat versions without a mapping
+    output are tolerated: the mapping is then left out.
+
+    Args:
+        task_data (ProcessingTask): the router task, used for duplicate logging.
+        retries (int): the retry count of the calling task.
+        db_id (int): the database id of the router task.
+        outputs (list): the outputs of the finished vector concat task.
+        file_name (str): the name to store the mapping under.
+    """
+    mapping_url = next(
+        (o["href"] for o in outputs if o.get("dataType") == DIMENSION_MAPPING_DATA_TYPE),
+        None,
+    )
+    if mapping_url is None:
+        return
+
+    save_intermediate_results(
+        task_data=task_data,
+        retries=retries,
+        db_id=db_id,
+        file=open_url(mapping_url, timeout=REQUEST_TIMEOUT).content,
+        file_name=file_name,
+        file_type=DIMENSION_MAPPING_DATA_TYPE,
+        mimetype="application/json",
+    )
+
+
+# --- AFTER VECTOR CONCAT: PCA (started from finalize_vector_concat) ---
+@CELERY.task(
+    name=f"{FeatureEngineeringPipeline.instance.identifier}.start_pca",
+    bind=True,
+    base=PipelineTask,
+)
+def start_pca(self, db_id: int, vector_url: str):
+    """
+    Initiates the PCA plugin to reduce the dimensions of the concatenated vector.
+
+    Args:
+        self: The Celery task instance (bound).
+        db_id (int): The database ID of the ProcessingTask.
+        vector_url (str): URL of the concatenated vector to reduce.
+    """
+
+    task_data = ProcessingTask.get_by_id(db_id)
+    params: InputParameters = load_params(task_data)
+
+    payload = {
+        **PCA_DEFAULTS,
+        "entityPointsUrl": vector_url,
+        "pcaType": params.pca_type.name,
+        "dimensions": params.pca_dimensions,
+        "solver": params.solver.name,
+        "tol": params.tol,
+        "iteratedPower": params.iterated_power,
+    }
+
+    run_pipeline_step(
+        db_id=db_id,
+        task_data=task_data,
+        plugin_name=PCA_PLUGIN,
+        logging_name="PCA",
+        payload=payload,
+    )
+
+
+# --- AFTER VECTOR CONCAT: finalize PCA ---
+@CELERY.task(
+    name=f"{FeatureEngineeringPipeline.instance.identifier}.finalize_pca",
+    bind=True,
+    base=PipelineTask,
+)
+def finalize_pca(self, db_id: int, source_url: str):
+    """
+    Persists the PCA results and finalizes the task.
+
+    Args:
+        self: The Celery task instance (bound).
+        db_id (int): The database ID of the ProcessingTask.
+        source_url (str): The URL of the completed previous task to fetch outputs from.
+
+    Raises:
+        ValueError: If the required 'entity/vector' output is missing.
+    """
+
+    outputs = requests.get(source_url, timeout=REQUEST_TIMEOUT).json().get("outputs", [])
+
+    # The result files are listed in the order they are stored: the plot, the
+    # reduced vector, the unreduced vector, then the metadata files.
+
+    # the plot is only produced for outputs with at most three dimensions
+    plot = next((o for o in outputs if o.get("dataType") == "custom/plot"), None)
+    if plot is not None:
+        STORE.persist_task_result(
+            db_id,
+            open_url(plot["href"], timeout=REQUEST_TIMEOUT).content,
+            "pca_plot.html",
+            "custom/plot",
+            "text/html",
+        )
+
+    reduced_vector = extract_output_url(outputs, "entity/vector")
+    STORE.persist_task_result(
+        db_id,
+        open_url(reduced_vector, timeout=REQUEST_TIMEOUT).content,
+        "final_vector_pca_reduced.csv",
+        "entity/vector",
+        "text/csv",
+    )
+
+    # The unreduced vector is part of the output as well.
+    task_data = ProcessingTask.get_by_id(db_id)
+    concat_url = task_data.data[f"{VECTOR_CONCAT_PLUGIN}_url"]
+    concat_outputs = (
+        requests.get(concat_url, timeout=REQUEST_TIMEOUT).json().get("outputs", [])
+    )
+    concatenated_vector = extract_output_url(concat_outputs, "entity/vector")
+    save_concatenated_vector(
+        task_data=task_data,
+        retries=self.request.retries,
+        db_id=db_id,
+        params=load_params(task_data),
+        outputs=concat_outputs,
+        vector=open_url(concatenated_vector, timeout=REQUEST_TIMEOUT).content,
+    )
+
+    pca_metadata = extract_output_url(outputs, "custom/pca-metadata")
+    STORE.persist_task_result(
+        db_id,
+        open_url(pca_metadata, timeout=REQUEST_TIMEOUT).content,
+        "pca_metadata.json",
+        "custom/pca-metadata",
+        "application/json",
+    )
+
+    save_task_result.delay(
+        "All Pipelines Completed Successfully And Dimensions Reduced With PCA!", db_id
+    )

@@ -63,6 +63,7 @@ class PluginsView(MethodView):
                         data_type="entity/vector",
                         content_type=[
                             "application/json",
+                            "application/X-lines+json",
                             "text/csv",
                         ],
                         required=True,

@@ -20,7 +20,7 @@ from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import plugin_identifier, QHAnaPluginBase
 
 _plugin_name = "quantum-kernel-estimation"
-__version__ = "v0.2.1"
+__version__ = "v0.2.2"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -66,7 +66,6 @@ class QKE(QHAnaPluginBase):
             "qiskit-aer~=0.17.2\n"
             "pennylane~=0.44.0\n"
             "pennylane-qiskit~=0.44.1\n"
-            "muid~=0.5.3\n"
             "autoray~=0.8.2"
         )
 

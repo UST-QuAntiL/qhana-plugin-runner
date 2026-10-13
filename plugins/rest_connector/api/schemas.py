@@ -72,7 +72,7 @@ class WelcomeParametersSchema(FrontendFormBaseSchema):
 class ConnectorUpdateSchema(MaBaseSchema):
     key = EnumField(ConnectorKey, required=True, use_value=True)
     value = ma.fields.String(required=True)
-    next_step = ma.fields.String(required=False, missing="")
+    next_step = ma.fields.String(required=False, load_default="")
 
 
 class ConnectorVariableSchema(MaBaseSchema):

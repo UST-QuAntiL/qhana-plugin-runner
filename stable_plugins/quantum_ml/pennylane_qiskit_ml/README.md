@@ -7,7 +7,6 @@ The following dependencies are used by these plugins:
 - pennylane-qiskit~=0.44.1
 - scikit-learn~=1.8.0
 - torch~=2.10.0
-- muid~=0.5.3
 
 ## Known limitations
 

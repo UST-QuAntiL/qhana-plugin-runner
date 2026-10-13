@@ -47,10 +47,10 @@ from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.attributes import (
     AttributeMetadata,
     dict_serializer,
-    tuple_deserializer,
 )
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     EntityTupleMixin,
+    ensure_dict,
     entity_attribute_sort_key,
     load_entities,
     save_entities,
@@ -68,7 +68,7 @@ from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _csv_plugin_name = "csv-to-json"
 _json_plugin_name = "json-to-csv"
-__version__ = "v0.1.0"
+__version__ = "v0.1.1"
 _csv_identifier = plugin_identifier(_csv_plugin_name, __version__)
 _json_identifier = plugin_identifier(_json_plugin_name, __version__)
 
@@ -431,36 +431,19 @@ def _convert_data(db_task: ProcessingTask):
                     for element in entities_metadata_list
                 }
 
-        def load():
-            nonlocal entities_metadata
-            deserializer = None
-            ent_attributes: tuple[str, ...] | None = None
-            for ent in load_entities(entities_data, mimetype):
-                if isinstance(ent, EntityTupleMixin):  # is NamedTuple
-                    if deserializer is None:
-                        ent_attributes = type(ent).entity_attributes
-                        entities_metadata = _fill_in_metadata(
-                            entities_metadata, data_type, ent_attributes
-                        )
-                        ent_tuple = type(ent)
-                        deserializer = tuple_deserializer(
-                            ent_attributes, entities_metadata, tuple_=ent_tuple._make
-                        )
-
-                    ent = deserializer(ent)
-                    yield ent.as_dict()
-                else:
-                    if not ent_attributes:
-                        ent_attributes = tuple(ent.keys())
-                    yield ent
-
-        entities = load()
-        try:
-            first = next(entities)
-        except StopIteration:
+        raw_entities = load_entities(entities_data, mimetype)
+        first_ent = next(raw_entities, None)
+        if first_ent is None:
             raise ValueError(
                 f"Cannot convert an empty list of entities! (Source: {data_url})"
             )
+        if isinstance(first_ent, EntityTupleMixin):  # is NamedTuple
+            entities_metadata = _fill_in_metadata(
+                entities_metadata, data_type, type(first_ent).entity_attributes
+            )
+
+        entities = ensure_dict(chain_iter([first_ent], raw_entities), entities_metadata)
+        first = next(entities)
         ent_attributes = tuple(sorted(first.keys(), key=entity_attribute_sort_key))
         entities = chain_iter([first], entities)
 

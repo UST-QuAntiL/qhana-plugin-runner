@@ -6,7 +6,6 @@ The following dependencies are used by these plugins:
 - scikit-learn~=1.8.0
 - plotly~=6.6.0
 - pandas~=2.3.3
-- muid~=0.5.3
 
 ## Compatibility
 

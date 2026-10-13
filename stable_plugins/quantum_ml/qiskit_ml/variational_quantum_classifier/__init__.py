@@ -20,7 +20,7 @@ from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import plugin_identifier, QHAnaPluginBase
 
 _plugin_name = "vqc"
-__version__ = "v0.1.1"
+__version__ = "v0.1.2"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -72,7 +72,6 @@ class VQC(QHAnaPluginBase):
             f"qiskit-machine-learning~={qiskit_ml_version}\n"
             "numpy~=2.4.3\n"
             "scikit-learn~=1.8.0\n"
-            "muid~=0.5.3"
         )
 
 

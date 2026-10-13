@@ -54,6 +54,21 @@
 
     {% block script %}
     <script src="{{url_for('static', filename='microfrontend.js')}}"></script>
+
+    <script>
+        (function () {
+            if (!document.body?.textContent?.match(/(?:\$|\\\(|\\\[|\\begin\{.*?})/)) return;
+            
+            window.MathJax = window.MathJax || { tex: { inlineMath: { '[+]': [['$', '$']] } } };
+
+            const script = document.createElement('script');
+            script.src = "{{ config.MATHJAX_SCRIPT_LOCATION }}";
+            script.integrity = "{{ config.MATHJAX_SCRIPT_INTEGRITY_HASH }}";
+            script.crossOrigin = "anonymous";
+            script.async = true;
+            document.head.appendChild(script);
+        })();
+    </script>
     {% endblock script %}
 
 </body>
