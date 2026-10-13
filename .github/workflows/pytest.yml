@@ -2,13 +2,13 @@ name: Tests
 
 on:
   push:
-    branches: [main,enpro2026-main]
+    branches: [main]
   pull_request:
 
 env:
   # keep the virtualenv inside the workspace so it can be cached by path
   POETRY_VIRTUALENVS_IN_PROJECT: "true"
-  PYTHON_VERSION: "3.10"
+  PYTHON_VERSION: "3.14"
 
 jobs:
   pytest:
@@ -54,13 +54,26 @@ jobs:
         with:
           path: .venv
           key: venv-plugins-${{ runner.os }}-py${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-${{ steps.plugin-requirements.outputs.hash }}
+          # Fallback if no cache matches the exact key: restore the newest venv matching one of
+          # these prefixes. The install step then only adds the changed packages.
+          restore-keys: |
+            venv-plugins-${{ runner.os }}-py${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-
+            venv-plugins-${{ runner.os }}-py${{ steps.setup-python.outputs.python-version }}-
 
       - name: Install plugin dependencies
         if: steps.cache-plugin-venv.outputs.cache-hit != 'true'
-        run: poetry run flask install --skip-runner-dependencies
+        env:
+          # CPU-only torch wheels skip the CUDA packages, which make up most of the venv size
+          PIP_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
+        run: |
+          # The restored venv replaces the one from "Install dependencies". A venv restored
+          # through the second restore-keys prefix can come from an older poetry.lock, so
+          # update the runner packages before adding the plugin packages.
+          poetry install --no-interaction --with dev
+          poetry run flask install --skip-runner-dependencies
 
       - name: Save virtualenv with plugin dependencies
-        if: steps.cache-plugin-venv.outputs.cache-hit != 'true'
+        if: steps.cache-plugin-venv.outputs.cache-hit != 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/cache/save@v6
         with:
           path: .venv

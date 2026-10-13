@@ -14,10 +14,12 @@
 import math
 from dataclasses import dataclass
 from http import HTTPStatus
+from io import StringIO
 from pathlib import Path
 from tempfile import SpooledTemporaryFile
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 from urllib.parse import urlparse
+from zipfile import ZipFile
 
 from celery.utils.log import get_task_logger
 
@@ -49,17 +51,19 @@ from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.attributes import NUMERIC_TYPES, AttributeMetadata
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
+    ResponseLike,
     ensure_dict,
     load_entities,
     save_entities,
 )
+from qhana_plugin_runner.plugin_utils.zip_utils import get_file_responses_from_zip
 from qhana_plugin_runner.requests import get_mimetype, open_url
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "numeric-value-normalization"
-__version__ = "v0.1.1"
+__version__ = "v0.2.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 _description = r"""
 Normalizes selected numeric entity attributes from an input range to an output range.
@@ -74,6 +78,11 @@ The input range can be determined automatically for each attribute or supplied m
 
 The output range may be inverted (for example $y_{min} = 1$ and $y_{max} = 0$) to invert the
 normalized values.
+
+The input can also be a zip archive of vector files, for example the `entity/vector` output
+of the MDS plugin. Each file holds the vectors of all entities for one attribute (an
+`entity/vector` list as JSON, JSON lines or CSV). Each vector dimension is normalized per
+file, and the result is a zip archive with the same file names and formats.
 """.strip()
 
 
@@ -171,33 +180,40 @@ class InputParametersSchema(FrontendFormBaseSchema):
     entities_url = FileUrl(
         required=True,
         allow_none=False,
-        data_input_type="entity/list",
-        data_content_types=["application/json", "application/X-lines+json", "text/csv"],
+        data_input_type="entity/*",
+        data_content_types=[
+            "application/json",
+            "application/X-lines+json",
+            "text/csv",
+            "application/zip",
+        ],
         metadata={
             "label": "Entities URL",
-            "description": "URL to a file with entities.",
+            "description": "URL to an entity file (JSON, JSON lines or CSV), or to a zip archive with one vector file per attribute (e.g. the entity/vector output of the MDS plugin). Each vector file holds the vectors of all entities for its attribute and is normalized on its own.",
             "input_type": "text",
         },
     )
     attribute_metadata_url = FileUrl(
         required=False,
         allow_none=True,
+        load_default=None,
         data_input_type="entity/attribute-metadata",
         data_content_types=["application/json", "application/X-lines+json", "text/csv"],
         metadata={
             "label": "Attribute Metadata URL (optional)",
-            "description": "Optional metadata used to verify that selected attributes are numeric. If not provided, the metadata will be fetched from the X-Attribute-Metadata header of the entities file, if present.",
+            "description": "Optional metadata used to verify that selected attributes are numeric. If not provided, the metadata will be fetched from the X-Attribute-Metadata header of the entities file, if present. Not used if the entities URL points to a zip archive.",
             "input_type": "text",
             "related_to": "entities_url",
             "relation": "post",
         },
     )
     attributes = ma.fields.String(
-        required=True,
+        required=False,
         allow_none=False,
+        load_default="",
         metadata={
             "label": "Attributes",
-            "description": "Numeric attributes to normalize, one attribute per line.",
+            "description": "Numeric attributes to normalize, one attribute per line. Leave empty to normalize every attribute except ID and href.",
             "input_type": "textarea",
         },
     )
@@ -206,6 +222,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         is_lower_bound=True,
         required=False,
         allow_none=True,
+        load_default=None,
         metadata={
             "label": "Input range minimum",
             "description": "Manual minimum applied to every attribute. If empty, the minimum of each attribute is used.",
@@ -217,6 +234,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         is_lower_bound=False,
         required=False,
         allow_none=True,
+        load_default=None,
         metadata={
             "label": "Input range maximum",
             "description": "Manual maximum applied to every attribute. If empty, the maximum of each attribute is used.",
@@ -243,10 +261,13 @@ class InputParametersSchema(FrontendFormBaseSchema):
     )
     use_clipping = ma.fields.Boolean(
         required=False,
-        load_default=True,
+        load_default=False,
         metadata={
             "label": "Use Clipping",
-            "description": "If enabled, values outside the input range will be clipped to the output range. Otherwise, an error is raised.",
+            "description": "Only matters with a manual input range, because a range taken from the data contains every value. "
+            "If enabled, a value outside the input range is set to the nearest output range bound "
+            "(e.g. with the output range [0..1], a value below the input minimum becomes 0). "
+            "If disabled, such a value stops the task with an error that names the entity, and no result file is created.",
             "input_type": "checkbox",
         },
     )
@@ -255,8 +276,10 @@ class InputParametersSchema(FrontendFormBaseSchema):
         load_default=False,
         metadata={
             "label": "Allow missing values",
-            "description": "If enabled, entities with missing values for selected attributes will be normalized to `null`. Otherwise, an error is raised. "
-            "Always throws an error if the attribute is missing in an entity.",
+            "description": "Controls `null` values of selected attributes. "
+            "If enabled, a `null` value stays `null` in the result and is ignored when the input range is taken from the data. "
+            "If disabled, a `null` value stops the task with an error that names the entity, and no result file is created. "
+            "An entity that lacks a selected attribute entirely always stops the task with an error.",
             "input_type": "checkbox",
         },
     )
@@ -284,11 +307,12 @@ class PluginsView(MethodView):
                 ui_href=url_for(f"{NORMALIZATION_BLP.name}.MicroFrontend"),
                 data_input=[
                     InputDataMetadata(
-                        data_type="entity/list",
+                        data_type="entity/*",
                         content_type=[
                             "application/json",
                             "application/X-lines+json",
                             "text/csv",
+                            "application/zip",
                         ],
                         required=True,
                         parameter="entitiesUrl",
@@ -312,8 +336,13 @@ class PluginsView(MethodView):
                             "application/X-lines+json",
                             "text/csv",
                         ],
-                        required=True,
-                    )
+                        required=False,
+                    ),
+                    DataMetadata(
+                        data_type="entity/vector",
+                        content_type=["application/zip"],
+                        required=False,
+                    ),
                 ],
             ),
             tags=Normalization.instance.tags,
@@ -360,7 +389,6 @@ class MicroFrontend(MethodView):
         default_values = {
             fields["output_range_start"].data_key: 0.0,
             fields["output_range_end"].data_key: 1.0,
-            fields["use_clipping"].data_key: True,
         }
         default_values.update(data)
         return Response(
@@ -410,36 +438,46 @@ class ProcessView(MethodView):
 TASK_LOGGER = get_task_logger(__name__)
 
 
-def _load_entities(
-    entities_url: str, attribute_metadata_url: Optional[str] = None
+def _read_entities(
+    entities_data: ResponseLike, attribute_metadata_url: Optional[str] = None
 ) -> Tuple[List[Dict[str, Any]], Optional[Mapping[str, AttributeMetadata]], str]:
-    """Load entities and attribute metadata from the given URLs."""
-    with open_url(entities_url) as entities_data:
-        mimetype = get_mimetype(entities_data)
-        attribute_metadata: dict[str, Any] = None
+    """Read the entities of an opened entity file and load their attribute metadata."""
+    mimetype = get_mimetype(entities_data)
+    attribute_metadata: dict[str, Any] = None
 
-        if attribute_metadata_url is None:
-            attribute_metadata_url = entities_data.headers.get("X-Attribute-Metadata")
+    if attribute_metadata_url is None:
+        attribute_metadata_url = entities_data.headers.get("X-Attribute-Metadata")
 
-        if attribute_metadata_url is not None:
-            with open_url(attribute_metadata_url) as attribute_metadata_file:
-                attribute_metadata = {
-                    attr_meta["ID"]: AttributeMetadata.from_dict(attr_meta)
-                    for attr_meta in ensure_dict(
-                        load_entities(
-                            attribute_metadata_file,
-                            get_mimetype(attribute_metadata_file),
-                        )
+    if attribute_metadata_url is not None:
+        with open_url(attribute_metadata_url) as attribute_metadata_file:
+            attribute_metadata = {
+                attr_meta["ID"]: AttributeMetadata.from_dict(attr_meta)
+                for attr_meta in ensure_dict(
+                    load_entities(
+                        attribute_metadata_file,
+                        get_mimetype(attribute_metadata_file),
                     )
-                }
+                )
+            }
 
-        entities = list(
-            ensure_dict(load_entities(entities_data, mimetype), attribute_metadata)
-        )
-        if not entities:
-            raise ValueError("The input entity file must not be empty.")
+    entities = list(
+        ensure_dict(load_entities(entities_data, mimetype), attribute_metadata)
+    )
+    if not entities:
+        raise ValueError("The input entity file must not be empty.")
 
     return entities, attribute_metadata, mimetype
+
+
+def _write_entities(
+    entities: Sequence[Mapping[str, Any]], file_, mimetype: str, attributes: List[str]
+):
+    save_entities(
+        entities=entities,
+        file_=file_,
+        mimetype=mimetype,
+        attributes=attributes if mimetype == "text/csv" else None,
+    )
 
 
 def _parse_numeric_value(entity_id: Any, attribute: str, value: Any) -> float:
@@ -465,8 +503,14 @@ def normalize_entities(
     params: InputParameters,
     attribute_metadata: Optional[Mapping[str, AttributeMetadata]] = None,
 ) -> List[Dict[str, Any]]:
-    """Normalize selected scalar numeric attributes while preserving entities."""
-    selected_attributes = params.attributes.splitlines()
+    """Normalize selected scalar numeric attributes while preserving entities.
+
+    Without selected attributes, every attribute of the first entity except ``ID`` and
+    ``href`` is normalized.
+    """
+    selected_attributes = params.attributes.splitlines() or [
+        key for key in (entities[0] if entities else {}) if key not in ("ID", "href")
+    ]
     output_start = params.output_range_start
     output_end = params.output_range_end
     output_range = output_end - output_start
@@ -547,6 +591,32 @@ def normalize_entities(
     return normalized
 
 
+def normalize_zip(content: bytes, params: InputParameters) -> SpooledTemporaryFile:
+    """Normalize every entity file of a zip independently.
+
+    Returns a zip with the same file names and formats. An error message names the
+    file that caused it.
+    """
+    output = SpooledTemporaryFile(mode="w+b")
+    with ZipFile(output, "w") as zip_file:
+        for member in get_file_responses_from_zip(content):
+            mimetype = get_mimetype(member)
+            try:
+                entities = list(ensure_dict(load_entities(member, mimetype)))
+                if not entities:
+                    raise ValueError("The entity file must not be empty.")
+                normalized = normalize_entities(entities, params)
+            except ValueError as error:
+                raise ValueError(f"File '{member.url}': {error}") from error
+            with StringIO() as file_:
+                _write_entities(normalized, file_, mimetype, list(entities[0].keys()))
+                zip_file.writestr(member.url, file_.getvalue())
+        if not zip_file.namelist():
+            raise ValueError("The input zip must contain at least one entity file.")
+    output.seek(0)
+    return output
+
+
 @CELERY.task(name=f"{Normalization.instance.identifier}.calculation_task", bind=True)
 def calculation_task(self, db_id: int) -> str:
     TASK_LOGGER.info("Starting numeric value normalization task with db_id=%s", db_id)
@@ -558,9 +628,21 @@ def calculation_task(self, db_id: int) -> str:
         raise KeyError(msg)
 
     params: InputParameters = InputParametersSchema().loads(task_data.parameters)
-    entities, attribute_metadata, mimetype = _load_entities(
-        params.entities_url, params.attribute_metadata_url
-    )
+    with open_url(params.entities_url) as entities_data:
+        if get_mimetype(entities_data) == "application/zip":
+            with normalize_zip(entities_data.content, params) as output:
+                STORE.persist_task_result(
+                    db_id,
+                    output,
+                    "normalized_entities.zip",
+                    "entity/vector",
+                    "application/zip",
+                )
+            return "Numeric values normalized successfully."
+
+        entities, attribute_metadata, mimetype = _read_entities(
+            entities_data, params.attribute_metadata_url
+        )
 
     normalized = normalize_entities(
         entities=entities,
@@ -568,14 +650,8 @@ def calculation_task(self, db_id: int) -> str:
         attribute_metadata=attribute_metadata,
     )
 
-    output_attributes = list(entities[0].keys())
     with SpooledTemporaryFile(mode="w+") as output:
-        save_entities(
-            entities=normalized,
-            file_=output,
-            mimetype=mimetype,
-            attributes=output_attributes if mimetype == "text/csv" else None,
-        )
+        _write_entities(normalized, output, mimetype, list(entities[0].keys()))
         output.seek(0)
         extension = Path(urlparse(params.entities_url).path).suffix
         STORE.persist_task_result(

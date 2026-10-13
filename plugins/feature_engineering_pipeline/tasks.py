@@ -43,6 +43,9 @@ from .schemas import (
     MAPPING_PLUGIN,
     MDS_PLUGIN,
     NONE_PLUGIN,
+    NORMALIZATION_PLUGIN,
+    NORMALIZATION_SETTINGS_KEYS,
+    NORMALIZE_KEY,
     NUMERIC_MAPPING_PIPELINE,
     ONE_HOT_PLUGIN,
     PCA_PLUGIN,
@@ -64,6 +67,7 @@ from .tasks_helpers import (
     taxonomy_ref,
 )
 from .tasks_pipeline_steps import (
+    finalize_normalization,
     finalize_one_hot,
     finalize_pca,
     finalize_pipeline,
@@ -223,20 +227,32 @@ def _pipeline_groups(
 
     The aggregator and the MDS step combine all attributes of a run into a single
     result, so attributes that disagree on a setting of that pipeline have to run
-    separately. A group records only the settings that differ from the first step, and
-    a label that keeps the result files of the groups apart.
+    separately. The normalization step normalizes the whole result of a run, so
+    attributes that differ in normalization run separately as well. A group records
+    only the settings that differ from the first step, whether its result is
+    normalized, and a label that keeps the result files of the groups apart.
     """
-    keys = PIPELINE_SETTINGS_KEYS.get(pipeline, ())
+    pipeline_keys = PIPELINE_SETTINGS_KEYS.get(pipeline, ())
     by_settings: dict = {}
     for attribute in attributes:
+        submitted = attribute_settings.get(attribute, {})
+        normalize = bool(submitted.get(NORMALIZE_KEY, False))
+        keys = (
+            (*pipeline_keys, *NORMALIZATION_SETTINGS_KEYS) if normalize else pipeline_keys
+        )
         settings = {
             key: value
-            for key, value in attribute_settings.get(attribute, {}).items()
+            for key, value in submitted.items()
             if key in keys and value != base_settings.get(key)
         }
         group = by_settings.setdefault(
-            tuple(sorted(settings.items())),
-            {"pipeline": pipeline, "attributes": [], "settings": settings},
+            (normalize, tuple(sorted(settings.items()))),
+            {
+                "pipeline": pipeline,
+                "attributes": [],
+                "settings": settings,
+                "normalize": normalize,
+            },
         )
         group["attributes"].append(attribute)
 
@@ -313,6 +329,9 @@ def start_routing_task(self, db_id: int) -> str:
             message = f"Queued {PIPELINE_LOG_NAMES[pipeline]}: {group['attributes']}"
             if group["settings"]:
                 message += f" with the attribute settings {group['settings']}"
+            if group["normalize"]:
+                message += " and normalization"
+                total_plugins += 1
             task_data.add_task_log_entry(message)
         pipeline_queue.extend(groups)
         total_plugins += PIPELINE_STEP_COUNTS[pipeline] * len(groups)
@@ -383,6 +402,7 @@ def handle_webhook_task(self, db_id: int, source_url: str, via: str):
         task_data.data.get(f"{MDS_PLUGIN}_url"),
         task_data.data.get(f"{VECTOR_CONCAT_PLUGIN}_url"),
         task_data.data.get(f"{PCA_PLUGIN}_url"),
+        task_data.data.get(f"{NORMALIZATION_PLUGIN}_url"),
     ]
 
     if not source_url or source_url not in known_urls:
@@ -492,7 +512,13 @@ def handle_webhook_task(self, db_id: int, source_url: str, via: str):
     task_data.progress_value += 1
     task_data.save(commit=True)
 
-    if current_pipeline == WU_PALMER_PLUGIN:
+    # Normalization is the last step of every pipeline that enables it.
+    if source_url == task_data.data.get(f"{NORMALIZATION_PLUGIN}_url"):
+        finalize_normalization.apply_async(
+            args=[db_id, source_url], countdown=CELERY_COUNTDOWN
+        )
+
+    elif current_pipeline == WU_PALMER_PLUGIN:
         handle_wu_palmer_progression(task_data, db_id, source_url)
 
     elif current_pipeline == MAPPING_PLUGIN:

@@ -183,7 +183,9 @@ def _get_plot(
     for column_name in attr_to_column_name.values():
         hover_data[column_name] = True
 
-    labels_by_dimension = load_dimension_labels(dimension_mapping_url)
+    labels_by_dimension = load_dimension_labels(
+        dimension_mapping_url, dimensions=dimension_names
+    )
     axis_labels: Dict[str, str] = {}
     for axis, index in (("x", 0), ("y", 1), ("z", 2)):
         if index >= len(dimension_names):

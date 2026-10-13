@@ -50,7 +50,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "json-visualization"
-__version__ = "v0.3.0"
+__version__ = "v0.3.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -120,12 +120,11 @@ class PluginsView(MethodView):
                         parameter="data",
                         required=True,
                     ),
-                    InputDataMetadata(
-                        data_type="entity/dimension-mapping",
-                        content_type=["application/json"],
-                        parameter="dimensionMappingUrl",
-                        required=False,
-                    ),
+                    # The optional dimension mapping is not declared here. The QHAna UI
+                    # ranks a visualization with more than one data input below the
+                    # single input visualizations, so the plugin would no longer be the
+                    # default preview of json files. The micro frontend selects the
+                    # mapping itself.
                 ],
                 data_output=[
                     DataMetadata(

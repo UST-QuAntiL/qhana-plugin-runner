@@ -15,7 +15,7 @@
 """Module containing helpers to work with ``entity/dimension-mapping`` files."""
 
 from pathlib import Path
-from typing import Any, Dict, Mapping, Optional, Sequence
+from typing import Any, Collection, Dict, Mapping, Optional, Sequence
 
 from .entity_marshalling import ensure_dict, load_entities
 from ..requests import get_mimetype, open_url
@@ -58,7 +58,9 @@ def _labels(
 
 
 def load_dimension_labels(
-    url: Optional[str], include_source_dimension: bool = False
+    url: Optional[str],
+    include_source_dimension: bool = False,
+    dimensions: Optional[Collection[str]] = None,
 ) -> Dict[str, str]:
     """Load an ``entity/dimension-mapping`` file and build the dimension labels.
 
@@ -66,11 +68,17 @@ def load_dimension_labels(
         url (Optional[str]): the url of the dimension mapping file
         include_source_dimension (bool): append the column the dimension had in
             the source file to the feature name, e.g. ``"color (dim1)"``
+        dimensions (Optional[Collection[str]]): the dimension names of the
+            vector file to label. If given, the labels are only returned if
+            the mapping describes exactly these dimensions. A mapping describes
+            one specific vector file, and other vector files of the same step
+            (e.g. a PCA result next to the concatenated vector) reuse the
+            dimension names ``dim0``, ``dim1``, ... for other features.
 
     Returns:
         Dict[str, str]: a mapping from dimension name (``"dim0"``) to its
-            label. Empty if no url was given, so that callers can use the
-            result unconditionally.
+            label. Empty if no url was given or the mapping does not match the
+            dimensions, so that callers can use the result unconditionally.
     """
     if not url:
         return {}
@@ -80,5 +88,10 @@ def load_dimension_labels(
         if mimetype is None:
             raise ValueError("Could not determine mimetype of the dimension mapping.")
         mapping_entities = list(ensure_dict(load_entities(response, mimetype=mimetype)))
+
+    if dimensions is not None:
+        mapped = {str(entity.get("ID") or "").strip() for entity in mapping_entities}
+        if mapped - {""} != set(dimensions):
+            return {}
 
     return _labels(mapping_entities, include_source_dimension)

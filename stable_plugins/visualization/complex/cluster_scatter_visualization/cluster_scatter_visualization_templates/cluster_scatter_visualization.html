@@ -45,7 +45,7 @@
     }
 
     // Asks the parent to fill an optional input with a file related to the entity url.
-    function autoSelectRelated(entityUrl, currentValue, inputKey, acceptedInputType, includeSelf) {
+    function autoSelectRelated(entityUrl, currentValue, inputKey, acceptedInputType, includeSelf, relation = "pre") {
         if (!entityUrl || currentValue) {
             requestedRelatedFor[inputKey] = null;
             return;
@@ -62,7 +62,7 @@
             type: "request-related-data-url",
             dataUrl: entityUrl,
             inputKey: inputKey,
-            relation: "pre",
+            relation: relation,
             acceptedInputType: acceptedInputType,
             userInteraction: false,
         };
@@ -93,8 +93,10 @@
 
         autoSelectRelated(entityUrl, entityDataUrl, "entity_data_url", "entity/*", false);
         // The dimension mapping is a sibling output of the step that produced the
-        // entity points, so the search includes the producing step itself.
-        autoSelectRelated(entityUrl, dimensionMappingUrl, "dimension_mapping_url", "entity/dimension-mapping", true);
+        // entity points, so the search includes the producing step itself. The relation
+        // "pre" also returns the mappings of earlier versions and the parent takes the
+        // first (oldest) one, so only the producing step is searched.
+        autoSelectRelated(entityUrl, dimensionMappingUrl, "dimension_mapping_url", "entity/dimension-mapping", true, "exact");
 
         // Only an entity Url is required to generate a plot
         if (entityUrl === "" || entityUrl === null) {

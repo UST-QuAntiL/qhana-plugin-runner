@@ -68,7 +68,7 @@ class MappingDistances(QHAnaPluginBase):
         return MAPPING_DISTANCES_BLP
 
     def get_requirements(self) -> str:
-        return "numpy~=1.13\nscipy~=1.10"
+        return "numpy~=2.4.3\nscipy~=1.17.1"
 
 
 try:

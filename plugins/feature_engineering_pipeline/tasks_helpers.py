@@ -214,6 +214,7 @@ def persist_generated_file(
     file_name: str,
     file_type: str,
     as_result: bool,
+    mimetype: str = "application/zip",
 ) -> str:
     """Store a file the router generated itself and return its external url.
 
@@ -227,11 +228,11 @@ def persist_generated_file(
 
     if as_result:
         file_info = save_intermediate_results(
-            task_data, retries, task_data.id, file, file_name, file_type
+            task_data, retries, task_data.id, file, file_name, file_type, mimetype
         )
     else:
         file_info = STORE.persist_task_temp_file(
-            task_data.id, file, file_name, mimetype="application/zip"
+            task_data.id, file, file_name, mimetype=mimetype
         )
 
     with current_app.test_request_context(base_url=task_data.data.get("base_url")):
@@ -391,6 +392,41 @@ def should_store_pipeline_vectors(params: InputParameters) -> bool:
         return params.include_intermediate_results_in_output
     else:
         return True
+
+
+def stores_unnormalized_vectors(
+    task_data: ProcessingTask, params: InputParameters
+) -> bool:
+    """Return true if the vectors of the running group are stored before normalization.
+
+    A normalized group stores the normalized vectors as its result, so the vectors
+    before normalization are only an intermediate result.
+    """
+    if task_data.data.get("current_normalize"):
+        return params.include_intermediate_results_in_output
+    return should_store_pipeline_vectors(params)
+
+
+def normalization_payload(params: InputParameters, entities_url: str) -> dict:
+    """Return the form data that starts the normalization plugin.
+
+    No attributes are selected, so the plugin normalizes every vector dimension. A
+    vector zip is normalized file by file.
+    """
+
+    def optional(value: float | None) -> float | str:
+        return "" if value is None else value
+
+    return {
+        "entitiesUrl": entities_url,
+        "attributes": "",
+        "inputRangeMin": optional(params.normalization_input_range_min),
+        "inputRangeMax": optional(params.normalization_input_range_max),
+        "outputRangeStart": params.normalization_output_range_start,
+        "outputRangeEnd": params.normalization_output_range_end,
+        "useClipping": str(params.normalization_use_clipping).lower(),
+        "allowMissingValues": str(params.normalization_allow_missing_values).lower(),
+    }
 
 
 def save_intermediate_results(

@@ -113,4 +113,4 @@ class ZZKernel(Kernel, metaclass=ABCMeta):
         results = circuit()
 
         # Probs for measured wires to be |0> and open qasm
-        return [result[0] for result in results], circuit.tape.to_openqasm()
+        return [result[0] for result in results], qml.to_openqasm(circuit)()

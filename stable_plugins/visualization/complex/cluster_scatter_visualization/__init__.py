@@ -20,7 +20,7 @@ from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "cluster-scatter-visualization"
-__version__ = "v1.0.3"
+__version__ = "v1.0.4"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 VIS_BLP = SecurityBlueprint(
@@ -52,7 +52,14 @@ class ClusterScatterVisualization(QHAnaPluginBase):
         return VIS_BLP
 
     def get_requirements(self) -> str:
-        return "pylatexenc~=2.10\nqiskit~=0.43\nkaleido~=0.2.1\ndash~=2.18.1"
+        return (
+            "pylatexenc~=2.10\n"
+            "qiskit~=2.3.0\n"
+            "kaleido~=1.2.0\n"
+            "dash~=4.0.0\n"
+            "pandas~=2.3.3\n"
+            "plotly~=6.6.0"
+        )
 
 
 try:

@@ -13,18 +13,18 @@
 # limitations under the License.
 
 import numpy as np
-from qiskit.primitives.sampler import BaseSampler
-from qiskit.algorithms.optimizers.optimizer import Optimizer
 from qiskit.circuit.library import TwoLocal
+from qiskit.primitives.base import BaseSamplerV2
+from qiskit_algorithms.minimum_eigensolvers import SamplingVQE
+from qiskit_algorithms.optimizers import Optimizer
 from qiskit_optimization.applications import Maxcut
-from qiskit.algorithms.minimum_eigensolvers import SamplingVQE
 
 
 class VQEMaxCutSolver:
     def __init__(
         self,
         adjacency_matrix: np.array,
-        backend: BaseSampler,
+        backend: BaseSamplerV2,
         optimizer: Optimizer,
         reps: int = 1,
         entanglement: str = "linear",

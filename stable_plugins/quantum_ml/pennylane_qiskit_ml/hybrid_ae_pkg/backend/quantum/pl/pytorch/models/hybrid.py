@@ -30,7 +30,7 @@ class HybridAutoencoder(torch.nn.Module):
         q_num: int,
         embedding_size: int,
         qnn_name: str,
-        dev: qml.Device,
+        dev: qml.devices.Device,
     ):
         super(HybridAutoencoder, self).__init__()
 
