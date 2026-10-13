@@ -242,7 +242,7 @@ def _try_load_plugin_package(app: Flask, plugin_package: Path):
         plugin_package (Path): the path to the python package (not the directory containing the package!)
     """
     if not (plugin_package / Path("__init__.py")).exists():
-        app.logger.info(
+        app.logger.debug(
             f"Tried to import a normal folder '{plugin_package}' as a python package, skipping."
         )
         return
