@@ -841,33 +841,16 @@ def finalize_vector_concat(self, db_id: int, source_url: str):
     """
     task_data = ProcessingTask.get_by_id(db_id)
     params: InputParameters = load_params(task_data)
-    extension, mimetype = OUTPUT_FORMATS.get(params.output_format, OUTPUT_FORMATS["csv"])
 
     outputs = requests.get(source_url, timeout=REQUEST_TIMEOUT).json().get("outputs", [])
     concatenated_vector = extract_output_url(outputs, "entity/vector")
     concatenated_vector_response = open_url(concatenated_vector, timeout=REQUEST_TIMEOUT)
 
-    # The unreduced vector is part of the output also if PCA runs afterwards.
-    save_intermediate_results(
-        task_data=task_data,
-        retries=self.request.retries,
-        db_id=db_id,
-        file=concatenated_vector_response.content,
-        file_name=f"final_concatenated_vector{extension}",
-        file_type="entity/vector",
-        mimetype=mimetype,
-    )
-    save_dimension_mapping(
-        task_data=task_data,
-        retries=self.request.retries,
-        db_id=db_id,
-        outputs=outputs,
-        file_name="final_concatenated_vector_dimension_mapping.json",
-    )
-
     if params.reduce_dimensions and has_enough_pca_dimensions(
         task_data, params, concatenated_vector_response
     ):
+        # The PCA result is the requested output, so finalize_pca stores it before
+        # the unreduced vector and its dimension mapping.
         task_data.add_task_log_entry(
             "Starting PCA plugin to reduce the dimensions of the concatenated vector."
         )
@@ -875,8 +858,54 @@ def finalize_vector_concat(self, db_id: int, source_url: str):
         start_pca.apply_async(args=[db_id, concatenated_vector])
         return
 
+    save_concatenated_vector(
+        task_data=task_data,
+        retries=self.request.retries,
+        db_id=db_id,
+        params=params,
+        outputs=outputs,
+        vector=concatenated_vector_response.content,
+    )
+
     save_task_result.delay(
         "All Pipelines Completed Successfully And Concatenated Vector Created!", db_id
+    )
+
+
+def save_concatenated_vector(
+    task_data: ProcessingTask,
+    retries: int,
+    db_id: int,
+    params: InputParameters,
+    outputs: list,
+    vector: bytes,
+):
+    """Persist the concatenated vector and its dimension mapping.
+
+    Args:
+        task_data (ProcessingTask): the router task, used for duplicate logging.
+        retries (int): the retry count of the calling task.
+        db_id (int): the database id of the router task.
+        params (InputParameters): the input parameters that select the output format.
+        outputs (list): the outputs of the finished vector concat task.
+        vector (bytes): the content of the concatenated vector file.
+    """
+    extension, mimetype = OUTPUT_FORMATS.get(params.output_format, OUTPUT_FORMATS["csv"])
+    save_intermediate_results(
+        task_data=task_data,
+        retries=retries,
+        db_id=db_id,
+        file=vector,
+        file_name=f"final_concatenated_vector{extension}",
+        file_type="entity/vector",
+        mimetype=mimetype,
+    )
+    save_dimension_mapping(
+        task_data=task_data,
+        retries=retries,
+        db_id=db_id,
+        outputs=outputs,
+        file_name="final_concatenated_vector_dimension_mapping.json",
     )
 
 
@@ -978,23 +1007,8 @@ def finalize_pca(self, db_id: int, source_url: str):
 
     outputs = requests.get(source_url, timeout=REQUEST_TIMEOUT).json().get("outputs", [])
 
-    reduced_vector = extract_output_url(outputs, "entity/vector")
-    STORE.persist_task_result(
-        db_id,
-        open_url(reduced_vector, timeout=REQUEST_TIMEOUT).content,
-        "final_vector_pca_reduced.csv",
-        "entity/vector",
-        "text/csv",
-    )
-
-    pca_metadata = extract_output_url(outputs, "custom/pca-metadata")
-    STORE.persist_task_result(
-        db_id,
-        open_url(pca_metadata, timeout=REQUEST_TIMEOUT).content,
-        "pca_metadata.json",
-        "custom/pca-metadata",
-        "application/json",
-    )
+    # The result files are listed in the order they are stored: the plot, the
+    # reduced vector, the unreduced vector, then the metadata files.
 
     # the plot is only produced for outputs with at most three dimensions
     plot = next((o for o in outputs if o.get("dataType") == "custom/plot"), None)
@@ -1006,6 +1020,40 @@ def finalize_pca(self, db_id: int, source_url: str):
             "custom/plot",
             "text/html",
         )
+
+    reduced_vector = extract_output_url(outputs, "entity/vector")
+    STORE.persist_task_result(
+        db_id,
+        open_url(reduced_vector, timeout=REQUEST_TIMEOUT).content,
+        "final_vector_pca_reduced.csv",
+        "entity/vector",
+        "text/csv",
+    )
+
+    # The unreduced vector is part of the output as well.
+    task_data = ProcessingTask.get_by_id(db_id)
+    concat_url = task_data.data[f"{VECTOR_CONCAT_PLUGIN}_url"]
+    concat_outputs = (
+        requests.get(concat_url, timeout=REQUEST_TIMEOUT).json().get("outputs", [])
+    )
+    concatenated_vector = extract_output_url(concat_outputs, "entity/vector")
+    save_concatenated_vector(
+        task_data=task_data,
+        retries=self.request.retries,
+        db_id=db_id,
+        params=load_params(task_data),
+        outputs=concat_outputs,
+        vector=open_url(concatenated_vector, timeout=REQUEST_TIMEOUT).content,
+    )
+
+    pca_metadata = extract_output_url(outputs, "custom/pca-metadata")
+    STORE.persist_task_result(
+        db_id,
+        open_url(pca_metadata, timeout=REQUEST_TIMEOUT).content,
+        "pca_metadata.json",
+        "custom/pca-metadata",
+        "application/json",
+    )
 
     save_task_result.delay(
         "All Pipelines Completed Successfully And Dimensions Reduced With PCA!", db_id

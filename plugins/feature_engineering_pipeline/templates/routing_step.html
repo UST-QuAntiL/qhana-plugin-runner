@@ -189,8 +189,8 @@ limitations under the License.
             <dd>
                 <p>Keeps the taxonomy attribute values unchanged and calculates pairwise Wu-Palmer similarities
                 from their positions in the taxonomy hierarchy. The similarities are converted to distances,
-                aggregated to entity distances, and embedded with MDS into the configured number of
-                feature-vector dimensions.</p>
+                aggregated to entity distances, and embedded with multidimensional scaling (MDS) into the
+                configured number of feature-vector dimensions.</p>
 
                 <p><i>Recommended if the taxonomy features a deep, multi-level hierarchy.</i></p>
             </dd>
@@ -329,8 +329,8 @@ limitations under the License.
     <p>No numeric attributes were found in the provided metadata.</p>
     {% endif %}
 
-    <fieldset id="pca-settings">
-        <legend>PCA Settings</legend>
+    <details id="pca-settings" class="settings-section" open>
+        <summary>Principal Component Analysis (PCA) Settings</summary>
         {% if concat_output %}
         {{ forms.render_fields(pca_toggle_schema, values=values, errors=errors) }}
         {%- set reduce_key = pca_toggle_schema.fields["reduce_dimensions"].data_key %}
@@ -338,10 +338,10 @@ limitations under the License.
             {{ forms.render_fields(pca_schema, values=values, errors=errors) }}
         </div>
         {% else %}
-        <p>PCA reduces the dimensions of the concatenated vector. Enable "Concat output" in the
-            first step to reduce them.</p>
+        <p>Principal component analysis (PCA) reduces the dimensions of the concatenated vector.
+            Enable "Concat output" in the first step to reduce them.</p>
         {% endif %}
-    </fieldset>
+    </details>
 
     <div class="qhana-form-buttons">
         {{ forms.submit("validate", target="microfrontend")}}

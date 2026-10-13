@@ -12,6 +12,8 @@ Original template repository: <https://github.com/buehlefs/flask-template/>
 > This repository also contains a Dockerfile and has pre-built docker containers available as GitHub packages.
 > Please see the [Docker](#docker) section for more information.
 
+The developer documentation (plugin authoring guide, testing guide, data formats, architecture decisions) is available at <https://qhana-plugin-runner.readthedocs.io/en/latest/>.
+
 ## VSCode
 
 For vscode install the python extension and add the poetry venv path to the folders the python extension searches for venvs.
@@ -73,7 +75,7 @@ Plugins that are under active development should be placed in the `./plugins` fo
 Plugins that are finished should be placed in a subfolder of `./stable_plugins`.
 The subfolders of `./stable_plugins` group the plugins by theme and also by dependencies.
 Inside a subfolder all dependencies of all plugins must be compatible with each other.
-If you add a new subfolder with new plugins, and the dependencies are compatible with every plugin that is loaded by default, add this subfolder to the `PLUGIN_FOLDERS` environemnt variable in `.flaskenv`.
+If you add a new subfolder with new plugins, and the dependencies are compatible with every plugin that is loaded by default, add this subfolder to the `PLUGIN_FOLDERS` environment variable in `.flaskenv`.
 If you add a dependency or change the version of a dependency inside a specific subfolder, you need to test every plugin in this subfolder to make sure that there are no dependency conflicts and everything still works.
 
 When many plugins are in use, many different dependencies will be installed which can lead to conflicts.
@@ -137,6 +139,9 @@ poetry run flask install
 poetry run flask install --dry-run
 ```
 
+Unless `--dry-run` is set, `flask install` also downloads the MathJax frontend assets into `qhana_plugin_runner/static/mathjax` (requires network access to the npm registry).
+The MathJax version is configured with `MATHJAX_VERSION` in `qhana_plugin_runner/util/config/__init__.py`.
+
 
 ## What this Repository contains
 
@@ -169,12 +174,12 @@ This plugin runner uses the following libraries to build a rest app with a datab
  *  Sphinx ([documentation](https://www.sphinx-doc.org/en/master/index.html))\
     The documentation generator.\
     Config: `pyproject.toml` and `docs/conf.py` (toml config input is manually configured in `conf.py`)
- *  sphinxcontrib-redoc ([documantation](https://sphinxcontrib-redoc.readthedocs.io/en/stable/))\
+ *  sphinxcontrib-redoc ([documentation](https://sphinxcontrib-redoc.readthedocs.io/en/stable/))\
     Renders the OpenAPI spec with redoc in sphinx html output.\
     Config: `docs/conf.py` (API title is read from spec)
  *  Celery ([documentation](https://docs.celeryproject.org/en/stable/index.html))\
-    A task queue for handling asynchrounous background tasks and scheduled/periodic tasks.\
-    Config: `qhana_plugin_runner/config/celery_config.py` and `qhana_plugin_runner/celery.py`\
+    A task queue for handling asynchronous background tasks and scheduled/periodic tasks.\
+    Config: `qhana_plugin_runner/util/config/celery_config.py` and `qhana_plugin_runner/celery.py`\
     Module to start celery as worker: `qhana_plugin_runner/celery_worker.py` (use `invoke worker` command)
  *  redis (dependency for Celery)\
     can be started via an invoke task
@@ -198,10 +203,13 @@ Additional files and folders:
     Config for the [flake8](https://flake8.pycqa.org/en/latest/) linter
  *  `.editorconfig`
  *  `tests`\
-    Reserved for unit tests.
+    Unit tests for the plugin runner core and shared test helpers (`tests/utils.py`).
+    Plugin tests are co-located with the plugin code (see [Unit Tests](#unit-tests)).
+ *  `conftest.py`\
+    Shared pytest fixtures (`task_data`, `app`, `client`, `broker_app`, `celery_worker`) available to all tests.
  *  `instance` (in .gitignore)\
     See <https://flask.palletsprojects.com/en/2.0.x/config/#instance-folders>
- *  `qhana_plugin_runner/templates` and `qhana_plugin_runner/static` (currently empty)\
+ *  `qhana_plugin_runner/templates` and `qhana_plugin_runner/static`\
     Templates and static files of the flask app
  *  `docs`\
     Folder containing a sphinx documentation
@@ -211,7 +219,11 @@ Additional files and folders:
  *  `tasks.py`\
     Tasks that can be executed with `invoke` (see [celery background tasks](#celery-background-tasks))
  *  `plugins`\
-    A folder to place plugins in during initial development. Mature plugins should be relocated into seperate repositories eventually.
+    A folder to place plugins in during initial development. Mature plugins should be relocated into separate repositories eventually.
+ *  `stable_plugins`\
+    Finished plugins, grouped into subfolders by theme and compatible dependencies (see "Plugin folders" in [Development](#development)).
+ *  `.github/workflows`\
+    CI workflows (see [Contributing](#contributing)).
 
 
 ## Poetry Commands
@@ -278,7 +290,7 @@ poetry run flask drop-db
 ## Migrations
 
 ℹ️ Try to minimize the number of migrations and only create a new one when your changes are likely final.
-Altenatively merge all your new migration into one before submitting a pull request.
+Alternatively merge all your new migrations into one before submitting a pull request.
 
 If you have added new mapped dataclasses or modified existing ones, a migration script needs to be added.
 This script updates the tables and columns of the database to match the mapped dataclasses.
@@ -385,9 +397,18 @@ The third party licenses will be stored in the `qhana_plugin_runner/templates/li
 
 The unit tests use [pytest](https://docs.pytest.org/en/latest/contents.html) and [hypothesis](https://hypothesis.readthedocs.io/en/latest/index.html).
 
+Pytest collects tests from `tests/` (plugin runner core), `plugins/` and `stable_plugins/`.
+Plugin tests are co-located with the plugin, either in `<plugin>/tests/test_*.py` or in `<plugin>/test_*.py`.
+Celery tasks are tested with an in-memory broker, so no Redis or Docker is required.
+Plugin tests need the plugin requirements to be installed (`poetry run flask install`).
+See the [testing documentation](https://qhana-plugin-runner.readthedocs.io/en/latest/testing.html) for the shared fixtures, the Celery testing pattern and examples.
+
 ```bash
 # Run all unit tests
 poetry run pytest
+
+# Run a single test
+poetry run pytest path/to/test_x.py::test_name
 
 # Run failed tests
 poetry run pytest --last-failed  # see also --stepwise
@@ -482,6 +503,61 @@ docker-compose down
 ```
 
 To also delete the volume containing the output files add the flag `-v`.
+
+
+## Contributing
+
+Every push and pull request is checked by GitHub Actions.
+A pull request should only be merged when all checks pass.
+
+### CI Checks
+
+| Workflow | Trigger | What it checks |
+|----------|---------|----------------|
+| Lint ([`.github/workflows/black.yml`](https://github.com/UST-QuAntiL/qhana-plugin-runner/blob/main/.github/workflows/black.yml)) | every push and pull request | Code formatting with [black](https://black.readthedocs.io/) 25.1.0 (`black --check --diff`). The configuration is defined in `pyproject.toml`. |
+| Tests ([`.github/workflows/pytest.yml`](https://github.com/UST-QuAntiL/qhana-plugin-runner/blob/main/.github/workflows/pytest.yml)) | pushes to `main` and every pull request | Runs the complete pytest suite with coverage. The HTML coverage report is uploaded as the `coverage-report` build artifact. |
+
+Two further workflows do not run on pull requests:
+[`container.yml`](https://github.com/UST-QuAntiL/qhana-plugin-runner/blob/main/.github/workflows/container.yml) builds and publishes the Docker image for pushes to `main` and for tags,
+and [`integration-tests.yml`](https://github.com/UST-QuAntiL/qhana-plugin-runner/blob/main/.github/workflows/integration-tests.yml) runs the [QHAna integration tests](https://github.com/UST-QuAntiL/qhana-integration-tests) weekly and on manual dispatch.
+
+### Running the Checks Locally
+
+Lint:
+
+```bash
+# check formatting (same check as the CI)
+poetry run black --check --diff .
+
+# reformat all files
+poetry run black .
+```
+
+The repository also contains a [flake8](https://flake8.pycqa.org/) configuration (`.flake8`).
+flake8 is not part of the CI, but `poetry run flake8 <path>` can be used to check changed files.
+
+Tests (same steps as the CI):
+
+```bash
+poetry install --with dev
+poetry run flask install
+poetry run pytest --cov=qhana_plugin_runner --cov-report=html --cov-report=term
+```
+
+See [Unit Tests](#unit-tests) for more pytest commands.
+
+### Further Reading
+
+ *  [Writing plugins](https://qhana-plugin-runner.readthedocs.io/en/latest/plugins.html)\
+    Plugin source files must use relative imports (enforced by `tests/test_plugin_imports.py`).
+    Data types and content types declared in plugin metadata must be listed in `tests/allowed_types.py` and in the [allowed types documentation](https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/allowed-types.html) (enforced by `tests/test_plugin_metadata_types.py` and `tests/test_allowed_types_docs.py`).
+ *  [Writing tests](https://qhana-plugin-runner.readthedocs.io/en/latest/testing.html)\
+    Test locations, shared fixtures, Celery task tests and the CI setup.
+ *  [Architecture decision records](https://qhana-plugin-runner.readthedocs.io/en/latest/adr/index.html)\
+    Read the relevant ADR before changing the area it covers.
+    New non-obvious design decisions are recorded as a new ADR in `docs/adr/`.
+ *  [Migrations](#migrations)\
+    Changes to the mapped dataclasses in `qhana_plugin_runner/db/models` require a migration script.
 
 
 ## Acknowledgements
