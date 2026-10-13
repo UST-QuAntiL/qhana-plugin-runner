@@ -31,6 +31,7 @@ AGGREGATOR_PLUGIN = "aggregator"
 MDS_PLUGIN = "mds"
 VECTOR_CONCAT_PLUGIN = "vector_concat"
 PCA_PLUGIN = "pca"
+NORMALIZATION_PLUGIN = "normalization"
 
 FEATURE_VECTOR = "feature_vector"
 NUMERIC_MAPPING_PIPELINE = "numeric_mapping"
@@ -51,6 +52,7 @@ PIPELINE_PLUGINS = {
     MDS_PLUGIN: "attribute-distance-mds",
     VECTOR_CONCAT_PLUGIN: "vector-concat",
     PCA_PLUGIN: "pca",
+    NORMALIZATION_PLUGIN: "numeric-value-normalization",
 }
 
 # Per-attribute pipeline options shown in the routing step.
@@ -153,6 +155,13 @@ class InputParameters:
         solver: SolverEnum,
         tol: float,
         iterated_power: int,
+        # Normalization Settings
+        normalization_input_range_min: float | None,
+        normalization_input_range_max: float | None,
+        normalization_output_range_start: float,
+        normalization_output_range_end: float,
+        normalization_use_clipping: bool,
+        normalization_allow_missing_values: bool,
     ):
         self.entities_url = entities_url
         self.entities_metadata_url = entities_metadata_url
@@ -176,6 +185,21 @@ class InputParameters:
         self.solver = solver
         self.tol = tol
         self.iterated_power = iterated_power
+        self.normalization_input_range_min = normalization_input_range_min
+        self.normalization_input_range_max = normalization_input_range_max
+        self.normalization_output_range_start = normalization_output_range_start
+        self.normalization_output_range_end = normalization_output_range_end
+        self.normalization_use_clipping = normalization_use_clipping
+        self.normalization_allow_missing_values = normalization_allow_missing_values
+
+
+class OptionalFloat(ma.fields.Float):
+    """Float field that reads the empty string of a cleared number input as ``None``."""
+
+    def deserialize(self, value, attr=None, data=None, **kwargs):
+        if value == "":
+            value = None
+        return super().deserialize(value, attr, data, **kwargs)
 
 
 class PCAParametersSchema(FrontendFormBaseSchema):
@@ -366,6 +390,115 @@ class PipelineSettingsSchema(FrontendFormBaseSchema):
         },
     )
 
+    # These settings mirror the inputs of the numeric value normalization plugin.
+    normalization_input_range_min = OptionalFloat(
+        required=False,
+        allow_none=True,
+        load_default=None,
+        metadata={
+            "label": "Input range minimum",
+            "description": "Manual minimum applied to every normalized value. If empty, the minimum of each value column is used.",
+            "input_type": "number",
+        },
+    )
+
+    normalization_input_range_max = OptionalFloat(
+        required=False,
+        allow_none=True,
+        load_default=None,
+        metadata={
+            "label": "Input range maximum",
+            "description": "Manual maximum applied to every normalized value. If empty, the maximum of each value column is used.",
+            "input_type": "number",
+        },
+    )
+
+    normalization_output_range_start = ma.fields.Float(
+        required=False,
+        allow_none=False,
+        load_default=0.0,
+        metadata={
+            "label": "Output range start",
+            "description": "Value the input range minimum is mapped to. Use a start greater than the end to invert the values.",
+            "input_type": "number",
+        },
+    )
+
+    normalization_output_range_end = ma.fields.Float(
+        required=False,
+        allow_none=False,
+        load_default=1.0,
+        metadata={
+            "label": "Output range end",
+            "description": "Value the input range maximum is mapped to. Use an end smaller than the start to invert the values.",
+            "input_type": "number",
+        },
+    )
+
+    normalization_use_clipping = ma.fields.Boolean(
+        required=False,
+        load_default=False,
+        metadata={
+            "label": "Use Clipping",
+            "description": "Only matters with a manual input range, because a range taken from the data contains every value. "
+            "If checked, a value outside the input range is set to the nearest output range bound "
+            "(e.g. with the output range [0..1], a value below the input minimum becomes 0). "
+            "If unchecked, such a value makes the normalization step fail with an error that names the entity, and the pipeline stops.",
+            "input_type": "checkbox",
+        },
+    )
+
+    normalization_allow_missing_values = ma.fields.Boolean(
+        required=False,
+        load_default=False,
+        metadata={
+            "label": "Allow missing values",
+            "description": "Controls `null` values in the vectors. "
+            "If checked, a `null` value stays `null` in the normalized vectors and is ignored when the input range is taken from the data. "
+            "If unchecked, a `null` value makes the normalization step fail with an error that names the entity, and the pipeline stops.",
+            "input_type": "checkbox",
+        },
+    )
+
+    @ma.validates_schema
+    def validate_normalization_ranges(self, data, **kwargs):
+        errors = {}
+        start = data.get("normalization_output_range_start")
+        end = data.get("normalization_output_range_end")
+        if start is not None and start == end:
+            errors[self.fields["normalization_output_range_end"].data_key] = [
+                f"The output range start and end must not be equal (both are {start})."
+            ]
+        minimum = data.get("normalization_input_range_min")
+        maximum = data.get("normalization_input_range_max")
+        if minimum is not None and maximum is not None and minimum >= maximum:
+            errors[self.fields["normalization_input_range_max"].data_key] = [
+                f"The input range maximum ({maximum}) must be greater than the "
+                f"input range minimum ({minimum})."
+            ]
+        if errors:
+            raise ma.ValidationError(errors)
+
+
+class AttributeSettingsSchema(PipelineSettingsSchema):
+    """Settings of one attribute in the routing step.
+
+    Normalization is enabled per attribute, so the toggle is not part of the first step.
+    """
+
+    normalize = ma.fields.Boolean(
+        required=False,
+        load_default=False,
+        metadata={
+            "label": "Normalize",
+            "description": "Unchecked by default, so the feature-vector dimensions of this attribute keep "
+            "their original scale. If checked, they are normalized to the configured output range "
+            "before they are concatenated. For a single-valued numeric attribute, this normalizes "
+            "the attribute value itself.",
+            "input_type": "checkbox",
+        },
+    )
+
 
 class InputParametersSchema(PipelineSettingsSchema, PCAParametersSchema):
     # Base Inputs
@@ -468,15 +601,49 @@ PIPELINE_SETTINGS_GROUPS = (
         "MDS Settings",
         ("mds_dimensions", "metric", "n_init", "max_iter", "missing_data_handling"),
     ),
+    (
+        NORMALIZATION_PLUGIN,
+        "Normalization Settings",
+        (
+            "normalization_input_range_min",
+            "normalization_input_range_max",
+            "normalization_output_range_start",
+            "normalization_output_range_end",
+            "normalization_use_clipping",
+            "normalization_allow_missing_values",
+        ),
+    ),
 )
 
 _SETTINGS_GROUP_FIELDS = {key: fields for key, _, fields in PIPELINE_SETTINGS_GROUPS}
 
-NUMERIC_SETTINGS_GROUPS = tuple(
-    group
-    for group in PIPELINE_SETTINGS_GROUPS
-    if group[0] in (MAPPING_PLUGIN, MDS_PLUGIN)
+NORMALIZE_FIELD = "normalize"
+NORMALIZE_KEY = AttributeSettingsSchema().fields[NORMALIZE_FIELD].data_key
+
+
+def _attribute_settings_groups(*group_keys: str) -> tuple:
+    """Return the routing step sections of an attribute.
+
+    The normalization section starts with the per-attribute toggle.
+    """
+    return tuple(
+        (
+            key,
+            title,
+            (NORMALIZE_FIELD, *fields) if key == NORMALIZATION_PLUGIN else fields,
+        )
+        for key, title, fields in PIPELINE_SETTINGS_GROUPS
+        if key in group_keys
+    )
+
+
+TAXONOMY_SETTINGS_GROUPS = _attribute_settings_groups(*_SETTINGS_GROUP_FIELDS)
+
+NUMERIC_SETTINGS_GROUPS = _attribute_settings_groups(
+    MAPPING_PLUGIN, MDS_PLUGIN, NORMALIZATION_PLUGIN
 )
+
+SINGLE_VALUED_NUMERIC_SETTINGS_GROUPS = _attribute_settings_groups(NORMALIZATION_PLUGIN)
 
 _RECOMMENDED_SETTINGS_GROUPS = {
     WU_PALMER_PLUGIN: (TRANSFORMERS_PLUGIN, WU_PALMER_PLUGIN),
@@ -487,6 +654,16 @@ _RECOMMENDED_SETTINGS_GROUPS = {
 def expanded_settings_groups(recommended: str | None) -> frozenset[str]:
     """Return the section keys that open by default for a recommendation."""
     return frozenset((MDS_PLUGIN, *_RECOMMENDED_SETTINGS_GROUPS.get(recommended, ())))
+
+
+def expanded_numeric_settings_groups() -> frozenset[str]:
+    """Return the section keys that open by default for a numeric attribute.
+
+    The pipeline of a numeric attribute is fixed, so its sections open like a
+    recommendation. Normalization is the main setting of a numeric attribute, so its
+    section opens as well.
+    """
+    return expanded_settings_groups(MAPPING_PLUGIN) | {NORMALIZATION_PLUGIN}
 
 
 _SETTINGS_FIELDS = PipelineSettingsSchema().fields
@@ -506,11 +683,16 @@ PIPELINE_SETTINGS_KEYS = {
     NUMERIC_MAPPING_PIPELINE: _form_keys(MAPPING_PLUGIN, MDS_PLUGIN),
 }
 
-SETTINGS_KEYS = frozenset(field.data_key for field in _SETTINGS_FIELDS.values())
+# Settings that only separate the pipeline groups of attributes that are normalized.
+NORMALIZATION_SETTINGS_KEYS = _form_keys(NORMALIZATION_PLUGIN)
+
+_ATTRIBUTE_SETTINGS_FIELDS = AttributeSettingsSchema().fields
+
+SETTINGS_KEYS = frozenset(field.data_key for field in _ATTRIBUTE_SETTINGS_FIELDS.values())
 
 BOOLEAN_SETTINGS_KEYS = tuple(
     field.data_key
-    for field in _SETTINGS_FIELDS.values()
+    for field in _ATTRIBUTE_SETTINGS_FIELDS.values()
     if isinstance(field, ma.fields.Boolean)
 )
 
@@ -555,7 +737,7 @@ def load_settings(raw: Mapping) -> dict:
     Raises:
         ma.ValidationError: If a submitted setting is unknown or invalid.
     """
-    schema = PipelineSettingsSchema(partial=True)
+    schema = AttributeSettingsSchema(partial=True)
     return dict(schema.dump(schema.load(_with_unchecked_boxes(raw))))
 
 
@@ -603,7 +785,7 @@ class RoutingStepParametersSchema(PCAParametersSchema):
         for attribute, raw in settings.items():
             prefix = f"{PIPELINE_FIELD_PREFIX}{attribute}{SETTINGS_FIELD_SEPARATOR}"
             for key, messages in (
-                PipelineSettingsSchema(partial=True).validate(raw).items()
+                AttributeSettingsSchema(partial=True).validate(raw).items()
             ):
                 errors[prefix + key] = messages
 

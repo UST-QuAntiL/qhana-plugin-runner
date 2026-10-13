@@ -223,7 +223,37 @@ def test_pca_fields_default_without_the_routing_step():
     assert result.iterated_power == 0
 
 
+# --- NORMALIZATION SETTINGS ---
+
+
+def test_equal_normalization_output_bounds_rejected():
+    with pytest.raises(ValidationError) as exc:
+        InputParametersSchema().load(
+            router_payload(normalizationOutputRangeStart=1, normalizationOutputRangeEnd=1)
+        )
+    assert "normalizationOutputRangeEnd" in exc.value.messages
+
+
+def test_normalization_input_maximum_must_exceed_the_minimum():
+    with pytest.raises(ValidationError) as exc:
+        InputParametersSchema().load(
+            router_payload(normalizationInputRangeMin=0, normalizationInputRangeMax=0)
+        )
+    assert "normalizationInputRangeMax" in exc.value.messages
+
+
 # --- ROUTING STEP ---
+
+
+def test_routing_step_reports_invalid_normalization_settings_per_attribute():
+    errors = _frontend_schema(RoutingStepParametersSchema).load(
+        {
+            "pipeline_year": INCLUDE_NUMERIC,
+            "pipeline_year__normalizationOutputRangeStart": "2",
+            "pipeline_year__normalizationOutputRangeEnd": "2",
+        }
+    )
+    assert "pipeline_year__normalizationOutputRangeEnd" in errors
 
 
 def test_routing_step_accepts_pipeline_fields():

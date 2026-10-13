@@ -13,8 +13,12 @@
 # limitations under the License.
 
 import concurrent.futures
+import json
 import threading
+from io import BytesIO
+from pathlib import PurePath
 from types import SimpleNamespace
+from zipfile import ZipFile
 
 import pytest
 from feature_engineering_pipeline import tasks as router_tasks
@@ -27,6 +31,7 @@ from feature_engineering_pipeline.schemas import (
     MAPPING_PLUGIN,
     MDS_PLUGIN,
     NONE_PLUGIN,
+    NORMALIZATION_PLUGIN,
     NUMERIC_MAPPING_PIPELINE,
     ONE_HOT_PLUGIN,
     PCA_PLUGIN,
@@ -48,13 +53,14 @@ from feature_engineering_pipeline.tests.data import (
     make_router_task,
     mock_open_url,
     pipeline_group,
+    stored_file_response,
 )
 from flask import current_app
 from requests.exceptions import Timeout
 
 from qhana_plugin_runner.db import DB
 from qhana_plugin_runner.db.models.tasks import ProcessingTask, TaskFile
-from tests.utils import run_task
+from tests.utils import MockResponse, run_task
 
 pytestmark = pytest.mark.usefixtures("celery_worker")
 
@@ -80,6 +86,7 @@ DISPATCHED_TASKS = (
             "start_aggregator",
             "start_mds",
             "finalize_one_hot",
+            "finalize_normalization",
             "finalize_pipeline",
             "finalize_vector_concat",
             "finalize_pca",
@@ -323,6 +330,7 @@ def test_routing_task_splits_a_pipeline_by_the_attribute_settings(monkeypatch):
             "pipeline": WU_PALMER_PLUGIN,
             "attributes": ["g2"],
             "settings": {"transformer": "square_inverse"},
+            "normalize": False,
             "label": f"{WU_PALMER_PLUGIN}_2",
         }
     ]
@@ -414,7 +422,7 @@ def test_routing_task_splits_the_numeric_mapping_by_the_attribute_settings(monke
 
 
 def test_routing_task_ignores_settings_of_a_single_valued_attribute(monkeypatch):
-    """Nothing is configurable yet for an attribute that skips the plugins."""
+    """Only the normalization is configurable for an attribute that skips the plugins."""
     monkeypatch.setattr(
         "feature_engineering_pipeline.tasks_pipeline_steps.build_numeric_feature_vector.apply_async",
         lambda *args, **kwargs: None,
@@ -429,6 +437,49 @@ def test_routing_task_ignores_settings_of_a_single_valued_attribute(monkeypatch)
     db_task = reload(db_task)
     assert db_task.data["pipeline_queue"] == []
     assert db_task.data["current_settings"] == {}
+
+
+def test_routing_task_splits_a_pipeline_by_the_normalization(monkeypatch):
+    """The normalization step normalizes the result of a whole plugin run."""
+    monkeypatch.setattr(
+        "feature_engineering_pipeline.tasks_pipeline_steps.start_wu_palmer.apply_async",
+        lambda *args, **kwargs: None,
+    )
+    db_task = make_router_task(
+        selections={
+            "g1": WU_PALMER_PLUGIN,
+            "g2": WU_PALMER_PLUGIN,
+            "g3": WU_PALMER_PLUGIN,
+            "g4": WU_PALMER_PLUGIN,
+        },
+        data={
+            "attribute_settings": {
+                "g1": {"normalize": True},
+                # normalization settings only matter for a normalized attribute
+                "g2": {"normalize": False, "normalizationOutputRangeEnd": 5.0},
+                "g3": {"normalize": True, "normalizationOutputRangeEnd": 5.0},
+                "g4": {"normalize": True},
+            }
+        },
+    )
+
+    run_task(start_routing_task, db_id=db_task.id)
+
+    db_task = reload(db_task)
+    assert db_task.data[f"{WU_PALMER_PLUGIN}_attributes"] == "g1\ng4"
+    assert db_task.data["current_normalize"] is True
+    assert db_task.data["pipeline_queue"] == [
+        pipeline_group(WU_PALMER_PLUGIN, ["g2"], label=f"{WU_PALMER_PLUGIN}_2"),
+        pipeline_group(
+            WU_PALMER_PLUGIN,
+            ["g3"],
+            {"normalizationOutputRangeEnd": 5.0},
+            f"{WU_PALMER_PLUGIN}_3",
+            normalize=True,
+        ),
+    ]
+    # every group runs four plugins, the two normalized groups also the normalization
+    assert db_task.progress_target == 1 + 3 * 4 + 2
 
 
 @pytest.mark.parametrize(
@@ -765,6 +816,81 @@ def test_full_run_with_numeric_attributes_and_concatenation(server, inline):
     )
     assert db_task.progress_value == db_task.progress_target == 10
     assert db_task.data["pipeline_queue"] == []
+
+
+MDS_VECTORS = [
+    {"ID": "e1", "href": "", "dim0": 1.0, "dim1": 5.0},
+    {"ID": "e2", "href": "", "dim0": 3.0, "dim1": 7.0},
+]
+
+
+def serve_normalized_zip(server: PluginServer, members: dict[str, list]):
+    """Serve the vector zip the normalization plugin returns for a vector zip."""
+    href = server.replace_outputs(NORMALIZATION_PLUGIN, "entity/vector")
+    server.files[href] = MockResponse.from_zip(
+        href, {name: json.dumps(entities) for name, entities in members.items()}
+    )
+
+
+def read_generated_zip(db_task: ProcessingTask, file_name: str) -> dict:
+    """Return the entities of a stored vector zip as ``{attribute: entities}``."""
+    url = reload(db_task).data["generated_files"][file_name]
+    with ZipFile(BytesIO(stored_file_response(url).content)) as zip_file:
+        return {
+            PurePath(name).stem: json.loads(zip_file.read(name))
+            for name in zip_file.namelist()
+        }
+
+
+def test_full_run_normalizes_the_mds_vectors(server, inline):
+    """The normalized vectors replace the MDS vectors as the pipeline result."""
+    mds_vectors = server.output_url(MDS_PLUGIN, "entity/vector")
+    server.files[mds_vectors] = MockResponse.from_zip(
+        mds_vectors, {"attr1.json": json.dumps(MDS_VECTORS)}
+    )
+    serve_normalized_zip(
+        server,
+        {
+            "attr1.json": [
+                {"ID": "e1", "href": "", "dim0": 0.0, "dim1": 1.0},
+                {"ID": "e2", "href": "", "dim0": 1.0, "dim1": 0.0},
+            ]
+        },
+    )
+    db_task = make_router_task(
+        selections={"attr1": WU_PALMER_PLUGIN},
+        data={
+            "attribute_settings": {
+                "attr1": {"normalize": True, "normalizationOutputRangeEnd": -1.0}
+            }
+        },
+    )
+
+    run_inline(start_routing_task, db_task.id)
+    for plugin in (WU_PALMER_PLUGIN, TRANSFORMERS_PLUGIN, AGGREGATOR_PLUGIN, MDS_PLUGIN):
+        complete_sub_task(db_task, plugin)
+
+    payload = server.payload(NORMALIZATION_PLUGIN)
+    # the plugin normalizes the MDS vector zip directly
+    assert payload["entitiesUrl"] == mds_vectors
+    assert payload["attributes"] == ""
+    assert payload["outputRangeStart"] == 0.0
+    assert payload["outputRangeEnd"] == -1.0
+
+    complete_sub_task(db_task, NORMALIZATION_PLUGIN)
+
+    assert inline.errors == []
+    assert inline.results == ["All Pipelines Completed Successfully!"]
+    file_name = f"{WU_PALMER_PLUGIN}_normalized_mds_vectors.zip"
+    assert stored_file_names(db_task) == {file_name}
+    assert read_generated_zip(db_task, file_name) == {
+        "attr1": [
+            {"ID": "e1", "href": "", "dim0": 0.0, "dim1": 1.0},
+            {"ID": "e2", "href": "", "dim0": 1.0, "dim1": 0.0},
+        ]
+    }
+    db_task = reload(db_task)
+    assert db_task.progress_value == db_task.progress_target == 6
 
 
 def test_full_run_stops_after_the_concatenation_without_pca(server, inline):

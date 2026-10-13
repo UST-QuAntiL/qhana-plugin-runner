@@ -16,6 +16,9 @@
 
 import csv
 import json
+from importlib import import_module
+from io import BytesIO, TextIOWrapper
+from zipfile import ZipFile
 
 import pytest
 
@@ -24,13 +27,15 @@ from tests.utils import MockResponse, run_plugin_task
 
 from .. import (
     InputParameters,
-    _load_entities,
     _parse_numeric_value,
+    _read_entities,
     calculation_task,
     normalize_entities,
+    normalize_zip,
 )
 
 ENTITIES_URL = "http://example.com/entities.json"
+ZIP_URL = "http://example.com/vectors.zip"
 LINES_URL = "http://example.com/entities_lines.json"
 CSV_URL = "http://example.com/entities.csv"
 METADATA_URL = "http://example.com/attribute_metadata.json"
@@ -118,6 +123,11 @@ def _patch_open_url(monkeypatch, responses: dict):
     monkeypatch.setattr(
         "normalization.open_url", lambda url, *args, **kwargs: responses[url]
     )
+
+
+def _open(url: str) -> MockResponse:
+    """Open ``url`` with the ``open_url`` that ``_patch_open_url`` replaced."""
+    return import_module("normalization").open_url(url)
 
 
 # ---------------------------------------------------------------------------
@@ -343,10 +353,12 @@ def test_non_numeric_values_are_rejected():
         normalize_entities(entities, _params())
 
 
-def test_no_attributes_selected_leaves_entities_unchanged():
+def test_no_attributes_selected_normalizes_all_but_id_and_href():
     result = normalize_entities(ENTITIES, _params(attributes=""))
 
-    assert result == ENTITIES
+    assert [entity["href"] for entity in result] == ["", "", ""]
+    assert [entity["x"] for entity in result] == [0.0, 0.5, 1.0]
+    assert [entity["y"] for entity in result] == [0.0, 0.5, 1.0]
 
 
 def test_numeric_attribute_metadata_is_accepted():
@@ -382,7 +394,7 @@ def test_multi_valued_attribute_metadata_is_rejected():
 
 
 # ---------------------------------------------------------------------------
-# _load_entities
+# _read_entities
 # ---------------------------------------------------------------------------
 
 
@@ -396,7 +408,7 @@ def test_load_entities_without_attribute_metadata(monkeypatch):
         },
     )
 
-    entities, metadata, mimetype = _load_entities(ENTITIES_URL)
+    entities, metadata, mimetype = _read_entities(_open(ENTITIES_URL))
 
     assert entities == ENTITIES
     assert metadata == None
@@ -416,7 +428,7 @@ def test_load_entities_with_explicit_metadata_url(monkeypatch):
         },
     )
 
-    entities, metadata, mimetype = _load_entities(ENTITIES_URL, METADATA_URL)
+    entities, metadata, mimetype = _read_entities(_open(ENTITIES_URL), METADATA_URL)
 
     assert entities == ENTITIES
     assert set(metadata) == {"x", "y"}
@@ -440,7 +452,7 @@ def test_load_entities_uses_attribute_metadata_header(monkeypatch):
         },
     )
 
-    _, metadata, _ = _load_entities(ENTITIES_URL)
+    _, metadata, _ = _read_entities(_open(ENTITIES_URL))
 
     assert set(metadata) == {"x", "y"}
 
@@ -462,7 +474,7 @@ def test_explicit_metadata_url_takes_precedence_over_header(monkeypatch):
         },
     )
 
-    _, metadata, _ = _load_entities(ENTITIES_URL, METADATA_URL)
+    _, metadata, _ = _read_entities(_open(ENTITIES_URL), METADATA_URL)
 
     assert set(metadata) == {"x", "y"}
 
@@ -478,7 +490,7 @@ def test_load_entities_deserializes_csv_values_with_metadata(monkeypatch):
         },
     )
 
-    entities, _, mimetype = _load_entities(CSV_URL, METADATA_URL)
+    entities, _, mimetype = _read_entities(_open(CSV_URL), METADATA_URL)
 
     assert mimetype == "text/csv"
     assert [entity["x"] for entity in entities] == [0.0, 5.0, 10.0]
@@ -491,7 +503,7 @@ def test_load_entities_rejects_an_empty_entity_file(monkeypatch):
     )
 
     with pytest.raises(ValueError, match="must not be empty"):
-        _load_entities(ENTITIES_URL)
+        _read_entities(_open(ENTITIES_URL))
 
 
 # ---------------------------------------------------------------------------
@@ -656,3 +668,72 @@ def test_task_fails_for_an_empty_entity_file(monkeypatch):
 
     with pytest.raises(ValueError, match="must not be empty"):
         _run_task(monkeypatch, responses, _task_params())
+
+
+# ---------------------------------------------------------------------------
+# zip input
+# ---------------------------------------------------------------------------
+
+VECTORS_A = [
+    {"ID": "e1", "href": "", "dim0": 0.0, "dim1": 4.0},
+    {"ID": "e2", "href": "", "dim0": 10.0, "dim1": 2.0},
+]
+VECTORS_B_CSV = '"ID","href","dim0"\n"e1","",-1\n"e2","",1'
+
+
+def _vector_zip(**members: str) -> MockResponse:
+    return MockResponse.from_zip(ZIP_URL, members)
+
+
+def _read_zip(content: bytes) -> dict:
+    with ZipFile(BytesIO(content)) as zip_file:
+        return {
+            name: TextIOWrapper(zip_file.open(name), encoding="utf-8").read()
+            for name in zip_file.namelist()
+        }
+
+
+def test_normalize_zip_normalizes_each_file_and_column_independently():
+    response = _vector_zip(**{"a.json": json.dumps(VECTORS_A), "b.csv": VECTORS_B_CSV})
+
+    with normalize_zip(response.content, _params(attributes="")) as output:
+        members = _read_zip(output.read())
+
+    assert set(members) == {"a.json", "b.csv"}
+    assert json.loads(members["a.json"]) == [
+        {"ID": "e1", "href": "", "dim0": 0.0, "dim1": 1.0},
+        {"ID": "e2", "href": "", "dim0": 1.0, "dim1": 0.0},
+    ]
+    rows = list(csv.DictReader(members["b.csv"].splitlines()))
+    assert [row["ID"] for row in rows] == ["e1", "e2"]
+    assert [float(row["dim0"]) for row in rows] == [0.0, 1.0]
+
+
+def test_normalize_zip_names_the_failing_file():
+    vectors = [dict(entity) for entity in VECTORS_A]
+    vectors[0]["dim0"] = "abc"
+    response = _vector_zip(**{"bad.json": json.dumps(vectors)})
+
+    with pytest.raises(ValueError, match="File 'bad.json': .*non-numeric value"):
+        normalize_zip(response.content, _params(attributes=""))
+
+
+def test_normalize_zip_rejects_an_empty_zip():
+    with pytest.raises(ValueError, match="at least one entity file"):
+        normalize_zip(_vector_zip().content, _params(attributes=""))
+
+
+@pytest.mark.usefixtures("celery_worker")
+def test_task_normalizes_a_vector_zip(monkeypatch):
+    responses = {ZIP_URL: _vector_zip(**{"a.json": json.dumps(VECTORS_A)})}
+
+    output = _run_task(
+        monkeypatch, responses, _task_params(entitiesUrl=ZIP_URL, attributes="")
+    )
+
+    assert output.file_name == "normalized_entities.zip"
+    assert output.file_type == "entity/vector"
+    assert output.mimetype == "application/zip"
+    with open(output.file_storage_data, "rb") as file_:
+        members = _read_zip(file_.read())
+    assert [entity["dim1"] for entity in json.loads(members["a.json"])] == [1.0, 0.0]

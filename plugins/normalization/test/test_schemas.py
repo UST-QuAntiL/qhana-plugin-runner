@@ -85,7 +85,7 @@ def test_flag_defaults_are_applied_when_flags_are_omitted():
 
     params = InputParametersSchema().load(payload)
 
-    assert params.use_clipping is True
+    assert params.use_clipping is False
     assert params.allow_missing_values is False
 
 
@@ -150,14 +150,27 @@ def test_invalid_attribute_metadata_url_is_rejected():
     assert exc.value.messages == {"attributeMetadataUrl": ["Not a valid URL."]}
 
 
-def test_attributes_are_required():
+def test_optional_fields_may_be_omitted():
+    """API clients such as the feature engineering pipeline send only some fields."""
+    params = InputParametersSchema().load(
+        {"entitiesUrl": ENTITIES_URL, "outputRangeStart": 0.0, "outputRangeEnd": 1.0}
+    )
+
+    assert params.attribute_metadata_url is None
+    assert params.attributes == ""
+    assert params.input_range_min is None
+    assert params.input_range_max is None
+    assert params.use_clipping is False
+    assert params.allow_missing_values is False
+
+
+def test_attributes_default_to_empty():
     payload = _payload()
     del payload["attributes"]
 
-    with pytest.raises(ValidationError) as exc:
-        InputParametersSchema().load(payload)
+    params = InputParametersSchema().load(payload)
 
-    assert exc.value.messages == {"attributes": ["Missing data for required field."]}
+    assert params.attributes == ""
 
 
 def test_attributes_must_not_be_null():

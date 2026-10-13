@@ -15,17 +15,20 @@
 """Shared test data and stubs for the feature engineering pipeline plugin tests."""
 
 import json
+import re
 from itertools import count
 from types import SimpleNamespace
 from typing import Dict, List, Optional
 
-from qhana_plugin_runner.db.models.tasks import ProcessingTask
+from qhana_plugin_runner.db.models.tasks import ProcessingTask, TaskFile
+from qhana_plugin_runner.storage import STORE
 from feature_engineering_pipeline.schemas import (
     AGGREGATOR_PLUGIN,
     FEATURE_VECTOR,
     INCLUDE_NUMERIC,
     MAPPING_PLUGIN,
     MDS_PLUGIN,
+    NORMALIZATION_PLUGIN,
     NUMERIC_MAPPING_PIPELINE,
     ONE_HOT_PLUGIN,
     PCA_PLUGIN,
@@ -102,12 +105,14 @@ def pipeline_group(
     attributes: List[str],
     settings: Optional[dict] = None,
     label: Optional[str] = None,
+    normalize: bool = False,
 ) -> dict:
     """One entry of the pipeline queue, as ``start_routing_task`` writes it."""
     return {
         "pipeline": pipeline,
         "attributes": list(attributes),
         "settings": dict(settings or {}),
+        "normalize": normalize,
         "label": label or pipeline,
     }
 
@@ -281,10 +286,23 @@ def input_file_responses() -> Dict[str, MockResponse]:
     }
 
 
+def stored_file_response(url: str) -> Optional[MockResponse]:
+    """Serve a file the router stored itself, as the files API of the runner does."""
+    match = re.search(r"/files/(\d+)/\?file-id=", url)
+    file_info = TaskFile.get_by_id(int(match[1])) if match else None
+    if file_info is None:
+        return None
+    with STORE.open(file_info) as file:
+        return MockResponse(url, file_info.mimetype, content=file.read())
+
+
 def mock_open_url(monkeypatch, responses: Dict[str, MockResponse]):
     """Serve ``open_url`` from an in-memory url mapping in every router module."""
 
     def _open_url(url, *args, **kwargs):
+        stored = None if url in responses else stored_file_response(url)
+        if stored is not None:
+            return stored
         assert url in responses, f"Unexpected open_url for {url}"
         return responses[url]
 
@@ -311,6 +329,7 @@ PLUGIN_OUTPUT_TYPES = {
     MDS_PLUGIN: ("entity/vector",),
     VECTOR_CONCAT_PLUGIN: ("entity/vector", "entity/dimension-mapping"),
     PCA_PLUGIN: ("entity/vector", "custom/pca-metadata", "custom/plot"),
+    NORMALIZATION_PLUGIN: ("entity/list",),
 }
 
 DIMENSION_MAPPING_JSON = (
@@ -384,6 +403,8 @@ class PluginServer:
             PCA_PLUGIN,
         ):
             return MockResponse(href, "text/csv", text=VECTOR_CSV)
+        if data_type == "entity/list":
+            return MockResponse(href, "application/json", json_data=[])
         return MockResponse.from_zip(href, {"attr1.json": "{}"})
 
     # -- accessors -------------------------------------------------------
@@ -399,6 +420,14 @@ class PluginServer:
             if output["dataType"] == data_type:
                 return output["href"]
         raise KeyError(f"{plugin} publishes no {data_type}")
+
+    def replace_outputs(self, plugin: str, data_type: str) -> str:
+        """Publish a single output of ``data_type`` for ``plugin`` and return its url."""
+        slug = data_type.replace("/", "_")
+        task_files = self._outputs[plugin][0]["href"].rsplit("files/", 1)[0]
+        href = f"{task_files}files/{slug}/download/"
+        self._outputs[plugin] = [{"dataType": data_type, "href": href, "name": slug}]
+        return href
 
     def payload(self, plugin: str) -> dict:
         """The payload of the first POST made to ``plugin``."""
