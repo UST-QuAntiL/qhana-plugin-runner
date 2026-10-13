@@ -62,7 +62,7 @@ class ZXCalculusVisualization(QHAnaPluginBase):
         return VIS_BLP
 
     def get_requirements(self) -> str:
-        return "pylatexenc~=2.10\npyzx~=0.8.0\nmpld3~=0.5.10"
+        return "pylatexenc~=2.10\npyzx~=0.9.0\nmpld3~=0.5.10"
 
 
 try:

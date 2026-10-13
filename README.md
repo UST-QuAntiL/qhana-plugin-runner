@@ -2,7 +2,7 @@
 
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![GitHub license](https://img.shields.io/github/license/UST-QuAntiL/qhana-plugin-runner)](https://github.com/UST-QuAntiL/qhana-plugin-runner/blob/main/LICENSE)
-![Python: >= 3.8](https://img.shields.io/badge/python-^3.10-blue)
+![Python: 3.14](https://img.shields.io/badge/python-3.14-blue)
 [![Documentation Status](https://readthedocs.org/projects/qhana-plugin-runner/badge/?version=latest)](https://qhana-plugin-runner.readthedocs.io/en/latest/?badge=latest)
 
 This package uses Poetry ([documentation](https://python-poetry.org/docs/)).
@@ -28,14 +28,20 @@ On linux:
 
 ## Development
 
-Run `poetry install` to install dependencies.
+Use Python 3.14 for local development and plugin installation.
+
+Run `poetry env use python3.14` once, then `poetry install` to install dependencies.
 
 If an environment variable specified in `.flaskenv` should be changed locally add a `.env` file with the corresponding variables set.
+Plugins that are not compatible with the current environment can be skipped via the `DISABLED_PLUGINS` environment variable (newline-, comma-, or colon-separated list of plugin names).
 
 ````{note}
 First start only:
 
 ```bash
+poetry env use python3.14
+poetry install
+
 # create development database
 poetry run flask create-db
 
@@ -72,6 +78,8 @@ If you add a dependency or change the version of a dependency inside a specific 
 
 When many plugins are in use, many different dependencies will be installed which can lead to conflicts.
 Then it is necessary to only load a subset of the plugins via the `PLUGIN_FOLDERS` environment variable.
+Single plugins that are found in a `PLUGIN_FOLDERS` folder can be excluded via the `DISABLED_PLUGINS` environment variable.
+Disabled plugins are removed before their API is registered, so they are neither reachable nor listed, and `flask install` does not install their dependencies.
 
 ### Debugging with VSCode
 
@@ -123,7 +131,7 @@ Configured in `qhana_plugin_runner/util/config/smorest_config.py`.
 Plugin requirements can be installed with the following command:
 
 ```bash
-poetry run flask install # --skip-runner-requirements
+poetry run flask install
 
 # only check generated requirements file:
 poetry run flask install --dry-run
