@@ -651,6 +651,19 @@
     qasm-3
 
     qc-simulator
+* - [pytket_qulacsBackend-simulator (@v1.0.0)](#pytket_qulacsBackend-simulator)
+
+    pytket_qulacsBackend-simulator@v1-0-0
+  - processing
+  - circuit-executor
+
+    pytket_qulacsBackend
+
+    qasm
+
+    qasm-2
+
+    qc-simulator
 
     qiskit
 * - [ridge-loss (@v1.0.0)](#ridge-loss@v1-0-0)
@@ -665,7 +678,7 @@
 
 ## Overview
 
-**Used tags:** `ML`, `MUSE`, `MUSE4Music`, `QML`, `bpmn`, `braket_local`, `camunda`, `camunda-engine`, `circuit`, `circuit-demo`, `circuit-executor`, `cirq`, `classical`, `classification`, `cluster`, `clustering`, `confusion-matrix`, `conversion`, `csv`, `data-annotation`, `data-cleaning`, `data-loading`, `data-preparation`, `data-synthesizing`, `demo`, `distance-calculation`, `duckdb`, `embedding`, `encoding`, `feature-engineering`, `feature-extraction`, `filter`, `gradient`, `hello-world`, `histogram`, `join`, `json`, `kernel`, `low-code-modeler`, `manual`, `mapping`, `mariadb`, `minimizer`, `mqt`, `multistep`, `music`, `mysql`, `neural-network`, `nisq-analyzer`, `non-default`, `objective-function`, `one-hot-encoding`, `optimization`, `pennylane`, `postgresql`, `preprocessing`, `qasm`, `qasm-2`, `qasm-3`, `qc-executor`, `qc-simulator`, `qiskit`, `quantme`, `quantum`, `rest`, `routing`, `sample`, `scatter`, `similarity-calculation`, `sql`, `supervised-learning`, `utility`, `vector`, `visualization`, `workflow`, `zxcalculus`
+**Used tags:** `ML`, `MUSE`, `MUSE4Music`, `QML`, `bpmn`, `braket_local`, `camunda`, `camunda-engine`, `circuit`, `circuit-demo`, `circuit-executor`, `cirq`, `classical`, `classification`, `cluster`, `clustering`, `confusion-matrix`, `conversion`, `csv`, `data-annotation`, `data-cleaning`, `data-loading`, `data-preparation`, `data-synthesizing`, `demo`, `distance-calculation`, `duckdb`, `embedding`, `encoding`, `feature-engineering`, `feature-extraction`, `filter`, `gradient`, `hello-world`, `histogram`, `join`, `json`, `kernel`, `low-code-modeler`, `manual`, `mapping`, `mariadb`, `minimizer`, `mqt`, `multistep`, `music`, `mysql`, `neural-network`, `nisq-analyzer`, `non-default`, `objective-function`, `one-hot-encoding`, `optimization`, `pennylane`, `postgresql`, `preprocessing`, `pytket_qulacsBackend`, `qasm`, `qasm-2`, `qasm-3`, `qc-executor`, `qc-simulator`, `qiskit`, `quantme`, `quantum`, `rest`, `routing`, `sample`, `scatter`, `similarity-calculation`, `sql`, `supervised-learning`, `utility`, `vector`, `visualization`, `workflow`, `zxcalculus`
 
 Every type below links to its entry in the list of [allowed data types and content types](data-formats/allowed-types.md).
 
@@ -2197,6 +2210,32 @@ processing – circuit-executor, pennylane, qasm, qasm-2, qasm-3, qc-simulator\
 *Path:* {file}`plugins/circuit_executors/pennylane_defaultqubit.py`
 
 Allows execution of quantum circuits using a simulator packaged with qiskit.
+
+**Inputs:**
+
+| Data Type | Content Type | Required |
+|-----------|--------------| :------: |
+|executable/circuit|text/x-qasm|✓|
+|provenance/execution-options|text/csv, application/json, application/X-lines+json|╳|
+
+
+**Outputs:**
+
+| Data Type | Content Type | Always |
+|-----------|--------------| :----: |
+|entity/vector|application/json|✓|
+|entity/vector|application/json|╳|
+|provenance/trace|application/json|✓|
+|provenance/execution-options|application/json|✓|
+
+
+(pytket_qulacsBackend-simulator)=
+### pytket_qulacsBackend-simulator (@v1.0.0)
+
+processing – circuit-executor, pytket_qulacsBackend, qasm, qasm-2, qc-simulator\
+*Path:* {file}`plugins/circuit_executors/pytket_Qulacs.py`
+
+Allows execution of quantum circuits using a simulator packaged with pytket_qulacsBackend.
 
 **Inputs:**
 
