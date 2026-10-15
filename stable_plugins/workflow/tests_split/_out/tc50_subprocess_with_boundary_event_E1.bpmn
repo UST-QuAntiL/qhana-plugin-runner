@@ -1,0 +1,94 @@
+<?xml version='1.0' encoding='utf-8'?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_tc50_subprocess_with_boundary_event" targetNamespace="http://qhana.example/testcases">
+  <bpmn:process id="tc50_subprocess_with_boundary_event_E1" name="Extracted Fragment E1" isExecutable="true" camunda:historyTimeToLive="180">
+    <bpmn:startEvent id="StartEvent_1" name="Start">
+      <bpmn:outgoing>Flow_E1_start</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:subProcess id="SubProcess_WithBoundary" name="Subprocess with Boundary Event">
+      <bpmn:startEvent id="Inner_Start">
+        <bpmn:outgoing>Inner_Flow_1</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:serviceTask id="Inner_LongRunning" name="long-running-task" camunda:type="external" camunda:topic="qhana-task">
+        <bpmn:incoming>Inner_Flow_1</bpmn:incoming>
+        <bpmn:outgoing>Inner_Flow_2</bpmn:outgoing>
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qhanaPlugin">placeholder-long-running</camunda:inputParameter>
+            <camunda:outputParameter name="qoutput.result">${output}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </bpmn:serviceTask>
+      <bpmn:boundaryEvent id="Inner_TimerBoundary" attachedToRef="Inner_LongRunning">
+        <bpmn:outgoing>Inner_Flow_Timeout</bpmn:outgoing>
+        <bpmn:timerEventDefinition>
+          <bpmn:timeDuration>PT30M</bpmn:timeDuration>
+        </bpmn:timerEventDefinition>
+      </bpmn:boundaryEvent>
+      <bpmn:endEvent id="Inner_End">
+        <bpmn:incoming>Inner_Flow_2</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:endEvent id="Inner_TimeoutEnd">
+        <bpmn:incoming>Inner_Flow_Timeout</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="Inner_Flow_1" sourceRef="Inner_Start" targetRef="Inner_LongRunning" />
+      <bpmn:sequenceFlow id="Inner_Flow_2" sourceRef="Inner_LongRunning" targetRef="Inner_End" />
+      <bpmn:sequenceFlow id="Inner_Flow_Timeout" sourceRef="Inner_TimerBoundary" targetRef="Inner_TimeoutEnd" />
+      <bpmn:incoming>Flow_E1_start</bpmn:incoming>
+      <bpmn:outgoing>Flow_end</bpmn:outgoing>
+    </bpmn:subProcess>
+    <bpmn:endEvent id="EndEvent_1" name="End">
+      <bpmn:incoming>Flow_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_E1_start" sourceRef="StartEvent_1" targetRef="SubProcess_WithBoundary" />
+    <bpmn:sequenceFlow id="Flow_end" sourceRef="SubProcess_WithBoundary" targetRef="EndEvent_1" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_tc50_subprocess_with_boundary_event_E1">
+    <bpmndi:BPMNPlane id="BPMNPlane_tc50_subprocess_with_boundary_event_E1" bpmnElement="tc50_subprocess_with_boundary_event_E1">
+      <bpmndi:BPMNShape id="SubProcess_WithBoundary_di" bpmnElement="SubProcess_WithBoundary" isExpanded="true">
+        <dc:Bounds x="200" y="80" width="460" height="280" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="720" y="182" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Inner_Start_di" bpmnElement="Inner_Start">
+        <dc:Bounds x="240" y="182" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Inner_LongRunning_di" bpmnElement="Inner_LongRunning">
+        <dc:Bounds x="320" y="160" width="140" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Inner_TimerBoundary_di" bpmnElement="Inner_TimerBoundary">
+        <dc:Bounds x="402" y="222" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Inner_End_di" bpmnElement="Inner_End">
+        <dc:Bounds x="520" y="182" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Inner_TimeoutEnd_di" bpmnElement="Inner_TimeoutEnd">
+        <dc:Bounds x="520" y="300" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Inner_Flow_1_di" bpmnElement="Inner_Flow_1">
+        <di:waypoint x="276" y="200" />
+        <di:waypoint x="320" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Inner_Flow_2_di" bpmnElement="Inner_Flow_2">
+        <di:waypoint x="460" y="200" />
+        <di:waypoint x="520" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Inner_Flow_Timeout_di" bpmnElement="Inner_Flow_Timeout">
+        <di:waypoint x="420" y="258" />
+        <di:waypoint x="420" y="318" />
+        <di:waypoint x="520" y="318" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="120" y="202" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_end_di" bpmnElement="Flow_end">
+        <di:waypoint x="660" y="200" />
+        <di:waypoint x="720" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E1_start_di" bpmnElement="Flow_E1_start">
+        <di:waypoint x="156" y="220" />
+        <di:waypoint x="200" y="220" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

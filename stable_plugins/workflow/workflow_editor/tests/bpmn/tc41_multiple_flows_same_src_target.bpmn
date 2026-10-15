@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+  xmlns:qhana="https://github.com/qhana"
+  id="Definitions_tc41_multiple_flows"
+  targetNamespace="http://qhana.example/testcases">
+
+  <bpmn:process id="tc41_multiple_flows_same_src_target" name="TC41 - Duplicate Flows" isExecutable="true" camunda:versionTag="0.2">
+    <bpmn:startEvent id="StartEvent_1">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:exclusiveGateway id="Gateway_Split">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_Path_A</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Path_B</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <qhana:qHAnaServiceTask id="QHanaTask_Target" name="process-data">
+      <bpmn:incoming>Flow_Path_A</bpmn:incoming>
+      <bpmn:incoming>Flow_Path_B</bpmn:incoming>
+      <bpmn:outgoing>Flow_End</bpmn:outgoing>
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaName">process-data</camunda:inputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+    </qhana:qHAnaServiceTask>
+
+    <bpmn:endEvent id="EndEvent_1">
+      <bpmn:incoming>Flow_End</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="Gateway_Split" />
+
+    <bpmn:sequenceFlow id="Flow_Path_A" name="Condition A" sourceRef="Gateway_Split" targetRef="QHanaTask_Target">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${type == 'A'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+
+    <bpmn:sequenceFlow id="Flow_Path_B" name="Condition B" sourceRef="Gateway_Split" targetRef="QHanaTask_Target">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${type == 'B'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+
+    <bpmn:sequenceFlow id="Flow_End" sourceRef="QHanaTask_Target" targetRef="EndEvent_1" />
+
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_tc41">
+    <bpmndi:BPMNPlane id="BPMNPlane_tc41" bpmnElement="tc41_multiple_flows_same_src_target">
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1"><dc:Bounds x="100" y="200" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Split_di" bpmnElement="Gateway_Split"><dc:Bounds x="200" y="193" width="50" height="50"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="QHanaTask_Target_di" bpmnElement="QHanaTask_Target"><dc:Bounds x="400" y="178" width="150" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1"><dc:Bounds x="600" y="200" width="36" height="36"/></bpmndi:BPMNShape>
+
+      <bpmndi:BPMNEdge id="Flow_Path_A_di" bpmnElement="Flow_Path_A">
+        <di:waypoint x="250" y="218"/>
+        <di:waypoint x="400" y="218"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_Path_B_di" bpmnElement="Flow_Path_B">
+        <di:waypoint x="225" y="193"/>
+        <di:waypoint x="225" y="100"/>
+        <di:waypoint x="475" y="100"/>
+        <di:waypoint x="475" y="178"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1"><di:waypoint x="136" y="218"/><di:waypoint x="200" y="218"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_End_di" bpmnElement="Flow_End"><di:waypoint x="550" y="218"/><di:waypoint x="600" y="218"/></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

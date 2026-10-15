@@ -1,0 +1,56 @@
+<?xml version='1.0' encoding='utf-8'?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc36_di_cleanup" targetNamespace="http://qhana.example/testcases">
+  <bpmn:process id="tc36_di_cleanup_E1" name="Extracted Fragment E1" isExecutable="true" camunda:historyTimeToLive="180">
+    <bpmn:startEvent id="StartEvent_1" name="Start">
+      <bpmn:outgoing>Flow_E1_start</bpmn:outgoing>
+    </bpmn:startEvent>
+    <qhana:qHAnaServiceTask id="QHanaTask_Prepare" name="prepare-input">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaName">prepare-input</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.seed">cleanup-seed</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.prepared">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_E1_start</bpmn:incoming>
+      <bpmn:outgoing>Flow_E1_end</bpmn:outgoing>
+    </qhana:qHAnaServiceTask>
+    <bpmn:endEvent id="EndEvent_E1" name="End">
+      <bpmn:incoming>Flow_E1_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_E1_start" sourceRef="StartEvent_1" targetRef="QHanaTask_Prepare" />
+    <bpmn:sequenceFlow id="Flow_E1_end" sourceRef="QHanaTask_Prepare" targetRef="EndEvent_E1" />
+    <bpmn:textAnnotation id="TextAnnotation_1">
+      <bpmn:text>Annotation linked to removable/extractable area</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Association_1" sourceRef="TextAnnotation_1" targetRef="QHanaTask_Prepare" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_tc36_di_cleanup_E1">
+    <bpmndi:BPMNPlane id="BPMNPlane_tc36_di_cleanup_E1" bpmnElement="tc36_di_cleanup_E1">
+      <bpmndi:BPMNShape id="QHanaTask_Prepare_di" bpmnElement="QHanaTask_Prepare">
+        <dc:Bounds x="120" y="198" width="180" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="40" y="220" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_E1_di" bpmnElement="EndEvent_E1">
+        <dc:Bounds x="350" y="220" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_E1_start_di" bpmnElement="Flow_E1_start">
+        <di:waypoint x="76" y="238" />
+        <di:waypoint x="120" y="238" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E1_end_di" bpmnElement="Flow_E1_end">
+        <di:waypoint x="300" y="238" />
+        <di:waypoint x="350" y="238" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="TextAnnotation_1_di" bpmnElement="TextAnnotation_1">
+        <dc:Bounds x="120" y="70" width="220" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Association_1_di" bpmnElement="Association_1">
+        <di:waypoint x="230" y="120" />
+        <di:waypoint x="210" y="198" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

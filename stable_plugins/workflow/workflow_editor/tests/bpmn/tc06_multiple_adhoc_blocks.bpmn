@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+  xmlns:qhana="https://github.com/qhana"
+  id="Definitions_tc06_multiple_adhoc_blocks"
+  targetNamespace="http://qhana.example/testcases">
+
+  <bpmn:process
+    id="tc06_multiple_adhoc_blocks"
+    name="TC06 - Multiple ad-hoc blocks with executable segments"
+    isExecutable="true"
+    camunda:versionTag="0.2">
+
+    <bpmn:startEvent id="StartEvent_1" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <qhana:qHAnaServiceTask id="QHanaTask_Load" name="load-input">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaName">load-input</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.seed">dataset-seed</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.loadedData">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+    </qhana:qHAnaServiceTask>
+
+    <bpmn:adHocSubProcess id="AdHocSubProcess_1" name="Ad-hoc Inspection Block" ordering="Parallel">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+
+      <qhana:qHAnaServiceTask id="QHanaTask_Inspect" name="inspect-data">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qhanaName">inspect-data</camunda:inputParameter>
+            <camunda:inputParameter name="qinput.data">${qoutput.loadedData}</camunda:inputParameter>
+            <camunda:outputParameter name="qoutput.inspectedData">${output}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </qhana:qHAnaServiceTask>
+
+      <qhana:qHAnaServiceTask id="QHanaTask_Comment" name="comment-on-data">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qhanaName">comment-on-data</camunda:inputParameter>
+            <camunda:inputParameter name="qinput.data">${qoutput.inspectedData}</camunda:inputParameter>
+            <camunda:outputParameter name="qoutput.annotatedData">${output}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </qhana:qHAnaServiceTask>
+    </bpmn:adHocSubProcess>
+
+    <qhana:qHAnaServiceTask id="QHanaTask_Transform" name="transform-data">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaName">transform-data</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.data">${qoutput.annotatedData}</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.transformedData">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+    </qhana:qHAnaServiceTask>
+
+    <bpmn:adHocSubProcess id="AdHocSubProcess_2" name="Ad-hoc Validation Block" ordering="Parallel">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+
+      <qhana:qHAnaServiceTask id="QHanaTask_Validate" name="validate-data">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qhanaName">validate-data</camunda:inputParameter>
+            <camunda:inputParameter name="qinput.data">${qoutput.transformedData}</camunda:inputParameter>
+            <camunda:outputParameter name="qoutput.validatedData">${output}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </qhana:qHAnaServiceTask>
+
+      <qhana:qHAnaServiceTask id="QHanaTask_ApproveValidation" name="approve-validation">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qhanaName">approve-validation</camunda:inputParameter>
+            <camunda:inputParameter name="qinput.data">${qoutput.validatedData}</camunda:inputParameter>
+            <camunda:outputParameter name="qoutput.approvedValidation">${output}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </qhana:qHAnaServiceTask>
+    </bpmn:adHocSubProcess>
+
+    <qhana:qHAnaServiceTask id="QHanaTask_Save" name="save-result">
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+      <bpmn:outgoing>Flow_6</bpmn:outgoing>
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaName">save-result</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.data">${qoutput.approvedValidation}</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.savedResult">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+    </qhana:qHAnaServiceTask>
+
+    <bpmn:endEvent id="EndEvent_1" name="End">
+      <bpmn:incoming>Flow_6</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="QHanaTask_Load" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="QHanaTask_Load" targetRef="AdHocSubProcess_1" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="AdHocSubProcess_1" targetRef="QHanaTask_Transform" />
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="QHanaTask_Transform" targetRef="AdHocSubProcess_2" />
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="AdHocSubProcess_2" targetRef="QHanaTask_Save" />
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="QHanaTask_Save" targetRef="EndEvent_1" />
+
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_tc06">
+    <bpmndi:BPMNPlane id="BPMNPlane_tc06" bpmnElement="tc06_multiple_adhoc_blocks">
+
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="50" y="220" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_Load_di" bpmnElement="QHanaTask_Load">
+        <dc:Bounds x="120" y="198" width="170" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="AdHocSubProcess_1_di" bpmnElement="AdHocSubProcess_1" isExpanded="true">
+        <dc:Bounds x="360" y="120" width="420" height="210"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_Inspect_di" bpmnElement="QHanaTask_Inspect">
+        <dc:Bounds x="415" y="190" width="150" height="70"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_Comment_di" bpmnElement="QHanaTask_Comment">
+        <dc:Bounds x="605" y="190" width="150" height="70"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_Transform_di" bpmnElement="QHanaTask_Transform">
+        <dc:Bounds x="850" y="198" width="180" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="AdHocSubProcess_2_di" bpmnElement="AdHocSubProcess_2" isExpanded="true">
+        <dc:Bounds x="1100" y="120" width="420" height="210"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_Validate_di" bpmnElement="QHanaTask_Validate">
+        <dc:Bounds x="1155" y="190" width="150" height="70"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_ApproveValidation_di" bpmnElement="QHanaTask_ApproveValidation">
+        <dc:Bounds x="1345" y="190" width="150" height="70"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_Save_di" bpmnElement="QHanaTask_Save">
+        <dc:Bounds x="1590" y="198" width="180" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="1830" y="220" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <di:waypoint x="86" y="238"/>
+        <di:waypoint x="120" y="238"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="290" y="238"/>
+        <di:waypoint x="360" y="238"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
+        <di:waypoint x="780" y="238"/>
+        <di:waypoint x="850" y="238"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4">
+        <di:waypoint x="1030" y="238"/>
+        <di:waypoint x="1100" y="238"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_5_di" bpmnElement="Flow_5">
+        <di:waypoint x="1520" y="238"/>
+        <di:waypoint x="1590" y="238"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_6_di" bpmnElement="Flow_6">
+        <di:waypoint x="1770" y="238"/>
+        <di:waypoint x="1830" y="238"/>
+      </bpmndi:BPMNEdge>
+
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</bpmn:definitions>
