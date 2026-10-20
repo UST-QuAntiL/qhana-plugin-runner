@@ -44,7 +44,7 @@
 			}
 		}
 
-        window.addEventListener("message", ensureHeight);
+        window.addEventListener("message", ensureHeight, { once: true });
 		document.addEventListener("DOMContentLoaded", ensureHeight);
     </script>  
 </body>
