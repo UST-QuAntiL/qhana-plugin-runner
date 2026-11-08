@@ -198,33 +198,6 @@ class PatternUI(MethodView):
         return Response(html, content_type="text/html")
 
 
-@PA_BLP.route("/ui/assets/<path:asset_path>")
-class AssetsUI(MethodView):
-    @PA_BLP.response(HTTPStatus.OK)
-    @PA_BLP.require_jwt("jwt", optional=True)
-    def get(self, asset_path):
-        asset_url = f"/plugins/{PA_BLP.name}/ui/assets/" + asset_path
-        if asset_url in renderer._resource_bytes:
-            if asset_path.endswith(".svg"):
-                content_type = "image/svg+xml"
-            elif asset_path.endswith(".js"):
-                content_type = "application/javascript"
-            elif asset_path.endswith(".woff"):
-                content_type = "font/woff"
-            elif asset_path.endswith(".woff2"):
-                content_type = "font/woff2"
-            elif asset_path.endswith(".ttf"):
-                content_type = "font/ttf"
-            elif asset_path.endswith(".gif"):
-                content_type = "image/gif"
-            else:
-                content_type = "application/octet-stream"
-            return Response(
-                renderer._resource_bytes[asset_url], content_type=content_type
-            )
-        return Response("Asset not found", status=404)
-
-
 @PA_BLP.route("/process/")
 class Process(MethodView):
     """TODO."""

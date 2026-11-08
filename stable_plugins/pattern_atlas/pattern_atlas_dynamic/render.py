@@ -140,7 +140,6 @@ class ExtractImageLinksParser(HTMLParser):
 class DynamicRender:
     def __init__(self) -> None:
         self._resource_map: dict[str, str] = {"": "/ui/assets/empty.svg"}
-        self._resource_bytes: dict[str, bytes] = {}
         self._jinja = Environment(
             loader=PackageLoader("pattern_atlas.pattern_atlas_dynamic"),
             autoescape=select_autoescape(
