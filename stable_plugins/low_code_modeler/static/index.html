@@ -76,8 +76,8 @@
     <div class="qhana-form-field">
       <label class="qhana-form-label" for="openDiagraminput">Open Diagram from local filesystem:</label>
       <div class="qhana-input-wrapper">
-	<input class="qhana-form-input" type="file" name="diagram" id="openDiagraminput" accept="bpmn" required>
-	<button class="qhana-form-submit" type="submit" value="openLocal">Open selected diagram</button>
+        <input class="qhana-form-input" type="file" name="diagram" id="openDiagraminput" accept="bpmn" required>
+        <button class="qhana-form-submit" type="submit" value="openLocal">Open selected diagram</button>
       </div>
     </div>
   </form>
@@ -99,14 +99,14 @@
       const flowWithMetadata = event.detail;
       console.log("recieved:", flowWithMetadata);
       fetch(
-	  "../models/",
-	  {
-	      method: "post",
-	      body: JSON.stringify(flowWithMetadata),
-	      headers: {
-		  "Content-Type": "application/json"
-	      },
-	  }
+          "../models/",
+          {
+              method: "post",
+              body: JSON.stringify(flowWithMetadata),
+              headers: {
+                  "Content-Type": "application/json"
+              },
+          }
       );
   });
 
@@ -122,47 +122,47 @@
       const dialogElement = document.querySelector("dialog#openDiagram");
       const url = "../models/";
       fetch(url).then(response => response.json()).then(result => {
-	  console.log("Received models from backend:", result);
-	  const container = document.querySelector("form#openExisting .diagram-list");
+          console.log("Received models from backend:", result);
+          const container = document.querySelector("form#openExisting .diagram-list");
 
-	  const newChildren = result.map(metadata => {
-	      console.log("Processing model:", metadata);
+          const newChildren = result.map(metadata => {
+              console.log("Processing model:", metadata);
 
-	      const modelId = metadata.id;
-	      const outer = document.createElement("div");
-	      outer.classList.add("diagram-item")
-	      const inner = document.createElement("div");
-	      const title = document.createElement("p");
-	      title.classList.add("diagram-title");
-	      title.textContent = `${metadata.name} – ${metadata.id}@${metadata.version}`;
-	      const subtitle = document.createElement("p");
-	      subtitle.classList.add("diagram-subtitle");
-	      const date = new Date(metadata.timestamp)
-	      subtitle.textContent = date.toLocaleString();
-	      const buttonContainer = document.createElement("span");
-	      const loadButton = document.createElement("button");
-	      const downloadButtonAnchor = document.createElement("a");
-	      const downloadButtonButton = document.createElement("input");
-	      downloadButtonButton.type = "button";
-	      downloadButtonButton.className = "qhana-form-submit";
-	      downloadButtonButton.value = "Download";
-	      downloadButtonAnchor.href = `../models/${modelId}/`;
-	      downloadButtonAnchor.download = `${modelId}.json`;
-	      downloadButtonAnchor.appendChild(downloadButtonButton);
-	      loadButton.setAttribute("value", `load:${modelId}`);
-	      loadButton.setAttribute("type", "submit");
-	      loadButton.classList.add("qhana-form-submit");
-	      loadButton.textContent = "Load";
-	      inner.appendChild(title);
-	      inner.appendChild(subtitle);
-	      outer.appendChild(inner);
-	      buttonContainer.appendChild(downloadButtonAnchor);
-	      buttonContainer.appendChild(loadButton);
-	      outer.appendChild(buttonContainer);
-	      return outer;
-	  });
+              const modelId = metadata.id;
+              const outer = document.createElement("div");
+              outer.classList.add("diagram-item")
+              const inner = document.createElement("div");
+              const title = document.createElement("p");
+              title.classList.add("diagram-title");
+              title.textContent = `${metadata.name} – ${metadata.id}@${metadata.version}`;
+              const subtitle = document.createElement("p");
+              subtitle.classList.add("diagram-subtitle");
+              const date = new Date(metadata.timestamp)
+              subtitle.textContent = date.toLocaleString();
+              const buttonContainer = document.createElement("span");
+              const loadButton = document.createElement("button");
+              const downloadButtonAnchor = document.createElement("a");
+              const downloadButtonButton = document.createElement("input");
+              downloadButtonButton.type = "button";
+              downloadButtonButton.className = "qhana-form-submit";
+              downloadButtonButton.value = "Download";
+              downloadButtonAnchor.href = `../models/${modelId}/`;
+              downloadButtonAnchor.download = `${modelId}.json`;
+              downloadButtonAnchor.appendChild(downloadButtonButton);
+              loadButton.setAttribute("value", `load:${modelId}`);
+              loadButton.setAttribute("type", "submit");
+              loadButton.classList.add("qhana-form-submit");
+              loadButton.textContent = "Load";
+              inner.appendChild(title);
+              inner.appendChild(subtitle);
+              outer.appendChild(inner);
+              buttonContainer.appendChild(downloadButtonAnchor);
+              buttonContainer.appendChild(loadButton);
+              outer.appendChild(buttonContainer);
+              return outer;
+          });
 
-	  container.replaceChildren(...newChildren);
+          container.replaceChildren(...newChildren);
       });
       dialogElement.showModal();
   }
@@ -170,40 +170,40 @@
   function onOpenDialogClosed(event) {
       const localDiagramInput = event.target.querySelector("input#openDiagraminput");
       if (event.target.returnValue === "openLocal") {
-	  if (localDiagramInput.files.length === 1) {
-	      const file = localDiagramInput.files[0];
-	      const reader = new FileReader();
-	      reader.onload = function(e) {
-		  try {
-		      const modelData = JSON.parse(e.target.result);
-		      if (currentRestoreFlow) {
-			  currentRestoreFlow(modelData);
-		      }
-		  } catch (error) {
-		      console.error("Error parsing model file:", error);
-		  }
-	      };
-	      reader.readAsText(file);
-	  }
+          if (localDiagramInput.files.length === 1) {
+              const file = localDiagramInput.files[0];
+              const reader = new FileReader();
+              reader.onload = function(e) {
+                  try {
+                      const modelData = JSON.parse(e.target.result);
+                      if (currentRestoreFlow) {
+                          currentRestoreFlow(modelData);
+                      }
+                  } catch (error) {
+                      console.error("Error parsing model file:", error);
+                  }
+              };
+              reader.readAsText(file);
+          }
       }
       localDiagramInput.value = "";
       if (event.target.returnValue === "cancel") {
-	  return;
+          return;
       }
       if (event.target.returnValue.startsWith("load:")) {
-	  const model_id = event.target.returnValue.substring(5);
-	  const url = `../models/${model_id}/`
-	  fetch(url).then(response => {
-	      if (response.status === 200) {
-		  return response.json();
-	      } else {
-		  throw Error("Could not load model!");
-	      }
-	  }).then(modelData => {
-	      if (currentRestoreFlow) {
-		  currentRestoreFlow(modelData);
-	      }
-	  });
+          const model_id = event.target.returnValue.substring(5);
+          const url = `../models/${model_id}/`
+          fetch(url).then(response => {
+              if (response.status === 200) {
+                  return response.json();
+              } else {
+                  throw Error("Could not load model!");
+              }
+          }).then(modelData => {
+              if (currentRestoreFlow) {
+                  currentRestoreFlow(modelData);
+              }
+          });
       }
   }
 
