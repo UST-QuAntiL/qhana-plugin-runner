@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 1020" width="1180" height="1020">
+  <defs>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  <rect x="82" y="16" width="992" height="992" fill="#dbeafe" stroke="#374151" stroke-width="7" filter="url(#shadow)"/>
+  <rect x="10" y="437" width="144" height="144" fill="#93c5fd" stroke="#000" stroke-width="9" filter="url(#shadow)"/>
+  <rect x="1026" y="437" width="138" height="144" fill="#93c5fd" stroke="#000" stroke-width="9" filter="url(#shadow)"/>
+  <text x="578" y="572" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="bold" font-size="160" fill="#0f172a">I</text>
+</svg>

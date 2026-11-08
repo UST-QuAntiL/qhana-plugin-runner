@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- gear: teeth as a dashed ring around a solid wheel with a hole -->
+  <circle cx="50" cy="50" r="33" fill="none" stroke="#000" stroke-width="16" stroke-dasharray="13 12.9"/>
+  <circle cx="50" cy="50" r="28" fill="#000"/>
+  <circle cx="50" cy="50" r="11" fill="#fff"/>
+</svg>

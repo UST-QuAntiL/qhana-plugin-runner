@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 540" width="640" height="540">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#000"/>
+    </marker>
+  </defs>
+  <g font-family="Arial, Helvetica, sans-serif" font-size="64" fill="#000">
+    <rect x="37" y="77" width="72" height="96" fill="none" stroke="#0f2a3a" stroke-width="6"/>
+    <text x="73" y="148" text-anchor="middle">0</text>
+    <text x="240" y="100" text-anchor="middle">I</text>
+    <line x1="190" y1="121" x2="320" y2="121" stroke="#000" stroke-width="6" marker-end="url(#arrow)"/>
+    <rect x="432" y="77" width="72" height="96" fill="none" stroke="#0f2a3a" stroke-width="6"/>
+    <text x="468" y="148" text-anchor="middle">0</text>
+
+    <line x1="12" y1="286" x2="636" y2="286" stroke="#000" stroke-width="6"/>
+
+    <rect x="37" y="405" width="72" height="96" fill="none" stroke="#0f2a3a" stroke-width="6"/>
+    <text x="73" y="476" text-anchor="middle">1</text>
+    <text x="240" y="420" text-anchor="middle">I</text>
+    <line x1="190" y1="444" x2="320" y2="444" stroke="#000" stroke-width="6" marker-end="url(#arrow)"/>
+    <rect x="432" y="405" width="72" height="96" fill="none" stroke="#0f2a3a" stroke-width="6"/>
+    <text x="468" y="476" text-anchor="middle">1</text>
+  </g>
+</svg>

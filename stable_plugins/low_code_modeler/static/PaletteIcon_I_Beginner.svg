@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 240" width="260" height="240">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#000"/>
+    </marker>
+  </defs>
+  <rect x="11" y="8" width="224" height="224" fill="#dbeafe" stroke="#374151" stroke-width="2"/>
+  <line x1="11" y1="118" x2="235" y2="118" stroke="#000" stroke-width="2"/>
+  <g font-family="Arial, Helvetica, sans-serif" font-size="22" fill="#0f172a">
+    <rect x="33" y="50" width="20" height="28" fill="none" stroke="#0f2a3a" stroke-width="2"/>
+    <text x="43" y="72" text-anchor="middle">0</text>
+    <text x="104" y="52" text-anchor="middle">I</text>
+    <line x1="83" y1="61" x2="128" y2="61" stroke="#000" stroke-width="2" marker-end="url(#arrow)"/>
+    <rect x="165" y="50" width="20" height="28" fill="none" stroke="#0f2a3a" stroke-width="2"/>
+    <text x="175" y="72" text-anchor="middle">0</text>
+
+    <rect x="33" y="166" width="20" height="28" fill="none" stroke="#0f2a3a" stroke-width="2"/>
+    <text x="43" y="188" text-anchor="middle">1</text>
+    <text x="104" y="168" text-anchor="middle">I</text>
+    <line x1="83" y1="177" x2="128" y2="177" stroke="#000" stroke-width="2" marker-end="url(#arrow)"/>
+    <rect x="165" y="166" width="20" height="28" fill="none" stroke="#0f2a3a" stroke-width="2"/>
+    <text x="175" y="188" text-anchor="middle">1</text>
+  </g>
+  <rect x="0" y="105" width="24" height="26" fill="#93c5fd" stroke="#0f172a" stroke-width="2"/>
+  <rect x="222" y="105" width="24" height="26" fill="#93c5fd" stroke="#0f172a" stroke-width="2"/>
+</svg>
