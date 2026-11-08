@@ -26,14 +26,14 @@
                     markerWidth="8" markerHeight="8"
                     orient="auto-start-reverse"
                     markerUnits="strokeWidth">
-                    <path d="M 0 0 L 10 5 L 0 10 Z" fill="black"></path>
+                    <path d="M 0 0 L 10 5 L 0 10 Z" style="fill: var(--text-strong);"></path>
                 </marker>
             </defs>         
             <g class="edges">
                 {%- for rel in relations -%}
                     <g id="edge-{{rel.edge_id}}" class="edge-group">
                         <path class="edge" data-source="{{rel.source_pattern}}" data-target="{{rel.target_pattern}}" fill="none" 
-                        stroke="black" vector-effect="non-scaling-stroke" d="M 100 120 C 180 80, 220 160, 300 120"
+                        style="stroke: var(--text-strong);" vector-effect="non-scaling-stroke" d="M 100 120 C 180 80, 220 160, 300 120"
                         marker-end="url(#arrow)"></path>
                     </g>
                 {%- endfor -%}
@@ -42,7 +42,7 @@
                 {%- for pattern in patterns -%}
                     <g class="node" id="node-{{pattern.pattern_id}}" transform="translate(0, 0)" data-template="default" data-x="0" data-y="0">
                         <rect data-link-handles="edges" height="170" rx="5" ry="5" width="270" x="-135" y="-25"
-                        style="stroke: black; stroke-width: 1;"></rect>
+                        style="stroke: var(--text-strong); stroke-width: 1;"></rect>
                         <foreignObject x="-125" y="-15" width="250" height="150">
                             <div xmlns="http://www.w3.org/1999/xhtml"
                                  style="
