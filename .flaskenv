@@ -6,6 +6,13 @@ FLASK_DEBUG=true # set to production if in production!
 # configure default port
 FLASK_RUN_PORT=5005
 
+# Exclude the repository root from the dev server reloader watch list, so that
+# the instance folder (database, task result files) does not trigger restarts.
+# The watchdog reloader watches the repository root recursively because the
+# flask command puts the current directory on sys.path. Excluding the root
+# leaves the package and plugin folders watched (all folders that have an __init__.py).
+FLASK_RUN_EXCLUDE_PATTERNS=${PWD:-/}
+
 # set UTF-8 encoding for file operations (to avoid cp1252 issues on Windows)
 PYTHONUTF8=1
 

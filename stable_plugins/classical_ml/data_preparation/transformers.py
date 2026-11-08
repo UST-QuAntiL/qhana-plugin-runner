@@ -17,14 +17,13 @@ from enum import Enum
 from http import HTTPStatus
 from io import StringIO
 from tempfile import SpooledTemporaryFile
-from typing import Mapping, Optional, List
+from typing import List, Mapping, Optional
 from zipfile import ZipFile
 
 import marshmallow as ma
 from celery.canvas import chain
 from celery.utils.log import get_task_logger
-from flask import Response
-from flask import redirect
+from flask import Response, redirect
 from flask.app import Flask
 from flask.globals import request
 from flask.helpers import url_for
@@ -34,36 +33,36 @@ from marshmallow import EXCLUDE, post_load
 
 from qhana_plugin_runner.api import EnumField
 from qhana_plugin_runner.api.plugin_schemas import (
-    PluginMetadataSchema,
-    PluginMetadata,
-    PluginType,
-    EntryPoint,
     DataMetadata,
+    EntryPoint,
     InputDataMetadata,
+    PluginMetadata,
+    PluginMetadataSchema,
+    PluginType,
 )
 from qhana_plugin_runner.api.util import (
+    FileUrl,
     FrontendFormBaseSchema,
     SecurityBlueprint,
-    FileUrl,
 )
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.entity_marshalling import save_entities
 from qhana_plugin_runner.plugin_utils.zip_utils import get_files_from_zip_url
+from qhana_plugin_runner.requests import retrieve_filename
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
-from qhana_plugin_runner.requests import retrieve_filename
 
-_plugin_name = "sim-to-dist-transformers"
-__version__ = "v0.2.1"
+_plugin_name = "attr-sim-to-attr-dist-transformers"
+__version__ = "v0.2.3"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
 TRANSFORMERS_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
-    description="Similarity to distance transformers plugin API.",
+    description="Attribute similarity to attribute distances transformers plugin API.",
 )
 
 
@@ -91,7 +90,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
     attribute_similarities_url = FileUrl(
         required=True,
         allow_none=False,
-        data_input_type="custom/attribute-similarities",
+        data_input_type="relation/attribute-similarities",
         data_content_types="application/zip",
         metadata={
             "label": "Attribute similarities URL",
@@ -133,7 +132,7 @@ class PluginsView(MethodView):
     def get(self):
         """Transformers endpoint returning the plugin metadata."""
         return PluginMetadata(
-            title="Similarities to distances transformers",
+            title="Attribute similarities to attribute distances transformers",
             description=Transformers.instance.description,
             name=Transformers.instance.name,
             version=Transformers.instance.version,
@@ -143,7 +142,7 @@ class PluginsView(MethodView):
                 ui_href=url_for(f"{TRANSFORMERS_BLP.name}.MicroFrontend"),
                 data_input=[
                     InputDataMetadata(
-                        data_type="custom/attribute-similarities",
+                        data_type="relation/attribute-similarities",
                         content_type=["application/zip"],
                         required=True,
                         parameter="attributeSimilaritiesUrl",
@@ -151,7 +150,7 @@ class PluginsView(MethodView):
                 ],
                 data_output=[
                     DataMetadata(
-                        data_type="custom/attribute-distances",
+                        data_type="relation/attribute-distances",
                         content_type=["application/zip"],
                         required=True,
                     )
@@ -253,7 +252,7 @@ class CalcSimilarityView(MethodView):
 class Transformers(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
-    description = "Transforms similarities to distances."
+    description = "Transforms attribute similarities to attribute distances."
     tags = ["preprocessing", "similarity-calculation", "distance-calculation"]
 
     def __init__(self, app: Optional[Flask]) -> None:
@@ -315,7 +314,7 @@ def calculation_task(self, db_id: int) -> str:
             dist = None
 
             if sim is None:
-                dist = None
+                raise ValueError(f"Similarity value is None for entity: {sim_entity}")
             elif transformer == TransformersEnum.linear_inverse:
                 dist = 1.0 - sim
             elif transformer == TransformersEnum.exponential_inverse:
@@ -325,18 +324,17 @@ def calculation_task(self, db_id: int) -> str:
             elif transformer == TransformersEnum.polynomial_inverse:
                 alpha = 1.0
                 beta = 1.0
-
                 dist = 1.0 / (1.0 + pow(sim / alpha, beta))
             elif transformer == TransformersEnum.square_inverse:
                 max_sim = 1.0
                 dist = (1.0 / math.sqrt(2.0)) * math.sqrt(2.0 * max_sim - 2 * sim)
+            else:
+                raise ValueError(f"Unknown transformer: {transformer}")
 
             attribute_distances.append(
                 {
-                    "ID": sim_entity["ID"],
-                    "entity_1_ID": sim_entity["entity_1_ID"],
-                    "entity_2_ID": sim_entity["entity_2_ID"],
-                    "href": "",
+                    "source": sim_entity["source"],
+                    "target": sim_entity["target"],
                     "distance": dist,
                 }
             )
@@ -355,7 +353,7 @@ def calculation_task(self, db_id: int) -> str:
         db_id,
         tmp_zip_file,
         f"transformers_attr_dist{info_str}.zip",
-        "custom/attribute-distances",
+        "relation/attribute-distances",
         "application/zip",
     )
 

@@ -42,7 +42,7 @@ class GenericInputsSchema(FrontendFormBaseSchema):
 
 class WorkflowIncidentSchema(MaBaseSchema):
     action = ma.fields.String(required=True, allow_none=False)
-    incident_id = ma.fields.String(required=False, allow_none=True, default="")
+    incident_id = ma.fields.String(required=False, allow_none=True, dump_default="")
 
 
 class AnyInputSchema(FrontendFormBaseSchema):

@@ -1,0 +1,508 @@
+# Copyright 2026 QHAna plugin runner contributors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import json
+from typing import IO, Optional
+from urllib.parse import urljoin
+from zipfile import ZipFile
+
+import requests
+from celery.utils.log import get_task_logger
+from flask.globals import current_app
+from marshmallow import EXCLUDE
+from requests.exceptions import ConnectionError, Timeout
+
+from qhana_plugin_runner.celery import CELERY
+from qhana_plugin_runner.db.models.tasks import ProcessingTask, TaskFile
+from qhana_plugin_runner.plugin_utils.attributes import AttributeMetadata
+from qhana_plugin_runner.plugin_utils.entity_marshalling import (
+    EntityTupleMixin,
+    load_entities,
+)
+from qhana_plugin_runner.plugin_utils.interop import (
+    get_plugin_endpoint,
+    monitor_result,
+    subscribe,
+)
+from qhana_plugin_runner.requests import get_mimetype, open_url
+from qhana_plugin_runner.storage import STORE
+from qhana_plugin_runner.tasks import TASK_DETAILS_CHANGED, save_task_error
+
+from .schemas import (
+    MAPPING_PLUGIN,
+    WU_PALMER_PLUGIN,
+    ONE_HOT_PLUGIN,
+    InputParameters,
+    InputParametersSchema,
+)
+
+TASK_LOGGER = get_task_logger(__name__)
+CELERY_COUNTDOWN = 3
+
+REQUEST_TIMEOUT = 10
+
+
+class PipelineTask(CELERY.Task):
+    """Base task for Feature Engineering Pipeline pipeline steps with centralized error handling.
+
+    Transient network errors (dropped connections, timeouts) are retried
+    automatically with exponential backoff. Any other exception fails the task
+    loudly: the real traceback is logged to the console and the task log, and the
+    processing task is marked ``FAILURE``.
+    """
+
+    autoretry_for = (ConnectionError, Timeout)
+    retry_backoff = True
+    retry_backoff_max = 60
+    max_retries = 5
+
+    @staticmethod
+    def _get_db_id(args, kwargs) -> Optional[int]:
+        if "db_id" in kwargs:
+            return kwargs["db_id"]
+        if args:
+            return args[0]
+        return None
+
+    def __call__(self, *args, **kwargs):
+        """Intercept task execution to check for cancellation."""
+
+        with self.app.flask_app.app_context():
+            db_id = self._get_db_id(args, kwargs)
+
+            if db_id is not None:
+                task_data = ProcessingTask.get_by_id(db_id)
+
+                if task_data and task_data.status == "CANCELED":
+                    TASK_LOGGER.warning(
+                        f"Execution of '{self.name}' (db_id={db_id}) aborted: "
+                        "The pipeline was CANCELED."
+                    )
+                    return None
+
+        return super().__call__(*args, **kwargs)
+
+    def on_retry(self, exc, task_id, args, kwargs, einfo):
+        db_id = self._get_db_id(args, kwargs)
+        attempt = getattr(self.request, "retries", 0) + 1
+        error_message = (
+            f"Transient error in step '{self.name}' (db_id={db_id}); exception: {exc!r}\n"
+            + f"Retry execution of '{self.name}' (attempt {attempt} of {self.max_retries})."
+        )
+        TASK_LOGGER.warning(error_message)
+        if db_id is not None:
+            try:
+                # celery invokes on_retry outside of FlaskTask.__call__, so there is no app context
+                with self.app.flask_app.app_context():
+                    task_data = ProcessingTask.get_by_id(db_id)
+                    if task_data is not None:
+                        log_task_event(task_data, error_message, level="warning")
+            except Exception as log_exc:  # Do not interrupt retry
+                TASK_LOGGER.warning(
+                    f"DEBUGGING: Could not record retry of step '{self.name}' (db_id={db_id}): {log_exc!r}"
+                )
+        super().on_retry(exc, task_id, args, kwargs, einfo)
+
+    def on_failure(self, exc, task_id, args, kwargs, einfo):
+        db_id = self._get_db_id(args, kwargs)
+        if db_id is not None:
+            save_task_error.delay(failing_task_id=task_id, db_id=db_id)
+        else:
+            TASK_LOGGER.error(
+                f"DEBUGGING ERROR:Step '{self.name}' failed permanently: {exc!r}"
+            )
+        super().on_failure(exc, task_id, args, kwargs, einfo)
+
+
+def log_task_event(task_data: ProcessingTask, message: str, level: str = "info"):
+    """Log a message to the console and to the task log shown in the UI."""
+    # TODO: Remove logging from ui and add it only to console.
+    getattr(TASK_LOGGER, level)(message)
+    task_data.add_task_log_entry(message)
+    task_data.save(commit=True)
+    app = current_app._get_current_object()
+    TASK_DETAILS_CHANGED.send(app, task_id=task_data.id)
+
+
+def extract_output_url(outputs: list, data_type: str) -> str:
+    """Finds the URL of a specific output from a plugin result based on its dataType."""
+    for output in outputs:
+        if output.get("dataType") == data_type:
+            return output["href"]
+    raise ValueError(f"Could not find output with dataType {data_type}")
+
+
+def plugin_process_url(task_data: ProcessingTask, plugin: str) -> str:
+    """Resolve a pipeline plugin's process endpoint from its metadata url.
+
+    The route handler stores the external metadata url per plugin in
+    ``data["plugin_urls"]``. ``get_plugin_endpoint`` follows the metadata to
+    the plugin's processing endpoint.
+    """
+    return get_plugin_endpoint(task_data.data["plugin_urls"][plugin])
+
+
+def load_params(task_data: ProcessingTask) -> InputParameters:
+    """Return the input parameters that apply to the running pipeline group.
+
+    A group carries the settings it overrides, see ``start_routing_task``.
+    """
+    parameters = json.loads(task_data.parameters or "{}")
+    parameters.update(task_data.data.get("current_settings", {}))
+    return InputParametersSchema(unknown=EXCLUDE).load(parameters)
+
+
+def pipeline_label(task_data: ProcessingTask) -> str:
+    """Return the label of the running pipeline group, used in its result file names."""
+    return task_data.data.get("current_pipeline_label") or task_data.data.get(
+        "current_pipeline", "unknown"
+    )
+
+
+def load_task(db_id: int) -> ProcessingTask:
+    task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
+    if task_data is None:
+        msg = f"Could not load task data with id {db_id} to read parameters!"
+        TASK_LOGGER.error(msg)
+        raise KeyError(msg)
+    return task_data
+
+
+def taxonomy_ref(metadata: AttributeMetadata) -> Optional[str]:
+    """Return the referenced taxonomy file name, or ``None`` for non-taxonomy attributes.
+
+    Taxonomy references point into the taxonomies zip, e.g.
+    ``taxonomies.zip:t_Gattung.json`` (the file name is the part after the
+    colon). Other references target plain files such as ``people.csv`` and are
+    excluded. The ``refTarget`` field is the reliable signal here. The ``type``
+    field carries the attribute id in the sample data, not the data type.
+    """
+    ref_target = metadata.ref_target or ""
+    if ".zip:" not in ref_target:
+        return None
+    return ref_target.split(":", 1)[1]
+
+
+def load_entity_attributes(entities_url: str) -> set:
+    """Return the set of attribute names present in the entities file."""
+    attributes: set = set()
+    with open_url(entities_url) as response:
+        mimetype = get_mimetype(response)
+        for ent in load_entities(response, mimetype):
+            if isinstance(ent, EntityTupleMixin):
+                attributes.update(type(ent).entity_attributes)
+                break
+            attributes.update(ent.keys())
+    return attributes
+
+
+def persist_generated_file(
+    task_data: ProcessingTask,
+    retries: int,
+    file: IO | bytes,
+    file_name: str,
+    file_type: str,
+    as_result: bool,
+    mimetype: str = "application/zip",
+) -> str:
+    """Store a file the router generated itself and return its external url.
+
+    With ``as_result`` the file is a task result, otherwise a temporary file
+    that only the following pipeline steps read. A retry reuses the url of the
+    first attempt instead of writing a second file.
+    """
+    generated = task_data.data.get("generated_files", {})
+    if file_name in generated:
+        return generated[file_name]
+
+    if as_result:
+        file_info = save_intermediate_results(
+            task_data, retries, task_data.id, file, file_name, file_type, mimetype
+        )
+    else:
+        file_info = STORE.persist_task_temp_file(
+            task_data.id, file, file_name, mimetype=mimetype
+        )
+
+    with current_app.test_request_context(base_url=task_data.data.get("base_url")):
+        url = STORE.get_task_file_url(file_info, external=True)
+    generated[file_name] = url
+    task_data.data["generated_files"] = generated
+    task_data.save(commit=True)
+    return url
+
+
+def calculate_recommendations(taxonomies_zip: ZipFile, zip_path: str) -> str:
+    """
+    Determines the optimal pipeline recommendation for a given taxonomy file.
+
+    If any entity contains non-empty 'mapping_raw' data, it recommends the Mapping plugin.
+    If the taxonomy is a strict tree with depth greater than 1, it recommends the Wu-Palmer plugin.
+    If the taxonomy is a flat list or has nodes with multiple parents, it recommends the One-Hot plugin.
+    """
+    try:
+        with taxonomies_zip.open(zip_path) as f:
+            tax_data = json.load(f)
+
+            entities = tax_data.get("entities", [])
+            relations = tax_data.get("relations", [])
+
+            # 1. Check for Mapping
+            has_mapping = any(ent.get("mapping_raw", "") != "" for ent in entities)
+            if has_mapping:
+                return MAPPING_PLUGIN
+
+            # 2. Build graph to check tree structure and depth
+            in_degree = {ent["ID"]: 0 for ent in entities}
+            children_map = {ent["ID"]: [] for ent in entities}
+
+            for rel in relations:
+                source = rel["source"]
+                target = rel["target"]
+
+                if target in in_degree:
+                    in_degree[target] += 1
+                if source in children_map:
+                    children_map[source].append(target)
+
+            # Check if it is a strict tree (no node has > 1 parent)
+            is_strict_tree = all(deg <= 1 for deg in in_degree.values())
+            if not is_strict_tree:
+                return ONE_HOT_PLUGIN
+
+            # Calculate max depth to ensure it is not a "flat" list
+            roots = [node for node, deg in in_degree.items() if deg == 0]
+
+            def get_max_depth(node):
+                if not children_map.get(node):
+                    return 0
+                return 1 + max(
+                    (get_max_depth(child) for child in children_map[node]), default=0
+                )
+
+            max_depth = max((get_max_depth(r) for r in roots), default=0)
+
+            if max_depth <= 1:
+                return ONE_HOT_PLUGIN
+
+            return WU_PALMER_PLUGIN
+
+    except Exception as e:
+        TASK_LOGGER.warning(
+            f"DEBUGGING WARNING: Could not read mapping for {zip_path}: {e}"
+        )
+        return ONE_HOT_PLUGIN
+
+
+def run_pipeline_step(
+    db_id: int,
+    task_data: ProcessingTask,
+    plugin_name: str,
+    logging_name: str,
+    payload: dict,
+):
+    """
+    Start a pipeline sub-plugin and make sure its completion is observed.
+
+    Error handling is delegated to :class:`PipelineTask`, which means that ransient
+    errors are retried automatically, everything else fails the task loudly.
+
+    Robustness:
+    * The POST is skipped if the sub-task was already started for this step
+      (``<plugin>_url`` already stored), so a retry never spawns a duplicate
+      sub-task ("started twice").
+    * The sub-task url is committed before the subscription is registered,
+      because ``handle_webhook_task`` drops events for unknown urls.
+    * Webhook subscription is the fast path, but a polling watchdog
+      (``monitor_result``) is always armed as well, so a lost event cannot leave
+      the pipeline stuck in ``PENDING``. Both deliver the same completion event;
+      ``handle_webhook_task`` keeps the loser of that race a no-op.
+    """
+    TASK_LOGGER.info(f"DEBUGGING: Starting {logging_name} Step")
+
+    existing_task_url = task_data.data.get(f"{plugin_name}_url")
+    if existing_task_url:
+        task_url = existing_task_url
+        TASK_LOGGER.info(
+            f"DEBUGGING: {logging_name} sub-task already started ({task_url}); skipping re-post."
+        )
+    else:
+        plugin_url = plugin_process_url(task_data, plugin_name)
+        response = requests.post(
+            plugin_url, data=payload, allow_redirects=False, timeout=REQUEST_TIMEOUT
+        )
+        response.raise_for_status()
+
+        task_url = urljoin(plugin_url, response.headers["Location"])
+        task_data.data[f"{plugin_name}_url"] = task_url
+        task_data.data["active_subtask_url"] = task_url
+
+        # commit before subscribing: handle_webhook_task drops events whose url
+        # is not stored yet, so an event arriving during the subscribe request
+        # would otherwise be lost
+        task_data.save(commit=True)
+
+    webhook_url = task_data.data["webhook_url"].replace("localhost", "127.0.0.1")
+    monitor_url = webhook_url + ("&" if "?" in webhook_url else "?") + "via=watchdog"
+
+    try:
+        subscribed = subscribe(
+            result_url=task_url,
+            webhook_url=webhook_url,
+            events=["status"],
+            monitor_countdown=CELERY_COUNTDOWN,
+            monitor_webhook_url=monitor_url,
+        )
+
+        if subscribed:
+            log_task_event(task_data, f"Subscribed to {logging_name} events.")
+        else:
+            log_task_event(
+                task_data,
+                f"Subscription for {logging_name} failed; relying on the polling watchdog.",
+                level="warning",
+            )
+    except Exception as e:
+        log_task_event(
+            task_data,
+            f"Subscription for {logging_name} failed ({e!r}); relying on the polling watchdog.",
+            level="warning",
+        )
+
+
+def should_store_pipeline_vectors(params: InputParameters) -> bool:
+    """
+    Returns true if the feature vectors of a single pipeline are stored as a task result.
+
+    Without concatenation the per-pipeline vectors are the only result of the run. With
+    concatenation they are stored only if intermediate results are included in the output.
+    """
+    if params.concat_output:
+        return params.include_intermediate_results_in_output
+    else:
+        return True
+
+
+def stores_unnormalized_vectors(
+    task_data: ProcessingTask, params: InputParameters
+) -> bool:
+    """Return true if the vectors of the running group are stored before normalization.
+
+    A normalized group stores the normalized vectors as its result, so the vectors
+    before normalization are only an intermediate result.
+    """
+    if task_data.data.get("current_normalize"):
+        return params.include_intermediate_results_in_output
+    return should_store_pipeline_vectors(params)
+
+
+def normalization_payload(params: InputParameters, entities_url: str) -> dict:
+    """Return the form data that starts the normalization plugin.
+
+    No attributes are selected, so the plugin normalizes every vector dimension. A
+    vector zip is normalized file by file.
+    """
+
+    def optional(value: float | None) -> float | str:
+        return "" if value is None else value
+
+    return {
+        "entitiesUrl": entities_url,
+        "attributes": "",
+        "inputRangeMin": optional(params.normalization_input_range_min),
+        "inputRangeMax": optional(params.normalization_input_range_max),
+        "outputRangeStart": params.normalization_output_range_start,
+        "outputRangeEnd": params.normalization_output_range_end,
+        "useClipping": str(params.normalization_use_clipping).lower(),
+        "allowMissingValues": str(params.normalization_allow_missing_values).lower(),
+    }
+
+
+def save_intermediate_results(
+    task_data: ProcessingTask,
+    retries: int,
+    db_id: int,
+    file: IO | bytes,
+    file_name: str,
+    file_type: str,
+    mimetype: str = "application/zip",
+) -> TaskFile:
+    """Store a result file once and return its record, also for a duplicate."""
+    existing_files = TaskFile.get_task_result_files(db_id)
+
+    # Race condition for file_exists should be handled, by the synchronization check in handle_webhook_task.
+    existing = next((f for f in existing_files if f.file_name == file_name), None)
+
+    if existing is None:
+        # Normal Execution: File doesn't exist, proceed with saving
+        file_info = STORE.persist_task_result(
+            task_db_id=db_id,
+            file_=file,
+            file_name=file_name,
+            file_type=file_type,
+            mimetype=mimetype,
+        )
+        TASK_LOGGER.info(f"Successfully stored intermediate file: {file_name}")
+        return file_info
+
+    # Check the reason for duplicate. Either parallel execution or the task saved intermediate output, then fails and restarts and wants to save again.
+    # In theory, parallel execution should no longer be possible.
+
+    if retries > 0:
+        msg = f"DEBUGGING: File {file_name} exists during retry {retries}. Skipping save."
+        TASK_LOGGER.info(msg)
+        task_data.add_task_log_entry(msg, commit=True)  # TODO: Remove this UI log
+    else:
+        error_msg = f"BUG/RACE CONDITION: Parallel execution detected! File {file_name} already exists on attempt 0."
+        TASK_LOGGER.warning(error_msg)
+        task_data.add_task_log_entry(error_msg, commit=True)
+    return existing
+
+
+def has_enough_pca_dimensions(
+    task_data: ProcessingTask, params: InputParameters, vector_response: requests.Response
+) -> bool:
+    """Checks if vector data has more dimensions than required for PCA reduction.
+    Uses the first entity in the vector response to determine the number of dimensions.
+
+    Args:
+        task_data: Task object used for logging execution details.
+        params: Input parameters containing the target `pca_dimensions`.
+        vector_response: HTTP response containing the raw vector data.
+
+    Returns:
+        True if vector dimensions exceed `params.pca_dimensions`, False otherwise.
+    """
+    mimetype = get_mimetype(vector_response)
+    if mimetype is None:
+        return False
+
+    first_ent = next(load_entities(vector_response, mimetype), None)
+    if first_ent is None:
+        return False
+
+    if isinstance(first_ent, EntityTupleMixin):
+        attributes = set(type(first_ent).entity_attributes)
+    else:
+        attributes = set(first_ent.keys())
+
+    dimensions = len(attributes - {"ID", "href"})
+    has_more_dimensions = dimensions > params.pca_dimensions
+
+    if not has_more_dimensions:
+        info_msg = f"PCA reduction step skipped, because vector has {dimensions} dimensions, which is equal or less than requested {params.pca_dimensions}."
+        TASK_LOGGER.info(info_msg)
+        task_data.add_task_log_entry(info_msg, commit=True)
+
+    return has_more_dimensions

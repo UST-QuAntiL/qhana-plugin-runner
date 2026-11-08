@@ -20,7 +20,7 @@ from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "qnn"
-__version__ = "v0.1.1"
+__version__ = "v0.1.2"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -65,7 +65,6 @@ class QNN(QHAnaPluginBase):
             "pennylane-qiskit~=0.44.1\n"
             "scikit-learn~=1.8.0\n"
             "torch~=2.10.0\n"
-            "muid~=0.5.3\n"
             "autoray~=0.8.2"
         )
 

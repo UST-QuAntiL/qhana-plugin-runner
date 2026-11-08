@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import muid
-
 from tempfile import SpooledTemporaryFile
 
 from celery.utils.log import get_task_logger
@@ -29,6 +27,7 @@ from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db import DB
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.entity_marshalling import save_entities
+from qhana_plugin_runner.plugin_utils.hashing import get_readable_hash
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.requests import retrieve_filename
 
@@ -40,10 +39,6 @@ from .backend.load_utils import get_indices_and_point_arr
 
 
 TASK_LOGGER = get_task_logger(__name__)
-
-
-def get_readable_hash(s: str) -> str:
-    return muid.pretty(muid.bhash(s.encode("utf-8")), k1=6, k2=5).replace(" ", "-")
 
 
 def prepare_data_for_output(id_list: list, data: List[List[float]]):

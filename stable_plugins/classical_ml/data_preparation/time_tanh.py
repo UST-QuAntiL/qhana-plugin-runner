@@ -57,7 +57,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "time-tanh"
-__version__ = "v0.2.1"
+__version__ = "v0.2.2"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -127,7 +127,7 @@ class PluginsView(MethodView):
                 ],
                 data_output=[
                     DataMetadata(
-                        data_type="custom/element-similarities",
+                        data_type="relation/element-similarities",
                         content_type=["application/zip"],
                         required=True,
                     )
@@ -329,7 +329,7 @@ def calculation_task(self, db_id: int) -> str:
         db_id,
         tmp_zip_file,
         f"time_tanh{info_str}.zip",
-        "custom/element-similarities",
+        "relation/element-similarities",
         "application/zip",
     )
 

@@ -28,6 +28,7 @@ from .schemas import (
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.entity_marshalling import save_entities
+from qhana_plugin_runner.plugin_utils.hashing import get_readable_hash
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.requests import retrieve_filename
 from .backend.load_utils import (
@@ -40,14 +41,9 @@ from .backend.svm import get_svc
 
 from sklearn.metrics import accuracy_score
 from .backend.visualize import plot_data, plot_confusion_matrix
-import muid
 
 
 TASK_LOGGER = get_task_logger(__name__)
-
-
-def get_readable_hash(s: str) -> str:
-    return muid.pretty(muid.bhash(s.encode("utf-8")), k1=6, k2=5).replace(" ", "-")
 
 
 @CELERY.task(name=f"{SVM.instance.identifier}.calculation_task", bind=True)

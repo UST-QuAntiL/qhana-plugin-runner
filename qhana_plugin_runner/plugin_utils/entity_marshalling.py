@@ -41,6 +41,8 @@ from typing import (
 )
 from unicodedata import category, normalize
 
+from .attributes import AttributeMetadata, tuple_deserializer
+
 
 class EntityTupleMixin:
     """A mixin class to provide entity metadata (e.g. attribute names) and
@@ -180,19 +182,37 @@ register_dialect("default", DefaultDialect)
 
 def ensure_dict(
     items: Iterable[Union[Dict[str, Any], NamedTuple]],
+    attribute_metadata: Optional[Dict[str, AttributeMetadata]] = None,
 ) -> Generator[Dict[str, Any], None, None]:
     """Ensure that all entities in an iterable are dicts.
 
+    If ``attribute_metadata`` is given, tuple entities (as produced by
+    :py:func:`load_entities` for csv files) are deserialized into typed values
+    with :py:func:`~qhana_plugin_runner.plugin_utils.attributes.tuple_deserializer`
+    before being converted to dicts.
+    Attributes without a metadata entry keep their raw string values.
+
     Args:
         items (Iterable[Union[Dict[str, Any], NamedTuple]]): the input iterable
+        attribute_metadata (Optional[Dict[str, AttributeMetadata]], optional): attribute
+            metadata used to deserialize tuple entity values. Defaults to None.
 
     Yields:
         Generator[Dict[str, Any], None, None]: the output iterable
     """
+    deserializer = None
     for item in items:
         if isinstance(item, dict):
             yield item
+            continue
         elif isinstance(item, EntityTupleMixin):
+            if attribute_metadata is not None:
+                if deserializer is None:
+                    attrs = type(item).entity_attributes
+                    deserializer = tuple_deserializer(
+                        attrs, attribute_metadata, tuple_=type(item)._make
+                    )
+                item = deserializer(item)
             yield item.as_dict()
         else:
             yield item._asdict()
@@ -245,6 +265,38 @@ def _str_to_nr(value: Optional[str], strict: bool = False) -> Union[float, int, 
         return None
 
 
+def _split_vector_entity(
+    item: Union[Dict[str, Any], NamedTuple],
+) -> Tuple[Any, Any, Tuple[str, ...], Tuple[Any, ...]]:
+    if isinstance(item, dict):
+        names = tuple(sorted(key for key in item if key not in ("ID", "href")))
+        return item["ID"], item.get("href"), names, tuple(item[n] for n in names)
+    offset = 2 if hasattr(item, "href") else 1
+    href = item[1] if offset == 2 else None
+    names = tuple(getattr(item, "_fields", ())[offset:])
+    return item[0], href, names, tuple(item[offset:])
+
+
+def entity_dimension_names(
+    entities: Sequence[Union[Dict[str, Any], NamedTuple]],
+) -> List[str]:
+    """Get the dimension names of a loaded ``entity/vector`` file.
+
+    The names are in the order in which :py:func:`ensure_array` yields the
+    values.
+
+    Args:
+        entities (Sequence[Dict[str, Any]|NamedTuple]): the entities as
+            returned by ``load_entities``
+
+    Returns:
+        List[str]: the dimension names, empty if there are no entities
+    """
+    if not entities:
+        return []
+    return list(_split_vector_entity(entities[0])[2])
+
+
 def ensure_array(
     items: Iterable[Union[Dict[str, Any], NamedTuple]], strict: bool = False
 ) -> Generator[ArrayEntity, None, None]:
@@ -265,18 +317,7 @@ def ensure_array(
         Generator[ArrayEntity, None, None]: the output iterable
     """
     for item in items:
-        if isinstance(item, dict):
-            id_ = item.pop("ID")
-            href = item.pop("href", None)
-            values_raw = (v for k, v in sorted(item.items(), key=lambda i: i[0]))
-        else:
-            id_ = item[0]
-            if hasattr(item, "href"):
-                href = item[1]
-                values_raw = item[2:]
-            else:
-                href = None
-                values_raw = item[1:]
+        id_, href, _names, values_raw = _split_vector_entity(item)
         values = tuple(
             v if isinstance(v, (int, float)) else _str_to_nr(v, strict=strict)
             for v in values_raw
@@ -414,11 +455,16 @@ def save_entities(
         ValueError: For unknown mimetypes
     """
     if mimetype == "application/json":
-        dump(list(ensure_dict(entities)), file_, separators=(",", ":"))
+        dump(
+            list(ensure_dict(entities)),
+            file_,
+            separators=(",", ":"),
+            default=_json_encoder_default,
+        )
         file_.write("\n")
     elif mimetype == "application/X-lines+json":
         for entity in ensure_dict(entities):
-            file_.write(f"{dumps(entity)}\n")
+            file_.write(f"{dumps(entity, default=_json_encoder_default)}\n")
     elif mimetype == "text/csv":
         if attributes is None:
             raise ValueError(
@@ -431,3 +477,9 @@ def save_entities(
         csv_writer.writerows(ensure_tuple(entities, tuple_=tuple_))
     else:
         raise ValueError(f"Saving entities to {mimetype} files is not implemented!")
+
+
+def _json_encoder_default(obj):
+    if isinstance(obj, set):
+        return list(obj)
+    raise TypeError

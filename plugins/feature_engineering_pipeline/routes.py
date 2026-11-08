@@ -1,0 +1,543 @@
+# Copyright 2026 QHAna plugin runner contributors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from http import HTTPStatus
+from json import dumps, loads
+from typing import Mapping
+
+from celery.canvas import chain
+from celery.utils.log import get_task_logger
+from flask import Response, current_app, redirect, render_template, request, url_for
+from flask.views import MethodView
+from marshmallow import EXCLUDE
+
+from qhana_plugin_runner.api.plugin_schemas import (
+    DataMetadata,
+    EntryPoint,
+    InputDataMetadata,
+    PluginMetadata,
+    PluginMetadataSchema,
+    PluginType,
+)
+from qhana_plugin_runner.db.models.tasks import ProcessingTask
+from qhana_plugin_runner.tasks import (
+    TASK_STEPS_CHANGED,
+    add_step,
+    save_task_error,
+)
+
+from . import FEATURE_ENGINEERING_PIPELINE_BLP, FeatureEngineeringPipeline
+from .schemas import (
+    NUMERIC_SETTINGS_GROUPS,
+    PIPELINE_OPTIONS,
+    PIPELINE_PLUGINS,
+    PIPELINE_SETTINGS_GROUPS,
+    SINGLE_VALUED_NUMERIC_SETTINGS_GROUPS,
+    TAXONOMY_SETTINGS_GROUPS,
+    VECTOR_CONCAT_PLUGIN,
+    AttributeSettingsSchema,
+    InputParametersSchema,
+    MetricEnum,
+    PCAParametersSchema,
+    PCATypeEnum,
+    RoutingStepParametersSchema,
+    SolverEnum,
+    expanded_numeric_settings_groups,
+    expanded_settings_groups,
+    load_settings,
+    merge_settings,
+    split_routing_fields,
+)
+from .tasks import (
+    handle_webhook_task,
+    preprocessing_task,
+    start_routing_task,
+)
+
+# Sections of the micro frontend: (key, title, field names).
+INPUT_FIELD_GROUPS = (
+    (
+        "basic_data",
+        "Basic Data",
+        (
+            "entities_url",
+            "entities_metadata_url",
+            "taxonomies_zip_url",
+            "include_intermediate_results_in_output",
+        ),
+    ),
+    *PIPELINE_SETTINGS_GROUPS,
+    (
+        VECTOR_CONCAT_PLUGIN,
+        "Vector Concatenation Settings",
+        ("concat_output", "output_format"),
+    ),
+)
+
+TASK_LOGGER = get_task_logger(__name__)
+
+
+# --- HELPER FUNCTION FOR UIs ---
+def field_groups(
+    groups: tuple[tuple[str, str, tuple[str, ...]], ...],
+    schema=InputParametersSchema,
+) -> list[dict]:
+    """Return the template sections for ``(key, title, field names)`` triples."""
+    return [
+        {"key": key, "title": title, "schema": schema(only=field_names)}
+        for key, title, field_names in groups
+    ]
+
+
+def render_step(schema, data, errors, process_url):
+    return Response(
+        render_template(
+            "simple_template.html",
+            name=FeatureEngineeringPipeline.instance.name,
+            version=FeatureEngineeringPipeline.instance.version,
+            schema=schema,
+            values=data,
+            errors=errors,
+            process=process_url,
+        )
+    )
+
+
+@FEATURE_ENGINEERING_PIPELINE_BLP.route("/")
+class PluginsView(MethodView):
+    @FEATURE_ENGINEERING_PIPELINE_BLP.response(HTTPStatus.OK, PluginMetadataSchema())
+    @FEATURE_ENGINEERING_PIPELINE_BLP.require_jwt("jwt", optional=True)
+    def get(self):
+        return PluginMetadata(
+            title="Feature Engineering Pipeline",
+            description=FeatureEngineeringPipeline.instance.description,
+            name=FeatureEngineeringPipeline.instance.name,
+            version=FeatureEngineeringPipeline.instance.version,
+            type=PluginType.processing,
+            entry_point=EntryPoint(
+                href=url_for(
+                    f"{FEATURE_ENGINEERING_PIPELINE_BLP.name}.{ProcessView.__name__}"
+                ),
+                ui_href=url_for(
+                    f"{FEATURE_ENGINEERING_PIPELINE_BLP.name}.{MicroFrontend.__name__}"
+                ),
+                data_input=[
+                    InputDataMetadata(
+                        data_type="entity/list",
+                        content_type=[
+                            "application/json",
+                            "application/X-lines+json",
+                            "text/csv",
+                        ],
+                        required=True,
+                        parameter="entitiesUrl",
+                    ),
+                    InputDataMetadata(
+                        data_type="entity/attribute-metadata",
+                        content_type=[
+                            "application/json",
+                            "application/X-lines+json",
+                            "text/csv",
+                        ],
+                        required=True,
+                        parameter="entitiesMetadataUrl",
+                    ),
+                    InputDataMetadata(
+                        data_type="graph/taxonomy",
+                        content_type=["application/zip"],
+                        required=True,
+                        parameter="taxonomiesZipUrl",
+                    ),
+                ],
+                data_output=[
+                    # WU-Palmer output (optional)
+                    DataMetadata(
+                        data_type="relation/element-similarities",
+                        content_type=["application/zip"],
+                        required=False,
+                    ),
+                    # Transformer output (optional)
+                    DataMetadata(
+                        data_type="relation/element-distances",
+                        content_type=["application/zip"],
+                        required=False,
+                    ),
+                    # Aggregator output (optional)
+                    DataMetadata(
+                        data_type="relation/attribute-distances",
+                        content_type=["application/zip"],
+                        required=False,
+                    ),
+                    # MDS output = final output
+                    DataMetadata(
+                        data_type="entity/vector",
+                        content_type=["application/zip"],
+                        required=True,
+                    ),
+                    # Vector concat of MDS (optional final output)
+                    DataMetadata(
+                        data_type="entity/vector",
+                        content_type=[
+                            "text/csv",
+                            "application/json",
+                            "application/X-lines+json",
+                        ],
+                        required=False,
+                    ),
+                    # Dimension mapping of the vector concat output, labelling
+                    # its dimensions with the attributes they came from
+                    DataMetadata(
+                        data_type="entity/dimension-mapping",
+                        content_type=["application/json"],
+                        required=False,
+                    ),
+                    # PCA output (optional final output after vector concat)
+                    DataMetadata(
+                        data_type="custom/plot",
+                        content_type=["text/html"],
+                        required=False,
+                    ),
+                    DataMetadata(
+                        data_type="custom/pca-metadata",
+                        content_type=["application/json"],
+                        required=False,
+                    ),
+                    DataMetadata(
+                        data_type="entity/vector",
+                        content_type=["text/csv"],
+                        required=False,
+                    ),
+                ],
+            ),
+            tags=FeatureEngineeringPipeline.instance.tags,
+        )
+
+
+@FEATURE_ENGINEERING_PIPELINE_BLP.route("/ui/")
+class MicroFrontend(MethodView):
+    """Micro frontend for the Feature Engineering Pipeline plugin."""
+
+    @FEATURE_ENGINEERING_PIPELINE_BLP.html_response(
+        HTTPStatus.OK,
+        description="Micro frontend of the Feature Engineering Pipeline plugin.",
+    )
+    @FEATURE_ENGINEERING_PIPELINE_BLP.arguments(
+        InputParametersSchema(
+            partial=True, unknown=EXCLUDE, validate_errors_as_result=True
+        ),
+        location="query",
+    )
+    @FEATURE_ENGINEERING_PIPELINE_BLP.require_jwt("jwt", optional=True)
+    def get(self, errors):
+        return self.render(data=request.args, errors=errors, valid=not errors)
+
+    @FEATURE_ENGINEERING_PIPELINE_BLP.html_response(
+        HTTPStatus.OK,
+        description="Micro frontend of the Feature Engineering Pipeline  plugin.",
+    )
+    @FEATURE_ENGINEERING_PIPELINE_BLP.arguments(
+        InputParametersSchema(
+            partial=True, unknown=EXCLUDE, validate_errors_as_result=True
+        ),
+        location="form",
+    )
+    @FEATURE_ENGINEERING_PIPELINE_BLP.require_jwt("jwt", optional=True)
+    def post(self, errors):
+        """Return the micro frontend with prerendered inputs."""
+        return self.render(data=request.form, errors=errors, valid=not errors)
+
+    def render(self, data, errors: dict, valid: bool):
+        data_dict = dict(data)
+        fields = InputParametersSchema().fields
+
+        default_values = {
+            fields["mds_dimensions"].data_key: 1,
+            fields["metric"].data_key: MetricEnum.metric_mds,
+            fields["n_init"].data_key: 4,
+            fields["max_iter"].data_key: 300,
+            fields["normalization_output_range_start"].data_key: 0.0,
+            fields["normalization_output_range_end"].data_key: 1.0,
+        }
+        # An unchecked checkbox is absent from a submitted form, so the checked
+        # default only applies before the form is submitted. A submitted form always
+        # contains the entities url field.
+        if fields["entities_url"].data_key not in data_dict:
+            default_values[fields["concat_output"].data_key] = True
+        default_values.update(data_dict)
+        data_dict = default_values
+
+        expanded_groups = frozenset(("basic_data", VECTOR_CONCAT_PLUGIN))
+
+        return Response(
+            render_template(
+                "router_form.html",
+                name=FeatureEngineeringPipeline.instance.name,
+                version=FeatureEngineeringPipeline.instance.version,
+                groups=field_groups(INPUT_FIELD_GROUPS),
+                expanded_groups=expanded_groups,
+                values=data_dict,
+                valid=valid,
+                errors=errors,
+                process=url_for(f"{FEATURE_ENGINEERING_PIPELINE_BLP.name}.ProcessView"),
+            )
+        )
+
+
+@FEATURE_ENGINEERING_PIPELINE_BLP.route("/process/")
+class ProcessView(MethodView):
+    @FEATURE_ENGINEERING_PIPELINE_BLP.arguments(
+        InputParametersSchema(unknown=EXCLUDE), location="form"
+    )
+    @FEATURE_ENGINEERING_PIPELINE_BLP.response(HTTPStatus.SEE_OTHER)
+    @FEATURE_ENGINEERING_PIPELINE_BLP.require_jwt("jwt", optional=True)
+    def post(self, arguments):
+        """Discover the taxonomy attributes and queue the routing step."""
+        db_task = ProcessingTask(
+            task_name=start_routing_task.name,
+            parameters=InputParametersSchema().dumps(arguments),
+        )
+        db_task.save(commit=True)
+
+        step_id = "routing-step"
+        href = url_for(
+            f"{FEATURE_ENGINEERING_PIPELINE_BLP.name}.RoutingStepView",
+            db_id=db_task.id,
+            _external=True,
+        )
+        ui_href = url_for(
+            f"{FEATURE_ENGINEERING_PIPELINE_BLP.name}.RoutingStepFrontend",
+            db_id=db_task.id,
+            _external=True,
+        )
+
+        task: chain = preprocessing_task.s(db_id=db_task.id) | add_step.s(
+            db_id=db_task.id, step_id=step_id, href=href, ui_href=ui_href
+        )
+        task.link_error(save_task_error.s(db_id=db_task.id))
+        task.apply_async()
+
+        return redirect(
+            url_for("tasks-api.TaskView", task_id=str(db_task.id)), HTTPStatus.SEE_OTHER
+        )
+
+
+@FEATURE_ENGINEERING_PIPELINE_BLP.route("/<int:db_id>/routing-step-ui/")
+class RoutingStepFrontend(MethodView):
+    """Micro frontend for the routing step (one pipeline dropdown per attribute)."""
+
+    @FEATURE_ENGINEERING_PIPELINE_BLP.html_response(
+        HTTPStatus.OK,
+        description="Micro frontend of the Feature Engineering Pipeline routing step.",
+    )
+    @FEATURE_ENGINEERING_PIPELINE_BLP.arguments(
+        RoutingStepParametersSchema(
+            partial=True, unknown=EXCLUDE, validate_errors_as_result=True
+        ),
+        location="query",
+        required=False,
+    )
+    @FEATURE_ENGINEERING_PIPELINE_BLP.require_jwt("jwt", optional=True)
+    def get(self, errors, db_id: int):
+        return self.render(request.args, db_id, errors, False)
+
+    @FEATURE_ENGINEERING_PIPELINE_BLP.html_response(
+        HTTPStatus.OK,
+        description="Micro frontend of the Feature Engineering Pipeline routing step.",
+    )
+    @FEATURE_ENGINEERING_PIPELINE_BLP.arguments(
+        RoutingStepParametersSchema(
+            partial=True, unknown=EXCLUDE, validate_errors_as_result=True
+        ),
+        location="form",
+        required=False,
+    )
+    @FEATURE_ENGINEERING_PIPELINE_BLP.require_jwt("jwt", optional=True)
+    def post(self, errors, db_id: int):
+        return self.render(request.form, db_id, errors, not errors)
+
+    def render(self, data: Mapping, db_id: int, errors: dict, valid: bool):
+        db_task: ProcessingTask | None = ProcessingTask.get_by_id(id_=db_id)
+        if db_task is None:
+            msg = f"Could not load task data with id {db_id} to read parameters!"
+            TASK_LOGGER.error(msg)
+            raise KeyError(msg)
+
+        attributes = db_task.data.get("taxonomy_attributes", [])
+        numeric_attributes = db_task.data.get("numeric_attributes", [])
+        multi_valued_numeric = set(
+            db_task.data.get("multi_valued_numeric_attributes", [])
+        )
+        recommendations = db_task.data.get("recommendations", {})
+        input_params = loads(db_task.parameters or "{}")
+        input_fields = InputParametersSchema().fields
+        pca_fields = PCAParametersSchema().fields
+
+        # The submitted form wins over the defaults, an unchecked checkbox is
+        # absent from it and falls back to the default.
+        values = {
+            pca_fields["pca_type"].data_key: PCATypeEnum.normal.name,
+            pca_fields["pca_dimensions"].data_key: 1,
+            pca_fields["solver"].data_key: SolverEnum.auto.name,
+            pca_fields["tol"].data_key: 0,
+            pca_fields["iterated_power"].data_key: 0,
+        }
+        values.update(data)
+
+        # A multi-valued numeric attribute runs the distances mapping, so it carries
+        # the settings of that pipeline. Every attribute carries the normalization
+        # settings.
+        _, submitted_settings = split_routing_fields(data)
+        settings_values = {
+            attribute: merge_settings(input_params, submitted_settings.get(attribute, {}))
+            for attribute in (*attributes, *numeric_attributes)
+        }
+        _, settings_errors = split_routing_fields(errors)
+
+        expanded_groups = {
+            **{
+                attribute: expanded_settings_groups(recommendations.get(attribute))
+                for attribute in attributes
+            },
+            **{
+                attribute: expanded_numeric_settings_groups()
+                for attribute in numeric_attributes
+            },
+        }
+
+        return Response(
+            render_template(
+                "routing_step.html",
+                name=FeatureEngineeringPipeline.instance.name,
+                version=FeatureEngineeringPipeline.instance.version,
+                schema=RoutingStepParametersSchema(),
+                pca_toggle_schema=PCAParametersSchema(only=["reduce_dimensions"]),
+                pca_schema=PCAParametersSchema(exclude=["reduce_dimensions"]),
+                attributes=attributes,
+                numeric_attributes=numeric_attributes,
+                multi_valued_numeric=multi_valued_numeric,
+                recommendations=recommendations,
+                pipeline_options=PIPELINE_OPTIONS,
+                settings_groups=field_groups(
+                    TAXONOMY_SETTINGS_GROUPS, AttributeSettingsSchema
+                ),
+                numeric_settings_groups=field_groups(
+                    NUMERIC_SETTINGS_GROUPS, AttributeSettingsSchema
+                ),
+                single_valued_numeric_settings_groups=field_groups(
+                    SINGLE_VALUED_NUMERIC_SETTINGS_GROUPS, AttributeSettingsSchema
+                ),
+                expanded_groups=expanded_groups,
+                input_params=input_params,
+                settings_values=settings_values,
+                settings_errors=settings_errors,
+                concat_output=bool(
+                    input_params.get(input_fields["concat_output"].data_key)
+                ),
+                values=values,
+                valid=valid,
+                errors=errors,
+                process=url_for(
+                    f"{FEATURE_ENGINEERING_PIPELINE_BLP.name}.RoutingStepView",
+                    db_id=db_id,
+                ),
+            )
+        )
+
+
+@FEATURE_ENGINEERING_PIPELINE_BLP.route("/<int:db_id>/routing-step-process/")
+class RoutingStepView(MethodView):
+    """Record the per-attribute routing and launch the Wu-Palmer pipeline."""
+
+    @FEATURE_ENGINEERING_PIPELINE_BLP.arguments(
+        RoutingStepParametersSchema(unknown=EXCLUDE), location="form"
+    )
+    @FEATURE_ENGINEERING_PIPELINE_BLP.response(HTTPStatus.SEE_OTHER)
+    @FEATURE_ENGINEERING_PIPELINE_BLP.require_jwt("jwt", optional=True)
+    def post(self, arguments, db_id: int):
+        db_task: ProcessingTask | None = ProcessingTask.get_by_id(id_=db_id)
+        if db_task is None:
+            msg = f"Could not load task data with id {db_id} to read parameters!"
+            TASK_LOGGER.error(msg)
+            raise KeyError(msg)
+
+        # The routing selections are kept in ``data`` rather than merged into
+        # ``parameters``. ``start_routing_task`` reloads ``parameters`` through
+        # ``InputParametersSchema`` which would reject the dynamic
+        # ``pipeline_<attribute>`` fields.
+        selections, submitted_settings = split_routing_fields(arguments)
+        db_task.data["routing_selections"] = selections
+        db_task.data["attribute_settings"] = {
+            attribute: load_settings(raw) for attribute, raw in submitted_settings.items()
+        }
+
+        # The PCA settings are part of the input parameters, the pipeline tasks
+        # read them from there. The form only offers them for a concatenated
+        # output, so without concatenation the defaults of the first step stay.
+        input_params = loads(db_task.parameters or "{}")
+        if input_params.get(InputParametersSchema().fields["concat_output"].data_key):
+            input_params.update(PCAParametersSchema().dump(arguments))
+            db_task.parameters = dumps(input_params)
+
+        db_task.data["webhook_url"] = url_for(
+            f"{FEATURE_ENGINEERING_PIPELINE_BLP.name}.WebhookView",
+            db_id=db_task.id,
+            _external=True,
+        )
+
+        # Resolve the pipeline plugin metadata urls here, where the request
+        # context supplies the host. The worker has no request context and
+        # SERVER_NAME is unset, so url_for(_external=True) cannot run there.
+        db_task.data["plugin_urls"] = {
+            key: url_for("plugins-api.PluginView", plugin=name, _external=True)
+            for key, name in PIPELINE_PLUGINS.items()
+        }
+        # The numeric pipelines build file urls in the worker (see persist_generated_file).
+        db_task.data["base_url"] = request.url_root
+        db_task.clear_previous_step()
+        db_task.save(commit=True)
+
+        app = current_app._get_current_object()
+        TASK_STEPS_CHANGED.send(app, task_id=db_id)
+
+        task = start_routing_task.s(db_id=db_task.id)
+        task.link_error(save_task_error.s(db_id=db_task.id))
+        task.apply_async()
+
+        return redirect(
+            url_for("tasks-api.TaskView", task_id=str(db_id)), HTTPStatus.SEE_OTHER
+        )
+
+
+# --- WEBHOOOK ---
+@FEATURE_ENGINEERING_PIPELINE_BLP.route("/<int:db_id>/webhook/")
+class WebhookView(MethodView):
+    """
+    Receives and processes state update webhooks from executed sub-plugins.
+
+    Listens for 'status' events from plugins currently executing a pipeline step.
+    It triggers the `handle_webhook_task` to progress the next step.
+    """
+
+    @FEATURE_ENGINEERING_PIPELINE_BLP.response(HTTPStatus.OK)
+    def post(self, db_id: int):
+        source_url = request.args.get("source")
+        event = request.args.get("event")
+        via = request.args.get("via")  # "watchdog" if delivered by the polling watchdog
+
+        if source_url and event == "status":
+            handle_webhook_task.apply_async(
+                kwargs={"db_id": db_id, "source_url": source_url, "via": via},
+                countdown=2,
+            )
+        return "Webhook received", HTTPStatus.OK

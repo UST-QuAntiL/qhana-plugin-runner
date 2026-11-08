@@ -1,0 +1,57 @@
+{
+    "GRAPH_ID": "t_activity",
+    "type": "tree",
+    "ref-target": "taxonomies.zip",
+    "entities": [
+        {
+            "ID": "t_activity_root",
+            "tax_item_name": "Time of activity",
+            "description": "position on the night to day axis",
+            "mapping": [
+                0.5
+            ],
+            "mapping_raw": "0.5"
+        },
+        {
+            "ID": "t_activity_nocturnal",
+            "tax_item_name": "Nocturnal",
+            "description": "",
+            "mapping": [
+                0.0
+            ],
+            "mapping_raw": "0.0"
+        },
+        {
+            "ID": "t_activity_crepuscular",
+            "tax_item_name": "Crepuscular",
+            "description": "",
+            "mapping": [
+                0.5
+            ],
+            "mapping_raw": "0.5"
+        },
+        {
+            "ID": "t_activity_diurnal",
+            "tax_item_name": "Diurnal",
+            "description": "",
+            "mapping": [
+                1.0
+            ],
+            "mapping_raw": "1.0"
+        }
+    ],
+    "relations": [
+        {
+            "source": "t_activity_root",
+            "target": "t_activity_nocturnal"
+        },
+        {
+            "source": "t_activity_root",
+            "target": "t_activity_crepuscular"
+        },
+        {
+            "source": "t_activity_root",
+            "target": "t_activity_diurnal"
+        }
+    ]
+}

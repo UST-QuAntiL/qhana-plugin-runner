@@ -17,7 +17,6 @@ from pathlib import Path
 from tempfile import SpooledTemporaryFile
 from typing import Any, Dict, Optional, Set, Tuple
 
-import muid
 import pandas as pd
 import plotly.express as px
 from celery.utils.log import get_task_logger
@@ -25,7 +24,9 @@ from requests import HTTPError
 
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.virtual_plugins import DataBlob, PluginState
+from qhana_plugin_runner.plugin_utils.dimension_mapping import load_dimension_labels
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
+    entity_dimension_names,
     ensure_array,
     ensure_dict,
     load_entities,
@@ -42,14 +43,11 @@ class PlotNotFinishedError(Exception):
     pass
 
 
-def get_readable_hash(s: str) -> str:
-    return muid.pretty(muid.bhash(s.encode("utf-8")), k1=6, k2=5).replace(" ", "-")
-
-
 def _get_plot(
     entity_url: str,
     clusters_url: Optional[str],
     entity_data_url: Optional[str],
+    dimension_mapping_url: Optional[str],
     full_html: bool,
 ) -> Tuple[str, str]:
     """Generate a scatter plot from the given url.
@@ -58,6 +56,8 @@ def _get_plot(
         entity_url (str): the url containing entity coordinates
         clusters_url (str|None): an optional url containing entity cluster labels
         entity_data_url (str|None): an optional url containing original entity attributes
+        dimension_mapping_url (str|None): an optional url containing a dimension
+            mapping used to label the plot axes with the original feature names
         full_html (bool): if True, produce a standalone html page, else produce
             an embeddable html snippet.
 
@@ -71,7 +71,9 @@ def _get_plot(
         if mimetype is None:
             raise ValueError("Could not determine mimetype.")
         name = retrieve_filename(response)
-        for ent in ensure_array(load_entities(response, mimetype=mimetype)):
+        raw_entities = list(load_entities(response, mimetype=mimetype))
+        dimension_names = entity_dimension_names(raw_entities)
+        for ent in ensure_array(iter(raw_entities)):
             entity_id = str(ent.ID)
             diagram_ent: Dict[str, Any] = {
                 "ID": entity_id,
@@ -181,6 +183,20 @@ def _get_plot(
     for column_name in attr_to_column_name.values():
         hover_data[column_name] = True
 
+    labels_by_dimension = load_dimension_labels(
+        dimension_mapping_url, dimensions=dimension_names
+    )
+    axis_labels: Dict[str, str] = {}
+    for axis, index in (("x", 0), ("y", 1), ("z", 2)):
+        if index >= len(dimension_names):
+            continue
+        dimension_name = dimension_names[index]
+        label = labels_by_dimension.get(dimension_name)
+        if label:
+            axis_labels[axis] = f"{axis} - {label} ({dimension_name})"
+        else:
+            axis_labels[axis] = f"{axis} - {dimension_name}"
+
     if is_3d:
         fig = px.scatter_3d(
             df,
@@ -193,6 +209,7 @@ def _get_plot(
             symbol="Cluster ID",
             hover_data=hover_data,
             custom_data=["URL", "ID"],
+            labels=axis_labels,
         )
     else:
         fig = px.scatter(
@@ -205,6 +222,7 @@ def _get_plot(
             symbol="Cluster ID",
             hover_data=hover_data,
             custom_data=["URL", "ID"],
+            labels=axis_labels,
         )
 
     fig.update_layout(clickmode="event+select")
@@ -265,14 +283,16 @@ def generate_plot(
     entity_url: str,
     clusters_url: Optional[str],
     entity_data_url: Optional[str],
+    dimension_mapping_url: Optional[str],
     hash_: str,
 ) -> str:
 
     TASK_LOGGER.info(
-        "Generating plot for entities %s, clusters %s and entity data %s...",
+        "Generating plot for entities %s, clusters %s, entity data %s and dimension mapping %s...",
         entity_url,
         clusters_url,
         entity_data_url,
+        dimension_mapping_url,
     )
 
     try:
@@ -280,6 +300,7 @@ def generate_plot(
             entity_url=entity_url,
             clusters_url=clusters_url,
             entity_data_url=entity_data_url,
+            dimension_mapping_url=dimension_mapping_url,
             full_html=False,
         )
     except HTTPError:
@@ -307,11 +328,13 @@ def process(
     entity_url: str,
     clusters_url: Optional[str],
     entity_data_url: Optional[str],
+    dimension_mapping_url: Optional[str],
 ) -> str:
     diagram, name = _get_plot(
         entity_url=entity_url,
         clusters_url=clusters_url,
         entity_data_url=entity_data_url,
+        dimension_mapping_url=dimension_mapping_url,
         full_html=True,
     )
 

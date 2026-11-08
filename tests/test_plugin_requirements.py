@@ -22,7 +22,7 @@ import ast
 from pathlib import Path
 from typing import Iterator
 
-from test_plugin_imports import IGNORE_FOLDERS, PLUGIN_LOCATIONS
+from .test_plugin_imports import IGNORE_FOLDERS, PLUGIN_LOCATIONS
 
 REQUIREMENTS_METHOD_NAME = "get_requirements"
 

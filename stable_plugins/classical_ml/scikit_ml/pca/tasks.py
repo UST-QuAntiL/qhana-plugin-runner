@@ -27,7 +27,7 @@ from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     load_entities,
     ensure_dict,
 )
-from qhana_plugin_runner.requests import open_url, retrieve_filename
+from qhana_plugin_runner.requests import get_mimetype, open_url, retrieve_filename
 from qhana_plugin_runner.storage import STORE
 
 from .pca_output import pca_to_output, get_output_dimensionality
@@ -58,7 +58,9 @@ def get_entity_generator(entity_points_url: str):
     """
     file_ = open_url(entity_points_url)
     file_.encoding = "utf-8"
-    file_type = file_.headers["Content-Type"]
+    file_type = get_mimetype(file_)
+    if file_type is None:
+        raise ValueError(f"Could not determine mimetype of {entity_points_url}!")
     entities_generator = load_entities(file_, mimetype=file_type)
     entities_generator = ensure_dict(entities_generator)
     return entities_generator

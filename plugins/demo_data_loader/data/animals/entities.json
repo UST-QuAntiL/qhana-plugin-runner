@@ -1,0 +1,287 @@
+[
+    {
+        "ID": "cow",
+        "taxonomicClass": "t_class_ruminant",
+        "diet": [
+            "t_diet_grass",
+            "t_diet_leaves"
+        ],
+        "habitat": [
+            "t_habitat_farmland",
+            "t_habitat_grassland"
+        ],
+        "activityTime": "t_activity_diurnal",
+        "weightKg": 750,
+        "temperatureRangeC": [
+            0,
+            30
+        ]
+    },
+    {
+        "ID": "pig",
+        "taxonomicClass": "t_class_suid",
+        "diet": [
+            "t_diet_grass",
+            "t_diet_fruit",
+            "t_diet_insects"
+        ],
+        "habitat": [
+            "t_habitat_farmland"
+        ],
+        "activityTime": "t_activity_crepuscular",
+        "weightKg": 130,
+        "temperatureRangeC": [
+            2,
+            28
+        ]
+    },
+    {
+        "ID": "sheep",
+        "taxonomicClass": "t_class_ruminant",
+        "diet": [
+            "t_diet_grass",
+            "t_diet_leaves"
+        ],
+        "habitat": [
+            "t_habitat_farmland",
+            "t_habitat_grassland",
+            "t_habitat_mountain"
+        ],
+        "activityTime": "t_activity_diurnal",
+        "weightKg": 70,
+        "temperatureRangeC": [
+            -5,
+            28
+        ]
+    },
+    {
+        "ID": "goat",
+        "taxonomicClass": "t_class_ruminant",
+        "diet": [
+            "t_diet_grass",
+            "t_diet_leaves",
+            "t_diet_fruit"
+        ],
+        "habitat": [
+            "t_habitat_farmland",
+            "t_habitat_mountain"
+        ],
+        "activityTime": "t_activity_diurnal",
+        "weightKg": 60,
+        "temperatureRangeC": [
+            -10,
+            35
+        ]
+    },
+    {
+        "ID": "lion",
+        "taxonomicClass": "t_class_bigcat",
+        "diet": [
+            "t_diet_meat"
+        ],
+        "habitat": [
+            "t_habitat_savanna",
+            "t_habitat_grassland"
+        ],
+        "activityTime": "t_activity_nocturnal",
+        "weightKg": 190,
+        "temperatureRangeC": [
+            15,
+            45
+        ]
+    },
+    {
+        "ID": "tiger",
+        "taxonomicClass": "t_class_bigcat",
+        "diet": [
+            "t_diet_meat"
+        ],
+        "habitat": [
+            "t_habitat_tropical_forest"
+        ],
+        "activityTime": "t_activity_nocturnal",
+        "weightKg": 220,
+        "temperatureRangeC": [
+            5,
+            40
+        ]
+    },
+    {
+        "ID": "wolf",
+        "taxonomicClass": "t_class_canine",
+        "diet": [
+            "t_diet_meat"
+        ],
+        "habitat": [
+            "t_habitat_temperate_forest",
+            "t_habitat_mountain"
+        ],
+        "activityTime": "t_activity_crepuscular",
+        "weightKg": 45,
+        "temperatureRangeC": [
+            -30,
+            25
+        ]
+    },
+    {
+        "ID": "fox",
+        "taxonomicClass": "t_class_canine",
+        "diet": [
+            "t_diet_meat",
+            "t_diet_fruit",
+            "t_diet_insects"
+        ],
+        "habitat": [
+            "t_habitat_temperate_forest",
+            "t_habitat_urban",
+            "t_habitat_farmland"
+        ],
+        "activityTime": "t_activity_nocturnal",
+        "weightKg": 7,
+        "temperatureRangeC": [
+            -20,
+            30
+        ]
+    },
+    {
+        "ID": "eagle",
+        "taxonomicClass": "t_class_bird_of_prey",
+        "diet": [
+            "t_diet_meat",
+            "t_diet_fish"
+        ],
+        "habitat": [
+            "t_habitat_mountain",
+            "t_habitat_temperate_forest"
+        ],
+        "activityTime": "t_activity_diurnal",
+        "weightKg": 5,
+        "temperatureRangeC": [
+            -15,
+            30
+        ]
+    },
+    {
+        "ID": "owl",
+        "taxonomicClass": "t_class_bird_of_prey",
+        "diet": [
+            "t_diet_meat",
+            "t_diet_insects"
+        ],
+        "habitat": [
+            "t_habitat_temperate_forest",
+            "t_habitat_farmland"
+        ],
+        "activityTime": "t_activity_nocturnal",
+        "weightKg": 1.5,
+        "temperatureRangeC": [
+            -20,
+            28
+        ]
+    },
+    {
+        "ID": "parrot",
+        "taxonomicClass": "t_class_parrot",
+        "diet": [
+            "t_diet_seeds",
+            "t_diet_fruit"
+        ],
+        "habitat": [
+            "t_habitat_tropical_forest"
+        ],
+        "activityTime": "t_activity_diurnal",
+        "weightKg": 1,
+        "temperatureRangeC": [
+            18,
+            35
+        ]
+    },
+    {
+        "ID": "sparrow",
+        "taxonomicClass": "t_class_songbird",
+        "diet": [
+            "t_diet_seeds",
+            "t_diet_insects"
+        ],
+        "habitat": [
+            "t_habitat_urban",
+            "t_habitat_farmland"
+        ],
+        "activityTime": "t_activity_diurnal",
+        "weightKg": 0.03,
+        "temperatureRangeC": [
+            -10,
+            35
+        ]
+    },
+    {
+        "ID": "dolphin",
+        "taxonomicClass": "t_class_marine_mammal",
+        "diet": [
+            "t_diet_fish"
+        ],
+        "habitat": [
+            "t_habitat_open_ocean",
+            "t_habitat_coast"
+        ],
+        "activityTime": "t_activity_diurnal",
+        "weightKg": 150,
+        "temperatureRangeC": [
+            10,
+            28
+        ]
+    },
+    {
+        "ID": "shark",
+        "taxonomicClass": "t_class_cartilaginous_fish",
+        "diet": [
+            "t_diet_fish",
+            "t_diet_meat"
+        ],
+        "habitat": [
+            "t_habitat_open_ocean",
+            "t_habitat_coral_reef"
+        ],
+        "activityTime": "t_activity_crepuscular",
+        "weightKg": 500,
+        "temperatureRangeC": [
+            12,
+            30
+        ]
+    },
+    {
+        "ID": "tuna",
+        "taxonomicClass": "t_class_bony_fish",
+        "diet": [
+            "t_diet_fish",
+            "t_diet_crustaceans"
+        ],
+        "habitat": [
+            "t_habitat_open_ocean"
+        ],
+        "activityTime": "t_activity_diurnal",
+        "weightKg": 250,
+        "temperatureRangeC": [
+            8,
+            28
+        ]
+    },
+    {
+        "ID": "octopus",
+        "taxonomicClass": "t_class_mollusc",
+        "diet": [
+            "t_diet_crustaceans",
+            "t_diet_fish"
+        ],
+        "habitat": [
+            "t_habitat_coral_reef",
+            "t_habitat_coast"
+        ],
+        "activityTime": "t_activity_nocturnal",
+        "weightKg": 15,
+        "temperatureRangeC": [
+            10,
+            28
+        ]
+    }
+]

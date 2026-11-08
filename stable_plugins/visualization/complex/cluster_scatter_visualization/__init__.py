@@ -14,16 +14,13 @@
 
 from typing import Optional
 
-import pathlib
-
 from flask.app import Flask
 
 from qhana_plugin_runner.api.util import SecurityBlueprint
-from qhana_plugin_runner.util.plugins import QHAnaPluginBase
-from qhana_plugin_runner.util.plugins import plugin_identifier
+from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "cluster-scatter-visualization"
-__version__ = "v1.0.0"
+__version__ = "v1.0.4"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 VIS_BLP = SecurityBlueprint(
@@ -38,7 +35,7 @@ VIS_BLP = SecurityBlueprint(
 
 
 class ClusterScatterVisualization(QHAnaPluginBase):
-    name = "Clustered Scatter Plot Visualization"
+    name = _plugin_name
     version = __version__
     description = (
         "A visualization plugin that creates a scatter plot using the provided data."
@@ -60,7 +57,6 @@ class ClusterScatterVisualization(QHAnaPluginBase):
             "qiskit~=2.3.0\n"
             "kaleido~=1.2.0\n"
             "dash~=4.0.0\n"
-            "muid~=0.5.3\n"
             "pandas~=2.3.3\n"
             "plotly~=6.6.0"
         )

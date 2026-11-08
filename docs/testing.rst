@@ -147,6 +147,9 @@ Tests for runner-core code go in ``tests/`` and follow standard pytest patterns.
 * :source:`tests/test_db.py`: minimal fixture usage with the ``task_data`` fixture.
 * :source:`tests/test_entity_marshalling.py`: exercises CSV/JSON entity round-trips with ``assert_sequence_equals``.
 * :source:`tests/test_plugin_imports.py`: validates the plugin import contract enforced on plugin source files.
+* :source:`tests/test_plugin_metadata_types.py`: requests the metadata of every registered plugin through the ``client`` fixture and fails if a plugin declares a data type or content type that is not allowed.
+
+The allowed types are defined in :source:`tests/allowed_types.py` and documented in :doc:`data-formats/allowed-types`. A new type has to be added to both, otherwise :source:`tests/test_allowed_types_docs.py` fails.
 
 Use ``task_data`` whenever a test needs a Flask app context or DB access.
 

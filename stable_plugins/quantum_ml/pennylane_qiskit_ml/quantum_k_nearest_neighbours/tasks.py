@@ -31,6 +31,7 @@ from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     load_entities,
     ensure_dict,
 )
+from qhana_plugin_runner.plugin_utils.hashing import get_readable_hash
 from qhana_plugin_runner.requests import open_url, retrieve_filename
 from qhana_plugin_runner.storage import STORE
 
@@ -40,13 +41,7 @@ from sklearn.metrics import accuracy_score
 from .backend.visualize import plot_data, plot_confusion_matrix
 from .backend.qknns.qknn import QkNNEnum
 
-import muid
-
 TASK_LOGGER = get_task_logger(__name__)
-
-
-def get_readable_hash(s: str) -> str:
-    return muid.pretty(muid.bhash(s.encode("utf-8")), k1=6, k2=5).replace(" ", "-")
 
 
 def get_point(ent: dict) -> np.ndarray:

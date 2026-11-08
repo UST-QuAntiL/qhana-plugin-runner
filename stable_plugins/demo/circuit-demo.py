@@ -98,7 +98,7 @@ class CircuitDemoParametersSchema(FrontendFormBaseSchema):
     )
     statevector = fields.Bool(
         required=False,
-        missing=False,
+        load_default=False,
         metadata={
             "label": "Request statevector",
         },
@@ -111,7 +111,7 @@ class WebhookParams(MaBaseSchema):
 
 
 class ExecutionOptionsParams(MaBaseSchema):
-    statevector = fields.Bool(missing=False)
+    statevector = fields.Bool(load_default=False)
 
 
 @CIRCUIT_BLP.route("/")
