@@ -202,12 +202,13 @@ class DynamicRender:
             patterns=all_patterns,
             base_url=f"/plugins/{PA_BLP.name}/ui",
             language=language,
+            sort_label="Name: A → Z",
         )
 
     def render_language_overview_categorized(
         self, atlas: PatternAtlasContent, language: PatternLanguage
     ) -> str:
-        template = self._jinja.get_template("language-overview-categorized.jinja2")
+        template = self._jinja.get_template("language-overview.jinja2")
         all_patterns = language.get_patterns_sorted(atlas)
         patterns_by_category = defaultdict(list)
         for pattern in all_patterns:
@@ -217,18 +218,20 @@ class DynamicRender:
             patterns_by_category=patterns_by_category,
             base_url=f"/plugins/{PA_BLP.name}/ui",
             language=language,
+            sort_label="Tags",
         )
 
     def render_language_overview_reverse(
         self, atlas: PatternAtlasContent, language: PatternLanguage
     ) -> str:
-        template = self._jinja.get_template("language-overview-reversed.jinja2")
+        template = self._jinja.get_template("language-overview.jinja2")
         all_patterns = language.get_patterns_sorted(atlas)
         all_patterns.reverse()
         return template.render(
             patterns=all_patterns,
             base_url=f"/plugins/{PA_BLP.name}/ui",
             language=language,
+            sort_label="Name: Z → A",
         )
 
     def render_pattern_graph(

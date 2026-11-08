@@ -7,6 +7,21 @@
 {% endblock head %}
 
 
+{%- macro pattern_cards(patterns) -%}
+    <div class="card-grid">
+        {%- for pattern in patterns -%}
+        <div class="card"
+        data-name="{{pattern.name | lower}}"
+        data-tags="{{pattern.tags | join(' ') | lower}}"
+        data-categories="{{pattern.categories | join(' ') | lower}}">
+            <img src="{{pattern.icon | resource}}" aria-hidden="true">
+            <h2><a href="{{base_url}}/pattern-languages/{{language.language_id}}/{{pattern.pattern_id}}/index.html">{{pattern.name}}</a></h2>
+        </div>
+        {%- endfor -%}
+    </div>
+{%- endmacro -%}
+
+
 {%- block content -%}
     <main>
     <header class="page-header">
@@ -26,7 +41,7 @@
             </div>
             <div class="sort-dropdown">
                 <button id="sort-btn" class="sort-btn">
-                    Sort by: <span id="sort-label">Name: A → Z</span>
+                    Sort by: <span id="sort-label">{{sort_label}}</span>
                     <span class="arrow">▼</span>
                 </button>
                 <ul id="sort-menu" class="sort-menu">
@@ -38,17 +53,16 @@
         </search>
     </header>
 
-    <div class="card-grid">
-        {%- for pattern in patterns -%}
-        <div class="card" 
-        data-name="{{pattern.name | lower}}" 
-        data-tags="{{pattern.tags | join(' ') | lower}}"
-        data-categories="{{pattern.categories | join(' ') | lower}}">
-            <img src="{{pattern.icon | resource}}" aria-hidden="true">
-            <h2><a href="{{base_url}}/pattern-languages/{{language.language_id}}/{{pattern.pattern_id}}/index.html">{{pattern.name}}</a></h2>
-        </div>
-        {%- endfor -%}
-    </div>
+    {%- if patterns_by_category is defined -%}
+    {%- for category, patterns in patterns_by_category.items() -%}
+    <details open class="pattern-detail">
+    <summary class="pattern-headline">{{ category }}</summary>
+    {{ pattern_cards(patterns) }}
+    </details>
+    {%- endfor -%}
+    {%- else -%}
+    {{ pattern_cards(patterns) }}
+    {%- endif -%}
 
     <script>
         const searchBox = document.getElementById('search-box');
@@ -62,7 +76,7 @@
                 const tags = card.dataset.tags;
                 const categories = card.dataset.categories;
                 const visible = name.includes(query) || tags.includes(query) || categories.includes(query);
-                card.style.display = visible ? '' : 'none';
+                card.classList.toggle("hidden", !visible);
             });
         });
 
