@@ -381,6 +381,26 @@ class QCAtlasClient:
             raise ValueError(f"Could not decode json response from url '{url}'!") from err
         return QCFile.from_dict(data)
 
+    def _find_plugin_identifiers(self, query_params: dict[str, str]) -> set[str]:
+        """Get the identifiers of all registered plugins matching the query params (filtered by the registry)."""
+        identifiers: set[str] = set()
+        if not PLUGIN_REGISTRY_CLIENT.ready:
+            current_app.logger.info("plugin registry url not set, no try out buttons")
+            return identifiers
+        with PLUGIN_REGISTRY_CLIENT as client:
+            page = client.search_by_rel("plugin", query_params=query_params)
+            while page is not None:
+                for link in page.data.get("items", []):
+                    plugin = (page.embedded or {}).get(link["href"])
+                    if plugin is None:
+                        plugin = client.fetch_by_api_link(link)
+                    identifier = plugin.data.get("identifier")
+                    if identifier:
+                        identifiers.add(identifier)
+                next_links = page.get_links_by_rel("next")
+                page = client.fetch_by_api_link(next_links[0]) if next_links else None
+        return identifiers
+
     def get_try_out_buttons(
         self,
         implementation: AlgorithmImplementation,
@@ -396,28 +416,11 @@ class QCAtlasClient:
             f"./algorithms/{implementation.implementedAlgorithmId}/implementations/{implementation.id}/implementation-packages/{implementation_package.id}/file/content",
         )
 
-        plugin_registry_url = urljoin(
-            PLUGIN_REGISTRY_CLIENT.plugin_registry_url, "./plugins/"
-        )
-
         match implementation_package.type:
 
             case "workflow_editor":
-
-                response = get(
-                    plugin_registry_url,
-                    params={"name": "workflow-editor"},
-                    headers={"Accept": "application/json"},
-                )
-                response.raise_for_status()
-                data = response.json()
-                if not data.get("embedded"):
+                if not self._find_plugin_identifiers({"name": "workflow-editor"}):
                     current_app.logger.info(f"workflow-editor not found!")
-                    return []
-                plugin = data.get("embedded")[0]
-                plugin_url = plugin["data"].get("identifier")
-                if not plugin_url:
-                    current_app.logger.info(f"workflow-editor has no identifier!")
                     return []
 
                 return [
@@ -429,20 +432,8 @@ class QCAtlasClient:
                 ]
 
             case "low_code_modeler":
-                response = get(
-                    plugin_registry_url,
-                    params={"name": "low-code-modeler"},
-                    headers={"Accept": "application/json"},
-                )
-                response.raise_for_status()
-                data = response.json()
-                if not data.get("embedded"):
+                if not self._find_plugin_identifiers({"name": "low-code-modeler"}):
                     current_app.logger.info(f"low-code-modeler not found!")
-                    return []
-                plugin = data.get("embedded")[0]
-                plugin_url = plugin["data"].get("identifier")
-                if not plugin_url:
-                    current_app.logger.info(f"low-code-modeler has no identifier!")
                     return []
 
                 return [
@@ -469,26 +460,12 @@ class QCAtlasClient:
                 unique_identifiers: set[str] = set()
 
                 for identifier in identifiers:
-                    response = get(
-                        plugin_registry_url,
-                        params={"name": identifier},
-                        headers={"Accept": "application/json"},
-                    )
-                    response.raise_for_status()
-                    data = response.json()
-                    if not data.get("embedded"):
+                    found = self._find_plugin_identifiers({"name": identifier})
+                    if not found:
                         current_app.logger.info(
                             f"plugin with identifier {identifier!r} not found!"
                         )
-                        continue
-                    plugin = data.get("embedded")[0]
-                    identifier = plugin["data"].get("identifier")
-                    if not identifier:
-                        current_app.logger.info(
-                            f"plugin with identifier {identifier!r} has no identifier!"
-                        )
-                        continue
-                    unique_identifiers.add(identifier)
+                    unique_identifiers.update(found)
 
                 for tag in tags:
                     match tag:
@@ -501,27 +478,12 @@ class QCAtlasClient:
                         case _:
                             current_app.logger.warning(f"invalid tag format {tag!r}")
                             continue
-                    response = get(
-                        plugin_registry_url,
-                        params={"tags": tags_param},
-                        headers={"Accept": "application/json"},
-                    )
-                    response.raise_for_status()
-                    data = response.json()
-                    embedded = data.get("embedded")
-                    if not embedded or len(embedded) == 0:
+                    found = self._find_plugin_identifiers({"tags": tags_param})
+                    if not found:
                         current_app.logger.info(
                             f"plugin with tags {tags_param!r} not found!"
                         )
-                        continue
-                    for plugin in embedded:
-                        identifier = plugin["data"].get("identifier")
-                        if not identifier:
-                            current_app.logger.info(
-                                f"plugin with tag {tags_param!r} has no identifier!"
-                            )
-                            continue
-                        unique_identifiers.add(identifier)
+                    unique_identifiers.update(found)
 
                 try_out_list = [
                     TryOutButton(
