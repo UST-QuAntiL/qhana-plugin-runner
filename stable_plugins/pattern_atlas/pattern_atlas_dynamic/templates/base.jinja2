@@ -13,13 +13,9 @@
 
 <body>
     {%- block titlebar -%}
-    {%- if is_planqk -%}
-    {% include 'titlebar-planqk.jinja2' %}
-    {%- else -%}
     <div class="titlebar">
         <a class="home" href="{{base_url}}/index.html">Pattern Atlas</a>
     </div>
-    {%- endif -%}
     {%- endblock titlebar -%}
 
     {%- block content -%}

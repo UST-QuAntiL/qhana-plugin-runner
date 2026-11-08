@@ -37,20 +37,6 @@ p {
     text-decoration: none;
 }
 
-.titlebar.planqk {
-    color: white;
-    background: #3d78b5;
-    background: linear-gradient(45deg,#3d78b5,#e12d32);
-}
-
-.planqk .home {
-    color: white;
-}
-
-.planqk-logo {
-    height: 3rem;
-}
-
 .page-head {
     margin: 0px;
     padding-inline: 1rem;
