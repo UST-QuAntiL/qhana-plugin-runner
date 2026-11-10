@@ -106,9 +106,7 @@ def compatible_markdown(markdown_text: str) -> str:
     text = BLOCK_MATH_RE.sub(replace_block, markdown_text)
     text = INLINE_MATH_RE.sub(replace_inline, text)
 
-    md = create_markdown(
-        escape=True, plugins=["table", "footnotes", "url", "task_lists"]
-    )
+    md = create_markdown(escape=True, plugins=["table", "footnotes", "url", "task_lists"])
     html = md(text)
 
     # replace all tokens with their corresponding math html snippets
