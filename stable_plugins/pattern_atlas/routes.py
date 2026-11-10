@@ -1,6 +1,5 @@
 from os import getenv
 from http import HTTPStatus
-from flask import render_template, send_from_directory, redirect, request
 from flask.views import MethodView
 from flask.helpers import url_for
 from flask.wrappers import Response
@@ -98,26 +97,6 @@ class PluginRootView(MethodView):
                 data_input=[],
                 data_output=[],
             ),
-        )
-
-
-@PA_BLP.route("/ui/styles.css")
-class StylesUI(MethodView):
-    @PA_BLP.response(HTTPStatus.OK)
-    @PA_BLP.require_jwt("jwt", optional=True)
-    def get(self):
-        return send_from_directory(
-            f"{PA_BLP.root_path}/pattern_atlas_dynamic/templates", "styles.css"
-        )
-
-
-@PA_BLP.route("/ui/graph.js")
-class GraphUI(MethodView):
-    @PA_BLP.response(HTTPStatus.OK)
-    @PA_BLP.require_jwt("jwt", optional=True)
-    def get(self):
-        return send_from_directory(
-            f"{PA_BLP.root_path}/pattern_atlas_dynamic/templates", "graph.js"
         )
 
 

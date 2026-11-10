@@ -12,20 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from collections import defaultdict
 import json
 import re
-from hashlib import sha3_256
+from collections import defaultdict
 from html.parser import HTMLParser
-from pathlib import Path
-from json import dumps, loads
+from typing import Match
 
-from httpx import get
-from jinja2 import Environment, PackageLoader, select_autoescape
+from flask import current_app, url_for
+from jinja2 import Environment, select_autoescape
 from markupsafe import Markup
 from mistune import create_markdown
-from typing import Match
-from pattern_atlas.plugin import PA_BLP
+
+from ..plugin import PA_BLP
 
 from .model import (
     ImplementationPackage,
@@ -137,30 +135,47 @@ class ExtractImageLinksParser(HTMLParser):
                     self.image_links.add(value)
 
 
+def ui_base_url() -> str:
+    index_url = url_for(f"{PA_BLP.name}.IndexUI")
+    return index_url.removesuffix("/index.html")
+
+
+def static_url(filename: str) -> str:
+    return url_for(f"{PA_BLP.name}.static", filename=filename)
+
+
+def resource(url: str | None) -> str:
+    if not url:
+        return static_url("empty.svg")
+    return url
+
+
 class DynamicRender:
     def __init__(self) -> None:
-        self._resource_map: dict[str, str] = {"": "/ui/assets/empty.svg"}
-        self._jinja = Environment(
-            loader=PackageLoader("pattern_atlas.pattern_atlas_dynamic"),
-            autoescape=select_autoescape(
-                enabled_extensions=("html", "jinja2", "css"), default_for_string=True
-            ),
-        )
-        self._jinja.filters["resource"] = self._resource
-        self._jinja.filters["markdown"] = self._markdown
-        self._jinja.filters["split_camel_case"] = split_camel_case
-        self._jinja.filters["json_dumps"] = lambda o: json.dumps(o)
+        self._jinja_envs: dict[int, Environment] = {}
         self._atlas_index = PatternAtlasIndex()
 
-    def _resource(self, url: str) -> str:
-        if url is None:
-            url = ""
+    def _get_jinja_env(self) -> Environment:
+        app = current_app._get_current_object()
+        env = self._jinja_envs.get(id(app))
+        if env is None:
+            env = app.jinja_env.overlay(
+                loader=PA_BLP.jinja_loader,
+                autoescape=select_autoescape(
+                    enabled_extensions=("html", "jinja2"), default_for_string=True
+                ),
+            )
+            env.filters = dict(env.filters)
+            env.filters["resource"] = resource
+            env.filters["markdown"] = self._markdown
+            env.filters["split_camel_case"] = split_camel_case
+            env.filters["json_dumps"] = json.dumps
+            self._jinja_envs[id(app)] = env
+        return env
 
-        resolved = self._resource_map.get(url)
-        if resolved:
-            return resolved
-
-        return url
+    def _render(self, template_name: str, **context) -> str:
+        template = self._get_jinja_env().get_template(template_name)
+        return template.render(base_url=ui_base_url(), static_url=static_url, **context)
 
     def _markdown(self, markdown: str):
         if not markdown:
@@ -174,32 +189,25 @@ class DynamicRender:
         image_link_parser = ExtractImageLinksParser()
         image_link_parser.feed(html)
         for link in image_link_parser.image_links:
-            replacement = self._resource(link)
+            replacement = resource(link)
             html = html.replace(link, replacement)
 
-        html = html.replace('href="pattern-languages/', 'href="/pattern-languages/')
+        html = html.replace(
+            'href="pattern-languages/', f'href="{ui_base_url()}/pattern-languages/'
+        )
         html = html.replace('href="http', 'target="_blank" href="http')
         return Markup(html)
 
-    def render_styles(self) -> str:
-        template = self._jinja.get_template("styles.css")
-        return template.render()
-
     def render_index(self, atlas: PatternAtlasContent) -> str:
-        template = self._jinja.get_template("languages.jinja2")
-        return template.render(
-            atlas=atlas,
-            base_url=f"/plugins/{PA_BLP.name}/ui",
-        )
+        return self._render("languages.jinja2", atlas=atlas)
 
     def render_language_overview(
         self, atlas: PatternAtlasContent, language: PatternLanguage
     ) -> str:
-        template = self._jinja.get_template("language-overview.jinja2")
         all_patterns = language.get_patterns_sorted(atlas)
-        return template.render(
+        return self._render(
+            "language-overview.jinja2",
             patterns=all_patterns,
-            base_url=f"/plugins/{PA_BLP.name}/ui",
             language=language,
             sort_label="Name: A → Z",
         )
@@ -207,15 +215,14 @@ class DynamicRender:
     def render_language_overview_categorized(
         self, atlas: PatternAtlasContent, language: PatternLanguage
     ) -> str:
-        template = self._jinja.get_template("language-overview.jinja2")
         all_patterns = language.get_patterns_sorted(atlas)
         patterns_by_category = defaultdict(list)
         for pattern in all_patterns:
             for category in pattern.categories:
                 patterns_by_category[CATEGORY_HEADLINES[category]].append(pattern)
-        return template.render(
+        return self._render(
+            "language-overview.jinja2",
             patterns_by_category=patterns_by_category,
-            base_url=f"/plugins/{PA_BLP.name}/ui",
             language=language,
             sort_label="Tags",
         )
@@ -223,12 +230,11 @@ class DynamicRender:
     def render_language_overview_reverse(
         self, atlas: PatternAtlasContent, language: PatternLanguage
     ) -> str:
-        template = self._jinja.get_template("language-overview.jinja2")
         all_patterns = language.get_patterns_sorted(atlas)
         all_patterns.reverse()
-        return template.render(
+        return self._render(
+            "language-overview.jinja2",
             patterns=all_patterns,
-            base_url=f"/plugins/{PA_BLP.name}/ui",
             language=language,
             sort_label="Name: Z → A",
         )
@@ -236,14 +242,13 @@ class DynamicRender:
     def render_pattern_graph(
         self, atlas: PatternAtlasContent, language: PatternLanguage
     ) -> str:
-        template = self._jinja.get_template("pattern-graph.jinja2")
         self._atlas_index.build(atlas)
         lang_relations = self._atlas_index.relations_for_language(language.language_id)
         all_patterns = language.get_patterns_sorted(atlas)
-        return template.render(
+        return self._render(
+            "pattern-graph.jinja2",
             relations=lang_relations,
             patterns=all_patterns,
-            base_url=f"/plugins/{PA_BLP.name}/ui",
             language=language,
         )
 
@@ -254,11 +259,10 @@ class DynamicRender:
         pattern: Pattern,
         language: PatternLanguage,
     ) -> str:
-        template = self._jinja.get_template("pattern.jinja2")
-        return template.render(
+        return self._render(
+            "pattern.jinja2",
             atlas=atlas,
             qc_atlas=qc_atlas,
-            base_url=f"/plugins/{PA_BLP.name}/ui",
             pattern=pattern,
             language=language,
         )

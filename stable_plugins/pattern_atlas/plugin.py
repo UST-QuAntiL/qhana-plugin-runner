@@ -10,6 +10,8 @@ PA_BLP = SecurityBlueprint(
     __name__,
     description="pattern atlas api",
     template_folder="pattern_atlas_dynamic/templates",
+    static_folder="pattern_atlas_dynamic/static",
+    static_url_path="/ui/static",
 )
 
 
