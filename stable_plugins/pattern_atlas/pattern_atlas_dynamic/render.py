@@ -20,7 +20,7 @@ from typing import Match
 
 from flask import current_app, url_for
 from jinja2 import Environment, select_autoescape
-from markupsafe import Markup
+from markupsafe import Markup, escape
 from mistune import create_markdown
 
 from ..plugin import PA_BLP
@@ -86,7 +86,7 @@ def compatible_markdown(markdown_text: str) -> str:
         assert INLINE_MATH_RE.fullmatch(match_obj.group(0))
         nonlocal counter
         tex = _link_as_text((match_obj.group(1) or match_obj.group(2)).strip())
-        placeholders.append(f'<span class="math">\\({tex}\\)</span>')
+        placeholders.append(f'<span class="math">\\({escape(tex)}\\)</span>')
         # the counter in the token corresponds to the index of this snippet in placeholders
         token = f"§INLINE_MATH_{counter}§"
         counter += 1
@@ -96,7 +96,7 @@ def compatible_markdown(markdown_text: str) -> str:
         assert BLOCK_MATH_RE.fullmatch(match_obj.group(0))
         nonlocal counter
         tex = _link_as_text((match_obj.group(1) or match_obj.group(2)).strip())
-        placeholders.append(f'<div class="math">\\[{tex}\\]</div>')
+        placeholders.append(f'<div class="math">\\[{escape(tex)}\\]</div>')
         # the counter in the token corresponds to the index of this snippet in placeholders
         token = f"§BLOCK_MATH_{counter}§"
         counter += 1
@@ -107,7 +107,7 @@ def compatible_markdown(markdown_text: str) -> str:
     text = INLINE_MATH_RE.sub(replace_inline, text)
 
     md = create_markdown(
-        escape=False, plugins=["table", "footnotes", "url", "task_lists"]
+        escape=True, plugins=["table", "footnotes", "url", "task_lists"]
     )
     html = md(text)
 
