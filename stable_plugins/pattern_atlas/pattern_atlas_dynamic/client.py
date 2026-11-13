@@ -296,6 +296,9 @@ class QCAtlasClient:
             atlas_url = atlas_url + "/"
         urlparse(atlas_url)  # ensure a valid url
         self.atlas_url = atlas_url
+        self._plugin_identifier_cache: dict[
+            tuple[tuple[str, str], ...], frozenset[str]
+        ] = {}
 
     def get_all(self) -> QCAtlasContent:
         # from example_data import EXAMPLE_DATA
@@ -381,12 +384,25 @@ class QCAtlasClient:
             raise ValueError(f"Could not decode json response from url '{url}'!") from err
         return QCFile.from_dict(data)
 
-    def _find_plugin_identifiers(self, query_params: dict[str, str]) -> set[str]:
-        """Get the identifiers of all registered plugins matching the query params (filtered by the registry)."""
-        identifiers: set[str] = set()
+    def _find_plugin_identifiers(self, query_params: dict[str, str]) -> frozenset[str]:
+        """Get the identifiers of all registered plugins matching the query params (filtered by the registry).
+
+        Results are cached per client instance to avoid repeated registry requests for the same query.
+        """
         if not PLUGIN_REGISTRY_CLIENT.ready:
             current_app.logger.info("plugin registry url not set, no try out buttons")
-            return identifiers
+            return frozenset()
+        cache_key = tuple(sorted(query_params.items()))
+        cached = self._plugin_identifier_cache.get(cache_key)
+        if cached is not None:
+            return cached
+        identifiers = frozenset(self._query_plugin_identifiers(query_params))
+        self._plugin_identifier_cache[cache_key] = identifiers
+        return identifiers
+
+    def _query_plugin_identifiers(self, query_params: dict[str, str]) -> set[str]:
+        """Query the plugin registry for all plugins matching the query params."""
+        identifiers: set[str] = set()
         with PLUGIN_REGISTRY_CLIENT as client:
             page = client.search_by_rel("plugin", query_params=query_params)
             while page is not None:
