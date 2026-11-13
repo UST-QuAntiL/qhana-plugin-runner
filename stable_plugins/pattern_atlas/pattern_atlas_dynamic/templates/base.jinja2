@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    {%- block head -%}
+    <script defer src="/static/microfrontend.js"></script>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link rel="stylesheet" type="text/css" href="{{static_url('styles.css')}}" media="screen" />
+    <link rel="stylesheet" type="text/css" href="{{'https://cdn.jsdelivr.net/npm/modern-normalize@3.0.1/modern-normalize.css' | resource}}" media="screen" />
+    {%- endblock head -%}
+</head>
+
+<body>
+    {%- block titlebar -%}
+    <div class="titlebar">
+        <a class="home" href="{{base_url}}/index.html">Pattern Atlas</a>
+    </div>
+    {%- endblock titlebar -%}
+
+    {%- block content -%}
+    {%- endblock content -%}
+
+    {%- block script -%}
+    {%- endblock script -%}
+    <script>
+
+       function applyWorkaround(){
+            if(window._qhana_microfrontend_state){
+                window._qhana_microfrontend_state.targetHeight = "full";
+	            window.notifyParentWindowOnHeightChange(null, "full");
+            }
+         }
+        let hasApplied = false;
+
+        function ensureHeight(){
+			if(!hasApplied){
+				hasApplied = true;
+				applyWorkaround();
+			}
+		}
+
+        window.addEventListener("message", ensureHeight, { once: true });
+		document.addEventListener("DOMContentLoaded", ensureHeight);
+    </script>  
+</body>
+
+</html>

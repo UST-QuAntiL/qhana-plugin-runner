@@ -100,16 +100,19 @@ def test_qasm3_circuit_is_parsed_by_the_qasm3_importer():
 
 
 def test_qasm2_circuit_is_rejected_by_the_qasm3_importer():
-    """An OpenQASM 2 program raises the error the executors fall back on.
+    """An OpenQASM 2 program raises an error the executors fall back on.
 
-    The executors catch exactly this exception to retry with the OpenQASM 2
-    parser, so widening or narrowing it would break the fallback.
+    The executors catch exactly these exceptions to retry with the OpenQASM 2
+    parser, so widening or narrowing them would break the fallback.
+    Up to openqasm3 1.0.1 QASM3ImporterError is raised. Starting with
+    openqasm3 1.0.2, the version check raises QASM3ParsingError instead.
     """
     pytest.importorskip("qiskit_qasm3_import")
+    from openqasm3.parser import QASM3ParsingError
     from qiskit.qasm3 import QASM3ImporterError
     from qiskit.qasm3 import loads as loads3
 
-    with pytest.raises(QASM3ImporterError):
+    with pytest.raises((QASM3ImporterError, QASM3ParsingError)):
         loads3(QASM2_CIRCUIT)
 
 

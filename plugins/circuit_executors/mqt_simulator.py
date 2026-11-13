@@ -302,6 +302,7 @@ TASK_LOGGER = get_task_logger(__name__)
 def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, int]]):
     from qiskit import QuantumCircuit, transpile
     from qiskit.qasm2 import loads as loads2
+    from openqasm3.parser import QASM3ParsingError
     from qiskit.qasm3 import QASM3ImporterError
     from qiskit.qasm3 import loads as loads3
 
@@ -313,7 +314,7 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
     circuit: QuantumCircuit
     try:
         circuit = loads3(circuit_qasm)
-    except QASM3ImporterError:
+    except (QASM3ImporterError, QASM3ParsingError):
         circuit = loads2(circuit_qasm)
 
     backend_Qasm = ddsim.DDSIMProvider().get_backend("qasm_simulator")

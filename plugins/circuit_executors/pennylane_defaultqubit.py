@@ -332,6 +332,7 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
     import pennylane as qml
     from qiskit import QuantumCircuit
     from qiskit.qasm2 import loads as loads2
+    from openqasm3.parser import QASM3ParsingError
     from qiskit.qasm3 import QASM3ImporterError
     from qiskit.qasm3 import loads as loads3
 
@@ -348,7 +349,7 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
     qiskit_circuit: QuantumCircuit
     try:
         qiskit_circuit = loads3(circuit_qasm)
-    except QASM3ImporterError:
+    except (QASM3ImporterError, QASM3ParsingError):
         qiskit_circuit = loads2(circuit_qasm)
     penny_circuit = qml.from_qiskit(qiskit_circuit)
 

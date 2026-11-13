@@ -1,5 +1,5 @@
 # Custom ignores:
-
+.DS_Store
 .idea/
 .vscode/
 docs/api.json

@@ -304,6 +304,7 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
     from qiskit import QiskitError, QuantumCircuit, transpile
     from qiskit_aer import AerSimulator
     from qiskit.qasm2 import loads as loads2
+    from openqasm3.parser import QASM3ParsingError
     from qiskit.qasm3 import QASM3ImporterError
     from qiskit.qasm3 import loads as loads3
     from qiskit.result import Result
@@ -315,7 +316,7 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
 
     try:
         circuit = loads3(circuit_qasm)
-    except QASM3ImporterError:
+    except (QASM3ImporterError, QASM3ParsingError):
         circuit = loads2(circuit_qasm)
 
     compiled_counts = transpile(circuit, backend_counts)
