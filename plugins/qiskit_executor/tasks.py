@@ -20,6 +20,7 @@ from uuid import uuid4
 from celery import chain
 from celery.utils.log import get_task_logger
 from flask.globals import current_app
+from openqasm3.parser import QASM3ParsingError
 from qiskit import QiskitError, transpile
 from qiskit.qasm2 import loads as loads2
 from qiskit.qasm3 import QASM3ImporterError
@@ -122,7 +123,7 @@ def start_execution(self, db_id: int) -> str:
     circuit: Any
     try:
         circuit = loads3(circuit_qasm)
-    except QASM3ImporterError:
+    except (QASM3ImporterError, QASM3ParsingError):
         circuit = loads2(circuit_qasm)
 
     TASK_LOGGER.info(f"Start execution with parameters: {str(circuit_params)}")
