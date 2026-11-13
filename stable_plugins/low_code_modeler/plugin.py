@@ -3,7 +3,7 @@ from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _name = "low-code-modeler"
-_version = "v0.0.2"
+_version = "v1.0.0"
 
 LCM_BLP = SecurityBlueprint(
     plugin_identifier(_name, _version),
@@ -17,7 +17,7 @@ class LowCodeModeler(QHAnaPluginBase):
     name = _name
     version = _version
     description = "A low-code modeling environment for designing, transforming, and executing quantum applications."
-    tags = ["low-code-modeler"]
+    tags = ["low-code-modeler", "quantum"]
 
     def get_api_blueprint(self):
         return LCM_BLP
