@@ -1,0 +1,81 @@
+<?xml version='1.0' encoding='utf-8'?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_tc59_non_interrupting_boundary" targetNamespace="http://qhana.example/testcases">
+  <bpmn:process id="tc59_non_interrupting_boundary_E1" name="Extracted Fragment E1" isExecutable="true" camunda:historyTimeToLive="180">
+    <bpmn:startEvent id="StartEvent_1" name="Start">
+      <bpmn:outgoing>Flow_E1_start</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="ServiceTask_LongJob" name="long-running-job" camunda:type="external" camunda:topic="qhana-task">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaPlugin">placeholder-long-job</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.jobResult">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_E1_start</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:boundaryEvent id="Boundary_Timer_NonInt" name="Every 1h" attachedToRef="ServiceTask_LongJob" cancelActivity="false">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeCycle>R/PT1H</bpmn:timeCycle>
+      </bpmn:timerEventDefinition>
+      <bpmn:outgoing>Flow_Notify</bpmn:outgoing>
+    </bpmn:boundaryEvent>
+    <bpmn:serviceTask id="ServiceTask_Notify" name="send-progress-notification" camunda:type="external" camunda:topic="qhana-task">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaPlugin">placeholder-notify</camunda:inputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Notify</bpmn:incoming>
+      <bpmn:outgoing>Flow_NotifyEnd</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="EndEvent_Main" name="End">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="EndEvent_Notify" name="Notify End">
+      <bpmn:incoming>Flow_NotifyEnd</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_E1_start" sourceRef="StartEvent_1" targetRef="ServiceTask_LongJob" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="ServiceTask_LongJob" targetRef="EndEvent_Main" />
+    <bpmn:sequenceFlow id="Flow_Notify" sourceRef="Boundary_Timer_NonInt" targetRef="ServiceTask_Notify" />
+    <bpmn:sequenceFlow id="Flow_NotifyEnd" sourceRef="ServiceTask_Notify" targetRef="EndEvent_Notify" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_tc59_non_interrupting_boundary_E1">
+    <bpmndi:BPMNPlane id="BPMNPlane_tc59_non_interrupting_boundary_E1" bpmnElement="tc59_non_interrupting_boundary_E1">
+      <bpmndi:BPMNShape id="ServiceTask_LongJob_di" bpmnElement="ServiceTask_LongJob">
+        <dc:Bounds x="160" y="178" width="160" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Boundary_Timer_NonInt_di" bpmnElement="Boundary_Timer_NonInt">
+        <dc:Bounds x="222" y="240" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ServiceTask_Notify_di" bpmnElement="ServiceTask_Notify">
+        <dc:Bounds x="180" y="340" width="160" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_Main_di" bpmnElement="EndEvent_Main">
+        <dc:Bounds x="380" y="200" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_Notify_di" bpmnElement="EndEvent_Notify">
+        <dc:Bounds x="400" y="362" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="80" y="200" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="320" y="218" />
+        <di:waypoint x="380" y="218" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Notify_di" bpmnElement="Flow_Notify">
+        <di:waypoint x="240" y="276" />
+        <di:waypoint x="240" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_NotifyEnd_di" bpmnElement="Flow_NotifyEnd">
+        <di:waypoint x="340" y="380" />
+        <di:waypoint x="400" y="380" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E1_start_di" bpmnElement="Flow_E1_start">
+        <di:waypoint x="116" y="218" />
+        <di:waypoint x="160" y="218" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

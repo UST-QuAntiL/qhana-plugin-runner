@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+  xmlns:qhana="https://github.com/qhana"
+  id="Definitions_tc57_escalation_end"
+  targetNamespace="http://qhana.example/testcases">
+  <bpmn:escalation id="Escalation_Urgent" name="UrgentReview" escalationCode="ESC_URGENT" />
+  <bpmn:process id="tc57_escalation_end" name="TC57 - Escalation end event" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_1" name="Start"><bpmn:outgoing>Flow_1</bpmn:outgoing></bpmn:startEvent>
+    <bpmn:serviceTask id="ServiceTask_Check" name="check-threshold"
+                      camunda:type="external" camunda:topic="qhana-task">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaPlugin">placeholder-check</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.severity">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Gateway_Severity" default="Flow_Normal">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_Urgent</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Normal</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="EndEvent_Normal" name="End"><bpmn:incoming>Flow_Normal</bpmn:incoming></bpmn:endEvent>
+    <bpmn:endEvent id="EndEvent_Escalated" name="Escalated ">
+      <bpmn:incoming>Flow_Urgent</bpmn:incoming>
+      <bpmn:escalationEventDefinition escalationRef="Escalation_Urgent" />
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="ServiceTask_Check" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="ServiceTask_Check" targetRef="Gateway_Severity" />
+    <bpmn:sequenceFlow id="Flow_Urgent" sourceRef="Gateway_Severity" targetRef="EndEvent_Escalated">
+      <bpmn:conditionExpression>${qoutput.severity == 'urgent'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Normal" sourceRef="Gateway_Severity" targetRef="EndEvent_Normal" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="tc57_escalation_end">
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1"><dc:Bounds x="80" y="220" width="36" height="36" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ServiceTask_Check_di" bpmnElement="ServiceTask_Check"><dc:Bounds x="160" y="198" width="140" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Severity_di" bpmnElement="Gateway_Severity"><dc:Bounds x="340" y="213" width="50" height="50" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_Escalated_di" bpmnElement="EndEvent_Escalated"><dc:Bounds x="450" y="102" width="36" height="36" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_Normal_di" bpmnElement="EndEvent_Normal"><dc:Bounds x="450" y="342" width="36" height="36" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1"><di:waypoint x="116" y="238" /><di:waypoint x="160" y="238" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2"><di:waypoint x="300" y="238" /><di:waypoint x="340" y="238" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Urgent_di" bpmnElement="Flow_Urgent"><di:waypoint x="365" y="213" /><di:waypoint x="365" y="120" /><di:waypoint x="450" y="120" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Normal_di" bpmnElement="Flow_Normal"><di:waypoint x="365" y="263" /><di:waypoint x="365" y="360" /><di:waypoint x="450" y="360" /></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

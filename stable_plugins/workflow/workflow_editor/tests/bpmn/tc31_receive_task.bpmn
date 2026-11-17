@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+  xmlns:qhana="https://github.com/qhana"
+  id="Definitions_tc31_receive_task"
+  targetNamespace="http://qhana.example/testcases">
+
+  <bpmn:message id="Message_Response" name="ResponseMessage" />
+  <bpmn:interface id="Interface_1" name="ResponseInterface">
+    <bpmn:operation id="Operation_ReceiveResponse" name="receiveResponse" />
+  </bpmn:interface>
+
+  <bpmn:process
+    id="tc31_receive_task"
+    name="TC31 - Receive Task"
+    isExecutable="true"
+    camunda:versionTag="0.2">
+
+    <bpmn:startEvent id="StartEvent_1" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <qhana:qHAnaServiceTask id="QHanaTask_Request" name="prepare-request">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaName">prepare-request</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.seed">request-seed</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.requestId">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+    </qhana:qHAnaServiceTask>
+
+    <bpmn:receiveTask id="ReceiveTask_Wait" name="Wait for Response" instantiate="false" messageRef="Message_Response" operationRef="Operation_ReceiveResponse">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qinput.requestId">${qoutput.requestId}</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.receivedPayload">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+    </bpmn:receiveTask>
+
+    <qhana:qHAnaServiceTask id="QHanaTask_ProcessResponse" name="process-response">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaName">process-response</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.payload">${qoutput.receivedPayload}</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.processedResponse">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+    </qhana:qHAnaServiceTask>
+
+    <bpmn:endEvent id="EndEvent_1" name="End">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="QHanaTask_Request" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="QHanaTask_Request" targetRef="ReceiveTask_Wait" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="ReceiveTask_Wait" targetRef="QHanaTask_ProcessResponse" />
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="QHanaTask_ProcessResponse" targetRef="EndEvent_1" />
+
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_tc31">
+    <bpmndi:BPMNPlane id="BPMNPlane_tc31" bpmnElement="tc31_receive_task">
+
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="70" y="190" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_Request_di" bpmnElement="QHanaTask_Request">
+        <dc:Bounds x="150" y="168" width="180" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="ReceiveTask_Wait_di" bpmnElement="ReceiveTask_Wait">
+        <dc:Bounds x="400" y="168" width="180" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_ProcessResponse_di" bpmnElement="QHanaTask_ProcessResponse">
+        <dc:Bounds x="650" y="168" width="190" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="910" y="190" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <di:waypoint x="106" y="208"/>
+        <di:waypoint x="150" y="208"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="330" y="208"/>
+        <di:waypoint x="400" y="208"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
+        <di:waypoint x="580" y="208"/>
+        <di:waypoint x="650" y="208"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4">
+        <di:waypoint x="840" y="208"/>
+        <di:waypoint x="910" y="208"/>
+      </bpmndi:BPMNEdge>
+
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</bpmn:definitions>

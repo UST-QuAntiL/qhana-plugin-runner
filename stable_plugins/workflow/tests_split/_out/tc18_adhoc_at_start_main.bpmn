@@ -1,0 +1,81 @@
+<?xml version='1.0' encoding='utf-8'?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc18_adhoc_at_start" targetNamespace="http://qhana.example/testcases">
+  <bpmn:process id="tc18_adhoc_at_start_main" name="TC18 - Adhoc at Start" isExecutable="true" camunda:versionTag="0.2" camunda:historyTimeToLive="180">
+    <bpmn:startEvent id="StartEvent_1" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:adHocSubProcess id="AdHocSubProcess_Init" name="Project Initialization (Ad-hoc)" ordering="Parallel">
+      <qhana:qHAnaServiceTask id="QHanaTask_DefineScope" name="define-project-scope">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qhanaName">define-project-scope</camunda:inputParameter>
+            <camunda:inputParameter name="qinput.init">start</camunda:inputParameter>
+            <camunda:outputParameter name="qoutput.scopeData">${output}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </qhana:qHAnaServiceTask>
+      <qhana:qHAnaServiceTask id="QHanaTask_AssignTeam" name="assign-team-members">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qhanaName">assign-team-members</camunda:inputParameter>
+            <camunda:inputParameter name="qinput.init">start</camunda:inputParameter>
+            <camunda:outputParameter name="qoutput.teamData">${output}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </qhana:qHAnaServiceTask>
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:adHocSubProcess>
+    <bpmn:adHocSubProcess id="AdHoc_E1_Wrapper" name="Extracted Fragment E1" qhana:fragmentRef="E1">
+      <bpmn:serviceTask id="ServiceTask_E1_Plugin" name="Extracted Fragment E1" camunda:type="external" camunda:topic="plugin.tc18_adhoc_at_start_E1">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qoutput.scopeData">${qoutput.scopeData}</camunda:inputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </bpmn:serviceTask>
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_to_Main_End</bpmn:outgoing>
+    </bpmn:adHocSubProcess>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="AdHocSubProcess_Init" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="AdHocSubProcess_Init" targetRef="AdHoc_E1_Wrapper" />
+    <bpmn:endEvent id="EndEvent_Main" name="End">
+      <bpmn:incoming>Flow_to_Main_End</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_to_Main_End" sourceRef="AdHoc_E1_Wrapper" targetRef="EndEvent_Main" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_tc18_adhoc_at_start_main">
+    <bpmndi:BPMNPlane id="BPMNPlane_tc18_adhoc_at_start_main" bpmnElement="tc18_adhoc_at_start_main">
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="80" y="200" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="AdHocSubProcess_Init_di" bpmnElement="AdHocSubProcess_Init" isExpanded="true">
+        <dc:Bounds x="180" y="123" width="420" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="QHanaTask_DefineScope_di" bpmnElement="QHanaTask_DefineScope">
+        <dc:Bounds x="230" y="178" width="150" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="QHanaTask_AssignTeam_di" bpmnElement="QHanaTask_AssignTeam">
+        <dc:Bounds x="410" y="178" width="150" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="AdHoc_E1_Wrapper_di" bpmnElement="AdHoc_E1_Wrapper" isExpanded="true">
+        <dc:Bounds x="660" y="168" width="296" height="100" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <di:waypoint x="116" y="218" />
+        <di:waypoint x="180" y="218" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="600" y="218" />
+        <di:waypoint x="660" y="218" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="EndEvent_Main_di" bpmnElement="EndEvent_Main">
+        <dc:Bounds x="1016" y="200" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_to_Main_End_di" bpmnElement="Flow_to_Main_End">
+        <di:waypoint x="956" y="218" />
+        <di:waypoint x="1016" y="218" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

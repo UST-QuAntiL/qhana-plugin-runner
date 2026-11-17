@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+  xmlns:qhana="https://github.com/qhana"
+  xmlns:testmeta="http://qhana.example/custom-metadata"
+  id="Definitions_tc38_custom_attributes"
+  targetNamespace="http://qhana.example/testcases"
+  testmeta:suite="phase1"
+  testmeta:owner="thesis">
+
+  <bpmn:process
+    id="tc38_custom_attributes"
+    name="TC38 - Custom attributes"
+    isExecutable="true"
+    camunda:versionTag="0.2"
+    testmeta:processCategory="metadata-preservation"
+    testmeta:priority="high">
+
+    <bpmn:startEvent id="StartEvent_1" name="Start" testmeta:entry="true">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <qhana:qHAnaServiceTask
+      id="QHanaTask_Metadata"
+      name="metadata-task"
+      testmeta:customTag="alpha"
+      testmeta:pluginFamily="demo">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaName">metadata-task</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.seed">metadata-seed</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.metadataValue">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+    </qhana:qHAnaServiceTask>
+
+    <bpmn:userTask
+      id="UserTask_Confirm"
+      name="Confirm Metadata"
+      testmeta:uiGroup="review"
+      testmeta:displayMode="expanded">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+      <bpmn:extensionElements>
+        <camunda:formData>
+          <camunda:formField id="qoutput.confirmation" label="Confirmation" type="string" />
+        </camunda:formData>
+      </bpmn:extensionElements>
+    </bpmn:userTask>
+
+    <bpmn:endEvent id="EndEvent_1" name="End" testmeta:exit="true">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="QHanaTask_Metadata" testmeta:edgeClass="primary" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="QHanaTask_Metadata" targetRef="UserTask_Confirm" testmeta:edgeClass="handover" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="UserTask_Confirm" targetRef="EndEvent_1" testmeta:edgeClass="completion" />
+
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_tc38" testmeta:diagramKind="custom-attrs">
+    <bpmndi:BPMNPlane id="BPMNPlane_tc38" bpmnElement="tc38_custom_attributes">
+
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="80" y="190" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_Metadata_di" bpmnElement="QHanaTask_Metadata">
+        <dc:Bounds x="170" y="168" width="190" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="UserTask_Confirm_di" bpmnElement="UserTask_Confirm">
+        <dc:Bounds x="440" y="168" width="190" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="710" y="190" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <di:waypoint x="116" y="208"/>
+        <di:waypoint x="170" y="208"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="360" y="208"/>
+        <di:waypoint x="440" y="208"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
+        <di:waypoint x="630" y="208"/>
+        <di:waypoint x="710" y="208"/>
+      </bpmndi:BPMNEdge>
+
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</bpmn:definitions>

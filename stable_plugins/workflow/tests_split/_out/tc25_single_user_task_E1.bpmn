@@ -1,0 +1,81 @@
+<?xml version='1.0' encoding='utf-8'?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc25_user_task_as_exec_candidate" targetNamespace="http://qhana.example/testcases">
+  <bpmn:process id="tc25_user_task_as_exec_candidate_E1" name="Extracted Fragment E1" isExecutable="true" camunda:historyTimeToLive="180">
+    <bpmn:startEvent id="StartEvent_1" name="Start">
+      <bpmn:outgoing>Flow_E1_start</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="UserTask_SelectOption" name="Select Processing Option">
+      <bpmn:extensionElements>
+        <camunda:formData>
+          <camunda:formField id="qoutput.processingOption" label="Processing Option" type="string" />
+        </camunda:formData>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_E1_start</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:userTask>
+    <qhana:qHAnaServiceTask id="QHanaTask_RunSelection" name="run-selection">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaName">run-selection</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.option">${qoutput.processingOption}</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.selectionResult">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </qhana:qHAnaServiceTask>
+    <qhana:qHAnaServiceTask id="QHanaTask_SaveSelection" name="save-selection">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaName">save-selection</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.result">${qoutput.selectionResult}</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.savedSelection">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+    </qhana:qHAnaServiceTask>
+    <bpmn:endEvent id="EndEvent_1" name="End">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_E1_start" sourceRef="StartEvent_1" targetRef="UserTask_SelectOption" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="UserTask_SelectOption" targetRef="QHanaTask_RunSelection" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="QHanaTask_RunSelection" targetRef="QHanaTask_SaveSelection" />
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="QHanaTask_SaveSelection" targetRef="EndEvent_1" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_tc25_user_task_as_exec_candidate_E1">
+    <bpmndi:BPMNPlane id="BPMNPlane_tc25_user_task_as_exec_candidate_E1" bpmnElement="tc25_user_task_as_exec_candidate_E1">
+      <bpmndi:BPMNShape id="UserTask_SelectOption_di" bpmnElement="UserTask_SelectOption">
+        <dc:Bounds x="160" y="168" width="190" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="QHanaTask_RunSelection_di" bpmnElement="QHanaTask_RunSelection">
+        <dc:Bounds x="430" y="168" width="180" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="QHanaTask_SaveSelection_di" bpmnElement="QHanaTask_SaveSelection">
+        <dc:Bounds x="690" y="168" width="180" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="940" y="190" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="80" y="190" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="350" y="208" />
+        <di:waypoint x="430" y="208" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
+        <di:waypoint x="610" y="208" />
+        <di:waypoint x="690" y="208" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4">
+        <di:waypoint x="870" y="208" />
+        <di:waypoint x="940" y="208" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E1_start_di" bpmnElement="Flow_E1_start">
+        <di:waypoint x="116" y="208" />
+        <di:waypoint x="160" y="208" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

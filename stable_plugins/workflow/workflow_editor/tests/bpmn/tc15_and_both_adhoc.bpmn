@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+  xmlns:qhana="https://github.com/qhana"
+  id="Definitions_tc15_and_both_adhoc"
+  targetNamespace="http://qhana.example/testcases">
+
+  <bpmn:process
+    id="tc15_and_both_adhoc"
+    name="TC15 - AND Both Adhoc"
+    isExecutable="true"
+    camunda:versionTag="0.2">
+
+    <bpmn:startEvent id="StartEvent_1" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:userTask id="UserTask_Input" name="Initialize Event Plan">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+      <bpmn:extensionElements>
+        <camunda:formData>
+          <camunda:formField id="qoutput.eventDetails" label="Event Details" type="string" />
+        </camunda:formData>
+      </bpmn:extensionElements>
+    </bpmn:userTask>
+
+    <bpmn:parallelGateway id="Gateway_Split" name="Parallel Workstreams">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3A</bpmn:outgoing>
+      <bpmn:outgoing>Flow_3B</bpmn:outgoing>
+    </bpmn:parallelGateway>
+
+    <bpmn:adHocSubProcess id="AdHocSubProcess_Venue" name="Venue Logistics (Ad-hoc)" ordering="Parallel">
+      <bpmn:incoming>Flow_3A</bpmn:incoming>
+      <bpmn:outgoing>Flow_4A</bpmn:outgoing>
+
+      <qhana:qHAnaServiceTask id="QHanaTask_BookLocation" name="book-location">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qhanaName">book-location</camunda:inputParameter>
+            <camunda:inputParameter name="qinput.data">${qoutput.eventDetails}</camunda:inputParameter>
+            <camunda:outputParameter name="qoutput.venueConfirm">${output}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </qhana:qHAnaServiceTask>
+
+      <qhana:qHAnaServiceTask id="QHanaTask_ArrangeCatering" name="arrange-catering">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qhanaName">arrange-catering</camunda:inputParameter>
+            <camunda:inputParameter name="qinput.data">${qoutput.eventDetails}</camunda:inputParameter>
+            <camunda:outputParameter name="qoutput.cateringMenu">${output}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </qhana:qHAnaServiceTask>
+    </bpmn:adHocSubProcess>
+
+    <bpmn:adHocSubProcess id="AdHocSubProcess_Marketing" name="Marketing Campaign (Ad-hoc)" ordering="Parallel">
+      <bpmn:incoming>Flow_3B</bpmn:incoming>
+      <bpmn:outgoing>Flow_4B</bpmn:outgoing>
+
+      <qhana:qHAnaServiceTask id="QHanaTask_DesignMaterials" name="design-materials">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qhanaName">design-materials</camunda:inputParameter>
+            <camunda:inputParameter name="qinput.data">${qoutput.eventDetails}</camunda:inputParameter>
+            <camunda:outputParameter name="qoutput.designAssets">${output}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </qhana:qHAnaServiceTask>
+
+      <qhana:qHAnaServiceTask id="QHanaTask_LaunchAds" name="launch-ads">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qhanaName">launch-ads</camunda:inputParameter>
+            <camunda:inputParameter name="qinput.data">${qoutput.eventDetails}</camunda:inputParameter>
+            <camunda:outputParameter name="qoutput.adMetrics">${output}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </qhana:qHAnaServiceTask>
+    </bpmn:adHocSubProcess>
+
+    <bpmn:parallelGateway id="Gateway_Merge" name="Sync Streams">
+      <bpmn:incoming>Flow_4A</bpmn:incoming>
+      <bpmn:incoming>Flow_4B</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+    </bpmn:parallelGateway>
+
+    <bpmn:endEvent id="EndEvent_1" name="End">
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="UserTask_Input" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="UserTask_Input" targetRef="Gateway_Split" />
+    <bpmn:sequenceFlow id="Flow_3A" name="Venue Track" sourceRef="Gateway_Split" targetRef="AdHocSubProcess_Venue" />
+    <bpmn:sequenceFlow id="Flow_3B" name="Promo Track" sourceRef="Gateway_Split" targetRef="AdHocSubProcess_Marketing" />
+    <bpmn:sequenceFlow id="Flow_4A" sourceRef="AdHocSubProcess_Venue" targetRef="Gateway_Merge" />
+    <bpmn:sequenceFlow id="Flow_4B" sourceRef="AdHocSubProcess_Marketing" targetRef="Gateway_Merge" />
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="Gateway_Merge" targetRef="EndEvent_1" />
+
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_tc15">
+    <bpmndi:BPMNPlane id="BPMNPlane_tc15" bpmnElement="tc15_and_both_adhoc">
+
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="80" y="350" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="UserTask_Input_di" bpmnElement="UserTask_Input">
+        <dc:Bounds x="160" y="328" width="170" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Gateway_Split_di" bpmnElement="Gateway_Split">
+        <dc:Bounds x="390" y="343" width="50" height="50"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="375" y="300" width="80" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="AdHocSubProcess_Venue_di" bpmnElement="AdHocSubProcess_Venue" isExpanded="true">
+        <dc:Bounds x="550" y="80" width="420" height="190"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_BookLocation_di" bpmnElement="QHanaTask_BookLocation">
+        <dc:Bounds x="600" y="135" width="150" height="70"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_ArrangeCatering_di" bpmnElement="QHanaTask_ArrangeCatering">
+        <dc:Bounds x="780" y="135" width="150" height="70"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="AdHocSubProcess_Marketing_di" bpmnElement="AdHocSubProcess_Marketing" isExpanded="true">
+        <dc:Bounds x="550" y="420" width="420" height="190"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_DesignMaterials_di" bpmnElement="QHanaTask_DesignMaterials">
+        <dc:Bounds x="600" y="475" width="150" height="70"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_LaunchAds_di" bpmnElement="QHanaTask_LaunchAds">
+        <dc:Bounds x="780" y="475" width="150" height="70"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Gateway_Merge_di" bpmnElement="Gateway_Merge">
+        <dc:Bounds x="1020" y="343" width="50" height="50"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1010" y="400" width="70" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="1120" y="350" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <di:waypoint x="116" y="368"/>
+        <di:waypoint x="160" y="368"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="330" y="368"/>
+        <di:waypoint x="390" y="368"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_3A_di" bpmnElement="Flow_3A">
+        <di:waypoint x="415" y="343"/>
+        <di:waypoint x="415" y="175"/>
+        <di:waypoint x="550" y="175"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="440" y="155" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_3B_di" bpmnElement="Flow_3B">
+        <di:waypoint x="415" y="393"/>
+        <di:waypoint x="415" y="515"/>
+        <di:waypoint x="550" y="515"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="440" y="525" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_4A_di" bpmnElement="Flow_4A">
+        <di:waypoint x="970" y="175"/>
+        <di:waypoint x="1045" y="175"/>
+        <di:waypoint x="1045" y="343"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_4B_di" bpmnElement="Flow_4B">
+        <di:waypoint x="970" y="515"/>
+        <di:waypoint x="1045" y="515"/>
+        <di:waypoint x="1045" y="393"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_5_di" bpmnElement="Flow_5">
+        <di:waypoint x="1070" y="368"/>
+        <di:waypoint x="1120" y="368"/>
+      </bpmndi:BPMNEdge>
+
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

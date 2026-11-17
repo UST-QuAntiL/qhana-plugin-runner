@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+  xmlns:qhana="https://github.com/qhana"
+  id="Definitions_tc55_data_store"
+  targetNamespace="http://qhana.example/testcases">
+  <bpmn:dataStore id="DataStore_Results" name="ResultsDB" />
+  <bpmn:process id="tc55_data_store" name="TC55 - Data store referenced by task" isExecutable="true">
+    <bpmn:dataStoreReference id="DataStoreRef_Results" name="Results" dataStoreRef="DataStore_Results" />
+    <bpmn:startEvent id="StartEvent_1" name="Start"><bpmn:outgoing>Flow_1</bpmn:outgoing></bpmn:startEvent>
+    <bpmn:serviceTask id="ServiceTask_Persist" name="persist-results"
+                      camunda:type="external" camunda:topic="qhana-task">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+      <bpmn:property id="Prop_DataInput" name="dataInput" />
+      <bpmn:dataOutputAssociation id="DataOutAssoc_1">
+        <bpmn:targetRef>DataStoreRef_Results</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaPlugin">placeholder-persist</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.persisted">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="EndEvent_1" name="End"><bpmn:incoming>Flow_2</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="ServiceTask_Persist" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="ServiceTask_Persist" targetRef="EndEvent_1" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="tc55_data_store">
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1"><dc:Bounds x="80" y="200" width="36" height="36" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ServiceTask_Persist_di" bpmnElement="ServiceTask_Persist"><dc:Bounds x="160" y="178" width="140" height="80" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DataStoreRef_Results_di" bpmnElement="DataStoreRef_Results"><dc:Bounds x="195" y="320" width="50" height="50" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1"><dc:Bounds x="360" y="200" width="36" height="36" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1"><di:waypoint x="116" y="218" /><di:waypoint x="160" y="218" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2"><di:waypoint x="300" y="218" /><di:waypoint x="360" y="218" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DataOutAssoc_1_di" bpmnElement="DataOutAssoc_1"><di:waypoint x="230" y="258" /><di:waypoint x="220" y="320" /></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

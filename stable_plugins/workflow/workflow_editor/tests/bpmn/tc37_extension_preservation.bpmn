@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+  xmlns:qhana="https://github.com/qhana"
+  id="Definitions_tc37_extension_preservation"
+  targetNamespace="http://qhana.example/testcases">
+
+  <bpmn:process
+    id="tc37_extension_preservation"
+    name="TC37 - Extension preservation"
+    isExecutable="true"
+    camunda:versionTag="0.2"
+    camunda:historyTimeToLive="180">
+
+    <bpmn:startEvent id="StartEvent_1" name="Start" camunda:asyncBefore="true">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <qhana:qHAnaServiceTask id="QHanaTask_Extended" name="extended-qhana-task" camunda:asyncBefore="true" camunda:asyncAfter="true">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaName">extended-qhana-task</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.seed">extension-seed</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.extendedResult">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+        <camunda:properties>
+          <camunda:property name="pluginVersion" value="1.2.0" />
+          <camunda:property name="retention" value="keep" />
+        </camunda:properties>
+      </bpmn:extensionElements>
+    </qhana:qHAnaServiceTask>
+
+    <bpmn:serviceTask id="ServiceTask_External" name="External Worker" camunda:type="external" camunda:topic="worker-topic" camunda:asyncBefore="true">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="workerInput">${qoutput.extendedResult}</camunda:inputParameter>
+          <camunda:outputParameter name="workerResult">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+        <camunda:properties>
+          <camunda:property name="engineSide" value="camunda" />
+        </camunda:properties>
+      </bpmn:extensionElements>
+    </bpmn:serviceTask>
+
+    <bpmn:endEvent id="EndEvent_1" name="End" camunda:asyncAfter="true">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="QHanaTask_Extended" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="QHanaTask_Extended" targetRef="ServiceTask_External" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="ServiceTask_External" targetRef="EndEvent_1" />
+
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_tc37">
+    <bpmndi:BPMNPlane id="BPMNPlane_tc37" bpmnElement="tc37_extension_preservation">
+
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="80" y="190" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_Extended_di" bpmnElement="QHanaTask_Extended">
+        <dc:Bounds x="170" y="168" width="200" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="ServiceTask_External_di" bpmnElement="ServiceTask_External">
+        <dc:Bounds x="450" y="168" width="190" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="720" y="190" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <di:waypoint x="116" y="208"/>
+        <di:waypoint x="170" y="208"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="370" y="208"/>
+        <di:waypoint x="450" y="208"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
+        <di:waypoint x="640" y="208"/>
+        <di:waypoint x="720" y="208"/>
+      </bpmndi:BPMNEdge>
+
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</bpmn:definitions>

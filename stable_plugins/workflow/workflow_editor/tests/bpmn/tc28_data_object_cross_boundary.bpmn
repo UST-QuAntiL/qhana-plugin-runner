@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+  xmlns:qhana="https://github.com/qhana"
+  id="Definitions_tc28_data_object_cross_boundary"
+  targetNamespace="http://qhana.example/testcases">
+
+  <bpmn:process
+    id="tc28_data_object_cross_boundary"
+    name="TC28 - Data Object Cross Boundary"
+    isExecutable="true"
+    camunda:versionTag="0.2">
+
+    <bpmn:startEvent id="StartEvent_1" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:userTask id="UserTask_Input" name="Input Terms">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+      <bpmn:extensionElements>
+        <camunda:formData>
+          <camunda:formField id="qoutput.terms" label="Contract Terms" type="string" />
+        </camunda:formData>
+      </bpmn:extensionElements>
+    </bpmn:userTask>
+
+    <bpmn:dataObject id="DataObject_Doc" />
+    <bpmn:dataObjectReference id="DataObjectReference_Doc" name="Drafted Contract" dataObjectRef="DataObject_Doc" />
+
+    <qhana:qHAnaServiceTask id="QHanaTask_DraftContract" name="draft-contract">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+
+      <bpmn:dataOutputAssociation id="DataOutputAssociation_1">
+        <bpmn:targetRef>DataObjectReference_Doc</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaName">draft-contract</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.data">${qoutput.terms}</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.contractDoc">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+    </qhana:qHAnaServiceTask>
+
+    <bpmn:adHocSubProcess id="AdHocSubProcess_Review" name="Manual Review" ordering="Parallel">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+
+      <bpmn:dataInputAssociation id="DataInputAssociation_1">
+        <bpmn:sourceRef>DataObjectReference_Doc</bpmn:sourceRef>
+      </bpmn:dataInputAssociation>
+
+      <qhana:qHAnaServiceTask id="QHanaTask_Sign" name="sign-document">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qhanaName">sign-document</camunda:inputParameter>
+            <camunda:inputParameter name="qinput.doc">${qoutput.contractDoc}</camunda:inputParameter>
+            <camunda:outputParameter name="qoutput.signedDoc">${output}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </qhana:qHAnaServiceTask>
+    </bpmn:adHocSubProcess>
+
+    <bpmn:endEvent id="EndEvent_1" name="End">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="UserTask_Input" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="UserTask_Input" targetRef="QHanaTask_DraftContract" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="QHanaTask_DraftContract" targetRef="AdHocSubProcess_Review" />
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="AdHocSubProcess_Review" targetRef="EndEvent_1" />
+
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_tc28">
+    <bpmndi:BPMNPlane id="BPMNPlane_tc28" bpmnElement="tc28_data_object_cross_boundary">
+
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="80" y="200" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="UserTask_Input_di" bpmnElement="UserTask_Input">
+        <dc:Bounds x="160" y="178" width="170" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_DraftContract_di" bpmnElement="QHanaTask_DraftContract">
+        <dc:Bounds x="390" y="178" width="170" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="DataObjectReference_Doc_di" bpmnElement="DataObjectReference_Doc">
+        <dc:Bounds x="520" y="80" width="36" height="50"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="500" y="137" width="80" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="AdHocSubProcess_Review_di" bpmnElement="AdHocSubProcess_Review" isExpanded="true">
+        <dc:Bounds x="620" y="123" width="420" height="190"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_Sign_di" bpmnElement="QHanaTask_Sign">
+        <dc:Bounds x="670" y="178" width="150" height="70"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="1100" y="200" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <di:waypoint x="116" y="218"/>
+        <di:waypoint x="160" y="218"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="330" y="218"/>
+        <di:waypoint x="390" y="218"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
+        <di:waypoint x="560" y="218"/>
+        <di:waypoint x="620" y="218"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4">
+        <di:waypoint x="1040" y="218"/>
+        <di:waypoint x="1100" y="218"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="DataOutputAssociation_1_di" bpmnElement="DataOutputAssociation_1">
+        <di:waypoint x="475" y="178"/>
+        <di:waypoint x="520" y="115"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="DataInputAssociation_1_di" bpmnElement="DataInputAssociation_1">
+        <di:waypoint x="556" y="115"/>
+        <di:waypoint x="620" y="178"/>
+      </bpmndi:BPMNEdge>
+
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

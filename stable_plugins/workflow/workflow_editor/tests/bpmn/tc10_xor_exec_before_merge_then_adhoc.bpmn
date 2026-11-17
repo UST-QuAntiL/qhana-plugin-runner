@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+  xmlns:qhana="https://github.com/qhana"
+  id="Definitions_tc10_xor_exec_before_merge_then_adhoc"
+  targetNamespace="http://qhana.example/testcases">
+
+  <bpmn:process
+    id="tc10_xor_exec_before_merge_then_adhoc"
+    name="TC10 - XOR Exec Before Merge Then Adhoc"
+    isExecutable="true"
+    camunda:versionTag="0.2">
+
+    <bpmn:startEvent id="StartEvent_1" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:userTask id="UserTask_Input" name="Upload Research Dataset">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+      <bpmn:extensionElements>
+        <camunda:formData>
+          <camunda:formField id="qoutput.datasetUrl" label="Dataset URL" type="string" />
+        </camunda:formData>
+      </bpmn:extensionElements>
+    </bpmn:userTask>
+
+    <!-- Executable chain before XOR -->
+    <qhana:qHAnaServiceTask id="QHanaTask_CleanData" name="clean-dataset">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaName">clean-dataset</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.data">${qoutput.datasetUrl}</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.cleanedData">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+    </qhana:qHAnaServiceTask>
+
+    <bpmn:exclusiveGateway id="Gateway_Split" name="Select Algorithm (XOR)" default="Flow_4B">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_4A</bpmn:outgoing>
+      <bpmn:outgoing>Flow_4B</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <!-- Branch A: Executable Plugin (Conditional) -->
+    <qhana:qHAnaServiceTask id="QHanaTask_AlgoA" name="run-algorithm-a">
+      <bpmn:incoming>Flow_4A</bpmn:incoming>
+      <bpmn:outgoing>Flow_5A</bpmn:outgoing>
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaName">run-algorithm-a</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.data">${qoutput.cleanedData}</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.algoResult">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+    </qhana:qHAnaServiceTask>
+
+    <!-- Branch B: Executable Plugin (Default) -->
+    <qhana:qHAnaServiceTask id="QHanaTask_AlgoB" name="run-algorithm-b">
+      <bpmn:incoming>Flow_4B</bpmn:incoming>
+      <bpmn:outgoing>Flow_5B</bpmn:outgoing>
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaName">run-algorithm-b</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.data">${qoutput.cleanedData}</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.algoResult">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+    </qhana:qHAnaServiceTask>
+
+    <bpmn:exclusiveGateway id="Gateway_Merge" name="Merge Algorithms">
+      <bpmn:incoming>Flow_5A</bpmn:incoming>
+      <bpmn:incoming>Flow_5B</bpmn:incoming>
+      <bpmn:outgoing>Flow_6</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <!-- Ad-hoc Block immediately after merge -->
+    <bpmn:adHocSubProcess id="AdHocSubProcess_Review" name="Post-Process Review" ordering="Parallel">
+      <bpmn:incoming>Flow_6</bpmn:incoming>
+      <bpmn:outgoing>Flow_7</bpmn:outgoing>
+
+      <qhana:qHAnaServiceTask id="QHanaTask_Visualize" name="generate-visualization">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qhanaName">generate-visualization</camunda:inputParameter>
+            <camunda:inputParameter name="qinput.result">${qoutput.algoResult}</camunda:inputParameter>
+            <camunda:outputParameter name="qoutput.visUrl">${output}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </qhana:qHAnaServiceTask>
+
+      <qhana:qHAnaServiceTask id="QHanaTask_SignOff" name="sign-off-results">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qhanaName">sign-off-results</camunda:inputParameter>
+            <camunda:inputParameter name="qinput.vis">${qoutput.visUrl}</camunda:inputParameter>
+            <camunda:outputParameter name="qoutput.signOff">${output}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </qhana:qHAnaServiceTask>
+    </bpmn:adHocSubProcess>
+
+    <bpmn:endEvent id="EndEvent_1" name="End">
+      <bpmn:incoming>Flow_7</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- Sequence Flows -->
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="UserTask_Input" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="UserTask_Input" targetRef="QHanaTask_CleanData" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="QHanaTask_CleanData" targetRef="Gateway_Split" />
+
+    <bpmn:sequenceFlow id="Flow_4A" name="Use Algo A" sourceRef="Gateway_Split" targetRef="QHanaTask_AlgoA">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${method == 'A'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+
+    <bpmn:sequenceFlow id="Flow_4B" name="Default (Algo B)" sourceRef="Gateway_Split" targetRef="QHanaTask_AlgoB" />
+
+    <bpmn:sequenceFlow id="Flow_5A" sourceRef="QHanaTask_AlgoA" targetRef="Gateway_Merge" />
+    <bpmn:sequenceFlow id="Flow_5B" sourceRef="QHanaTask_AlgoB" targetRef="Gateway_Merge" />
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="Gateway_Merge" targetRef="AdHocSubProcess_Review" />
+    <bpmn:sequenceFlow id="Flow_7" sourceRef="AdHocSubProcess_Review" targetRef="EndEvent_1" />
+
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_tc10">
+    <bpmndi:BPMNPlane id="BPMNPlane_tc10" bpmnElement="tc10_xor_exec_before_merge_then_adhoc">
+
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="80" y="250" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="UserTask_Input_di" bpmnElement="UserTask_Input">
+        <dc:Bounds x="160" y="228" width="170" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_CleanData_di" bpmnElement="QHanaTask_CleanData">
+        <dc:Bounds x="390" y="228" width="170" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Gateway_Split_di" bpmnElement="Gateway_Split" isMarkerVisible="true">
+        <dc:Bounds x="620" y="243" width="50" height="50"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="605" y="200" width="80" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_AlgoA_di" bpmnElement="QHanaTask_AlgoA">
+        <dc:Bounds x="750" y="80" width="170" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_AlgoB_di" bpmnElement="QHanaTask_AlgoB">
+        <dc:Bounds x="750" y="380" width="170" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Gateway_Merge_di" bpmnElement="Gateway_Merge" isMarkerVisible="true">
+        <dc:Bounds x="1000" y="243" width="50" height="50"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="985" y="300" width="85" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="AdHocSubProcess_Review_di" bpmnElement="AdHocSubProcess_Review" isExpanded="true">
+        <dc:Bounds x="1130" y="173" width="420" height="190"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_Visualize_di" bpmnElement="QHanaTask_Visualize">
+        <dc:Bounds x="1180" y="228" width="150" height="70"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_SignOff_di" bpmnElement="QHanaTask_SignOff">
+        <dc:Bounds x="1360" y="228" width="150" height="70"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="1630" y="250" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <di:waypoint x="116" y="268"/>
+        <di:waypoint x="160" y="268"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="330" y="268"/>
+        <di:waypoint x="390" y="268"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
+        <di:waypoint x="560" y="268"/>
+        <di:waypoint x="620" y="268"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_4A_di" bpmnElement="Flow_4A">
+        <di:waypoint x="645" y="243"/>
+        <di:waypoint x="645" y="120"/>
+        <di:waypoint x="750" y="120"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="660" y="100" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_4B_di" bpmnElement="Flow_4B">
+        <di:waypoint x="645" y="293"/>
+        <di:waypoint x="645" y="420"/>
+        <di:waypoint x="750" y="420"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="660" y="430" width="80" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_5A_di" bpmnElement="Flow_5A">
+        <di:waypoint x="920" y="120"/>
+        <di:waypoint x="1025" y="120"/>
+        <di:waypoint x="1025" y="243"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_5B_di" bpmnElement="Flow_5B">
+        <di:waypoint x="920" y="420"/>
+        <di:waypoint x="1025" y="420"/>
+        <di:waypoint x="1025" y="293"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_6_di" bpmnElement="Flow_6">
+        <di:waypoint x="1070" y="268"/>
+        <di:waypoint x="1130" y="268"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_7_di" bpmnElement="Flow_7">
+        <di:waypoint x="1550" y="268"/>
+        <di:waypoint x="1630" y="268"/>
+      </bpmndi:BPMNEdge>
+
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

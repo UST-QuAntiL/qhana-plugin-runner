@@ -1,0 +1,62 @@
+<?xml version='1.0' encoding='utf-8'?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc05_only_adhoc" targetNamespace="http://qhana.example/testcases">
+  <bpmn:process id="tc05_only_adhoc_main" name="TC05 - Only ad-hoc block" isExecutable="true" camunda:versionTag="0.2" camunda:historyTimeToLive="180">
+    <bpmn:startEvent id="StartEvent_1" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:adHocSubProcess id="AdHocSubProcess_1" name="Ad-hoc Only Block" ordering="Parallel">
+      <qhana:qHAnaServiceTask id="QHanaTask_Check" name="check-input">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qhanaName">check-input</camunda:inputParameter>
+            <camunda:inputParameter name="qinput.seed">review-seed</camunda:inputParameter>
+            <camunda:outputParameter name="qoutput.checkedInput">${output}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </qhana:qHAnaServiceTask>
+      <qhana:qHAnaServiceTask id="QHanaTask_Approve" name="approve-input">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qhanaName">approve-input</camunda:inputParameter>
+            <camunda:inputParameter name="qinput.text">${qoutput.checkedInput}</camunda:inputParameter>
+            <camunda:outputParameter name="qoutput.approvedInput">${output}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </qhana:qHAnaServiceTask>
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:adHocSubProcess>
+    <bpmn:endEvent id="EndEvent_1" name="End">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="AdHocSubProcess_1" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="AdHocSubProcess_1" targetRef="EndEvent_1" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_tc05_only_adhoc_main">
+    <bpmndi:BPMNPlane id="BPMNPlane_tc05_only_adhoc_main" bpmnElement="tc05_only_adhoc_main">
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="80" y="190" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="AdHocSubProcess_1_di" bpmnElement="AdHocSubProcess_1" isExpanded="true">
+        <dc:Bounds x="170" y="110" width="430" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="QHanaTask_Check_di" bpmnElement="QHanaTask_Check">
+        <dc:Bounds x="225" y="165" width="150" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="QHanaTask_Approve_di" bpmnElement="QHanaTask_Approve">
+        <dc:Bounds x="415" y="165" width="150" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="670" y="190" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <di:waypoint x="116" y="208" />
+        <di:waypoint x="170" y="208" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="600" y="208" />
+        <di:waypoint x="670" y="208" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

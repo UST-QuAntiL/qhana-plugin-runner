@@ -235,7 +235,14 @@ class WorkflowListView(MethodView):
                 wf_id=wf_id,
                 _external=True,
             )
-            deploy_workflow.s(workflow_url, wf_id, deploy_as=deploy).apply_async()
+            base_url = url_for(
+                f"{WF_EDITOR_BLP.name}.{WorkflowView.__name__}",
+                wf_id="__PLACEHOLDER__",
+                _external=True,
+            ).replace("__PLACEHOLDER__", "")
+            deploy_workflow.s(
+                workflow_url, wf_id, deploy_as=deploy, base_url=base_url
+            ).apply_async()
 
         try:
             cleanup_autosaved_workflows.s(plugin.name).apply_async()

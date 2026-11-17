@@ -1,0 +1,73 @@
+<?xml version='1.0' encoding='utf-8'?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc29_association_cleanup" targetNamespace="http://qhana.example/testcases">
+  <bpmn:process id="tc29_association_cleanup_E1" name="Extracted Fragment E1" isExecutable="true" camunda:historyTimeToLive="180">
+    <bpmn:startEvent id="StartEvent_1" name="Start">
+      <bpmn:outgoing>Flow_E1_start</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="UserTask_Input" name="Upload Raw Logs">
+      <bpmn:extensionElements>
+        <camunda:formData>
+          <camunda:formField id="qoutput.logData" label="Log Data" type="string" />
+        </camunda:formData>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_E1_start</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:userTask>
+    <qhana:qHAnaServiceTask id="QHanaTask_FilterLogs" name="filter-logs">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaName">filter-logs</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.data">${qoutput.logData}</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.filteredLogs">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_E1_end</bpmn:outgoing>
+    </qhana:qHAnaServiceTask>
+    <bpmn:endEvent id="EndEvent_E1" name="End">
+      <bpmn:incoming>Flow_E1_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_E1_start" sourceRef="StartEvent_1" targetRef="UserTask_Input" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="UserTask_Input" targetRef="QHanaTask_FilterLogs" />
+    <bpmn:sequenceFlow id="Flow_E1_end" sourceRef="QHanaTask_FilterLogs" targetRef="EndEvent_E1" />
+    <bpmn:textAnnotation id="TextAnnotation_1">
+      <bpmn:text>Critical: This plugin will be extracted. Ensure the association line does not crash the Camunda engine by becoming a dangling edge.</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Association_1" sourceRef="QHanaTask_FilterLogs" targetRef="TextAnnotation_1" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_tc29_association_cleanup_E1">
+    <bpmndi:BPMNPlane id="BPMNPlane_tc29_association_cleanup_E1" bpmnElement="tc29_association_cleanup_E1">
+      <bpmndi:BPMNShape id="UserTask_Input_di" bpmnElement="UserTask_Input">
+        <dc:Bounds x="160" y="228" width="170" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="QHanaTask_FilterLogs_di" bpmnElement="QHanaTask_FilterLogs">
+        <dc:Bounds x="390" y="228" width="170" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="80" y="250" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_E1_di" bpmnElement="EndEvent_E1">
+        <dc:Bounds x="610" y="250" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="330" y="268" />
+        <di:waypoint x="390" y="268" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E1_start_di" bpmnElement="Flow_E1_start">
+        <di:waypoint x="116" y="268" />
+        <di:waypoint x="160" y="268" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E1_end_di" bpmnElement="Flow_E1_end">
+        <di:waypoint x="560" y="268" />
+        <di:waypoint x="610" y="268" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="TextAnnotation_1_di" bpmnElement="TextAnnotation_1">
+        <dc:Bounds x="420" y="80" width="220" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Association_1_di" bpmnElement="Association_1">
+        <di:waypoint x="475" y="228" />
+        <di:waypoint x="475" y="150" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

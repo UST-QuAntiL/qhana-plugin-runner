@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+  xmlns:qhana="https://github.com/qhana"
+  id="Definitions_tc20_nested_adhoc"
+  targetNamespace="http://qhana.example/testcases">
+
+  <bpmn:process
+    id="tc20_nested_adhoc"
+    name="TC20 - Nested Adhoc"
+    isExecutable="true"
+    camunda:versionTag="0.2">
+
+    <bpmn:startEvent id="StartEvent_1" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:userTask id="UserTask_Input" name="Report Incident">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+      <bpmn:extensionElements>
+        <camunda:formData>
+          <camunda:formField id="qoutput.incidentData" label="Incident Data" type="string" />
+        </camunda:formData>
+      </bpmn:extensionElements>
+    </bpmn:userTask>
+
+    <!-- OUTER AD-HOC BLOCK -->
+    <bpmn:adHocSubProcess id="AdHocSubProcess_Outer" name="Incident Management (Outer)" ordering="Parallel">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+
+      <!-- Standard task floating inside the outer ad-hoc block -->
+      <qhana:qHAnaServiceTask id="QHanaTask_Assess" name="assess-incident">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qhanaName">assess-incident</camunda:inputParameter>
+            <camunda:inputParameter name="qinput.data">${qoutput.incidentData}</camunda:inputParameter>
+            <camunda:outputParameter name="qoutput.assessment">${output}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </qhana:qHAnaServiceTask>
+
+      <!-- INNER AD-HOC BLOCK (Nested) -->
+      <bpmn:adHocSubProcess id="AdHocSubProcess_Inner" name="Emergency Mitigation (Inner)" ordering="Parallel">
+
+        <qhana:qHAnaServiceTask id="QHanaTask_Isolate" name="isolate-server">
+          <bpmn:extensionElements>
+            <camunda:inputOutput>
+              <camunda:inputParameter name="qhanaName">isolate-server</camunda:inputParameter>
+              <camunda:inputParameter name="qinput.data">${qoutput.assessment}</camunda:inputParameter>
+              <camunda:outputParameter name="qoutput.isolationLog">${output}</camunda:outputParameter>
+            </camunda:inputOutput>
+          </bpmn:extensionElements>
+        </qhana:qHAnaServiceTask>
+
+        <qhana:qHAnaServiceTask id="QHanaTask_Notify" name="notify-stakeholders">
+          <bpmn:extensionElements>
+            <camunda:inputOutput>
+              <camunda:inputParameter name="qhanaName">notify-stakeholders</camunda:inputParameter>
+              <camunda:inputParameter name="qinput.data">${qoutput.assessment}</camunda:inputParameter>
+              <camunda:outputParameter name="qoutput.notificationLog">${output}</camunda:outputParameter>
+            </camunda:inputOutput>
+          </bpmn:extensionElements>
+        </qhana:qHAnaServiceTask>
+
+      </bpmn:adHocSubProcess>
+
+    </bpmn:adHocSubProcess>
+
+    <bpmn:endEvent id="EndEvent_1" name="End">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- Sequence Flows -->
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="UserTask_Input" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="UserTask_Input" targetRef="AdHocSubProcess_Outer" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="AdHocSubProcess_Outer" targetRef="EndEvent_1" />
+
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_tc20">
+    <bpmndi:BPMNPlane id="BPMNPlane_tc20" bpmnElement="tc20_nested_adhoc">
+
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="80" y="200" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="UserTask_Input_di" bpmnElement="UserTask_Input">
+        <dc:Bounds x="160" y="178" width="170" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <!-- OUTER AD-HOC (Massive boundary) -->
+      <bpmndi:BPMNShape id="AdHocSubProcess_Outer_di" bpmnElement="AdHocSubProcess_Outer" isExpanded="true">
+        <dc:Bounds x="390" y="80" width="700" height="300"/>
+      </bpmndi:BPMNShape>
+
+      <!-- Floating Task inside Outer -->
+      <bpmndi:BPMNShape id="QHanaTask_Assess_di" bpmnElement="QHanaTask_Assess">
+        <dc:Bounds x="440" y="180" width="150" height="70"/>
+      </bpmndi:BPMNShape>
+
+      <!-- INNER AD-HOC (Nested inside Outer) -->
+      <bpmndi:BPMNShape id="AdHocSubProcess_Inner_di" bpmnElement="AdHocSubProcess_Inner" isExpanded="true">
+        <dc:Bounds x="630" y="120" width="420" height="190"/>
+      </bpmndi:BPMNShape>
+
+      <!-- Floating Tasks inside Inner -->
+      <bpmndi:BPMNShape id="QHanaTask_Isolate_di" bpmnElement="QHanaTask_Isolate">
+        <dc:Bounds x="680" y="175" width="150" height="70"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_Notify_di" bpmnElement="QHanaTask_Notify">
+        <dc:Bounds x="860" y="175" width="150" height="70"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="1150" y="200" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <di:waypoint x="116" y="218"/>
+        <di:waypoint x="160" y="218"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="330" y="218"/>
+        <di:waypoint x="390" y="218"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
+        <di:waypoint x="1090" y="218"/>
+        <di:waypoint x="1150" y="218"/>
+      </bpmndi:BPMNEdge>
+
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
