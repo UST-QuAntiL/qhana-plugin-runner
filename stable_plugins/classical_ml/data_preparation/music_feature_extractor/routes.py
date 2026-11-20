@@ -159,6 +159,9 @@ class MicroFrontend(MethodView):
             "includeDynamics": False,
             "includeTonality": False,
             "includeHarmony": False,
+            "includeMelodicIntervals": False,
+            "includeMelodicSummary": False,
+            "includeVoiceActivity": False,
         }
         values.update(dict(data))
 

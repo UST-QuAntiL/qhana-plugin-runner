@@ -32,6 +32,9 @@ FEATURE_GROUP_ORDER = (
     "dynamics",
     "tonality",
     "harmony",
+    "melodic_intervals",
+    "melodic_summary",
+    "voice_activity",
 )
 FEATURE_PRESET_GROUPS = {
     "basic": (),
@@ -44,7 +47,19 @@ FEATURE_PRESET_GROUPS = {
         "dynamics",
         "tonality",
     ),
-    "full": FEATURE_GROUP_ORDER,
+    # "full" keeps its original groups,
+    # so that existing workflows get the same vectors.
+    # The note-event groups can only be selected with "custom" for now.
+    "full": (
+        "pitch_stats",
+        "intervals",
+        "rhythm",
+        "meter_tempo",
+        "texture",
+        "dynamics",
+        "tonality",
+        "harmony",
+    ),
     "custom": (),
 }
 
@@ -65,6 +80,9 @@ class InputParameters:
     include_dynamics: bool = False
     include_tonality: bool = False
     include_harmony: bool = False
+    include_melodic_intervals: bool = False
+    include_melodic_summary: bool = False
+    include_voice_activity: bool = False
 
 
 class InputParametersSchema(FrontendFormBaseSchema):
@@ -238,6 +256,53 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "input_type": "checkbox",
         },
     )
+    include_melodic_intervals = ma.fields.Boolean(
+        required=False,
+        allow_none=False,
+        data_key="includeMelodicIntervals",
+        load_default=False,
+        metadata={
+            "label": "Include Melodic Intervals (jSymbolic M-1)",
+            "description": (
+                "Adds the share of melodic intervals of 0 to 12 semitones "
+                "and of intervals larger than an octave. "
+                "Intervals are only formed within a part and voice. "
+                "Only available with the custom preset."
+            ),
+            "input_type": "checkbox",
+        },
+    )
+    include_melodic_summary = ma.fields.Boolean(
+        required=False,
+        allow_none=False,
+        data_key="includeMelodicSummary",
+        load_default=False,
+        metadata={
+            "label": "Include Melodic Summary (jSymbolic M-3 to M-22)",
+            "description": (
+                "Adds the mean melodic interval in semitones "
+                "and the shares of repeated notes, semitone steps, seconds, thirds, "
+                "intervals larger than an octave and rising motion. "
+                "Only available with the custom preset."
+            ),
+            "input_type": "checkbox",
+        },
+    )
+    include_voice_activity = ma.fields.Boolean(
+        required=False,
+        allow_none=False,
+        data_key="includeVoiceActivity",
+        load_default=False,
+        metadata={
+            "label": "Include Voice Activity (jSymbolic T-1 to T-3)",
+            "description": (
+                "Adds the maximum, average and standard deviation "
+                "of the number of parts sounding at the same time, weighted by duration. "
+                "Only available with the custom preset."
+            ),
+            "input_type": "checkbox",
+        },
+    )
 
     @post_load
     def make_input_params(self, data, **kwargs) -> InputParameters:
@@ -255,6 +320,9 @@ def resolve_feature_selection(
     include_dynamics: bool = False,
     include_tonality: bool = False,
     include_harmony: bool = False,
+    include_melodic_intervals: bool = False,
+    include_melodic_summary: bool = False,
+    include_voice_activity: bool = False,
 ) -> dict[str, bool]:
     normalized_preset = (feature_preset or "basic").strip().lower()
     if normalized_preset not in FEATURE_PRESETS:
@@ -274,6 +342,9 @@ def resolve_feature_selection(
                 "dynamics": include_dynamics,
                 "tonality": include_tonality,
                 "harmony": include_harmony,
+                "melodic_intervals": include_melodic_intervals,
+                "melodic_summary": include_melodic_summary,
+                "voice_activity": include_voice_activity,
             }.items()
             if selected
         }
@@ -292,6 +363,9 @@ def resolve_feature_selection_from_input(params: InputParameters) -> dict[str, b
         include_dynamics=params.include_dynamics,
         include_tonality=params.include_tonality,
         include_harmony=params.include_harmony,
+        include_melodic_intervals=params.include_melodic_intervals,
+        include_melodic_summary=params.include_melodic_summary,
+        include_voice_activity=params.include_voice_activity,
     )
 
 
@@ -309,6 +383,9 @@ def resolve_feature_selection_from_values(
         include_dynamics=_to_bool(values.get("includeDynamics")),
         include_tonality=_to_bool(values.get("includeTonality")),
         include_harmony=_to_bool(values.get("includeHarmony")),
+        include_melodic_intervals=_to_bool(values.get("includeMelodicIntervals")),
+        include_melodic_summary=_to_bool(values.get("includeMelodicSummary")),
+        include_voice_activity=_to_bool(values.get("includeVoiceActivity")),
     )
     resolved_preset = preset.strip().lower()
     if resolved_preset not in FEATURE_PRESETS:

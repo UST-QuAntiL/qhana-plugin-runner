@@ -27,7 +27,14 @@ def extract_music21_payload_from_bytes(
     fmt: str,
     source_name: str | None,
     warnings: list[str],
-) -> tuple[dict[str, Any], int]:
+) -> tuple[dict[str, Any], int, Any]:
+    """Extract the payload of a MIDI file with music21.
+
+    Returns:
+        the payload, the number of pitched notes and the parsed music21 score.
+        The score is ``None`` if music21 is missing or could not parse the data.
+        It is returned so that the note-event table does not parse it again.
+    """
     try:
         from music21 import converter  # type: ignore[import-not-found]
     except Exception:
@@ -35,6 +42,7 @@ def extract_music21_payload_from_bytes(
         return (
             empty_payload(source_hash, fmt, source_name, warnings, part_count=None),
             0,
+            None,
         )
 
     try:
@@ -44,6 +52,7 @@ def extract_music21_payload_from_bytes(
         return (
             empty_payload(source_hash, fmt, source_name, warnings, part_count=None),
             0,
+            None,
         )
 
     pitch_values = [
@@ -247,7 +256,19 @@ def extract_music21_payload_from_bytes(
         harmony_qualities=harmony_qualities,
         harmony_warning=harmony_warning,
     )
-    return payload, total
+    return payload, total, score
+
+
+def parse_musicxml_score(xml_text: str) -> Any:
+    """Parse MusicXML text into a music21 score for the note-event table.
+
+    Raises:
+        ImportError: if music21 is not installed.
+        Exception: music21 raises various exception types for malformed MusicXML.
+    """
+    from music21 import converter  # type: ignore[import-not-found]
+
+    return converter.parseData(xml_text, format="musicxml")
 
 
 def try_music21_ambitus(

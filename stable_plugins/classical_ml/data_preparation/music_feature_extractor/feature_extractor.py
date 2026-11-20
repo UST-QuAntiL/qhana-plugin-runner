@@ -15,10 +15,15 @@
 """Feature extraction utilities for music data (prefer MusicXML)."""
 
 from dataclasses import dataclass
-from typing import Any, Mapping
+from typing import Any, Callable, Mapping
 
+from .event_features import EVENT_GROUP_ORDER, compute_event_feature_groups
+from .events import NoteEvent, build_note_events
 from .feature_groups import build_feature_vector, normalize_feature_selection
-from .music21_extractor import extract_music21_payload_from_bytes
+from .music21_extractor import (
+    extract_music21_payload_from_bytes,
+    parse_musicxml_score,
+)
 from .musicxml_extractor import extract_musicxml_payload, load_musicxml_text
 from .payloads import SCHEMA_VERSION, empty_payload
 from .utils import sha256_hex
@@ -59,8 +64,11 @@ def extract_music_features(
 
     if xml_text is None:
         if fmt == "midi":
-            payload, note_count = extract_music21_payload_from_bytes(
+            payload, note_count, score = extract_music21_payload_from_bytes(
                 source_bytes, source_hash, fmt, node.source_name, warnings
+            )
+            _add_event_feature_groups(
+                payload, effective_selection, lambda: score, warnings
             )
             feature_vector, feature_vector_schema = build_feature_vector(
                 payload,
@@ -100,6 +108,9 @@ def extract_music_features(
     payload, note_count = extract_musicxml_payload(
         xml_text, source_hash, fmt, node.source_name, warnings
     )
+    _add_event_feature_groups(
+        payload, effective_selection, lambda: parse_musicxml_score(xml_text), warnings
+    )
 
     feature_vector, feature_vector_schema = build_feature_vector(
         payload,
@@ -121,3 +132,47 @@ def extract_music_features(
         part_count=part_count,
         duration_seconds=None,
     )
+
+
+def _add_event_feature_groups(
+    payload: dict[str, Any],
+    selection: Mapping[str, bool],
+    load_score: Callable[[], Any],
+    warnings: list[str],
+) -> None:
+    """Add the selected note-event feature groups to the payload.
+
+    The score is only loaded and the note-event table only built,
+    if at least one note-event group is selected.
+    Otherwise the parser-based extraction keeps its output and speed.
+    """
+    groups = [group for group in EVENT_GROUP_ORDER if selection.get(group, False)]
+    if not groups:
+        return
+
+    events = _load_note_events(load_score, warnings)
+    payload["computed"]["feature_groups"].update(
+        compute_event_feature_groups(events, groups)
+    )
+
+
+def _load_note_events(
+    load_score: Callable[[], Any], warnings: list[str]
+) -> list[NoteEvent]:
+    """Return the note events of the score, or none if it cannot be analysed.
+
+    A failure only makes the note-event groups unavailable.
+    The parser-based groups that were already computed stay valid.
+    """
+    try:
+        score = load_score()
+        if score is None:
+            # the MIDI path already reported why there is no score
+            return []
+        return build_note_events(score)
+    except Exception as exc:  # music21 raises many unrelated exception types
+        warnings.append(
+            "Note-event feature groups unavailable, "
+            f"music21 could not analyse the score: {exc}"
+        )
+        return []

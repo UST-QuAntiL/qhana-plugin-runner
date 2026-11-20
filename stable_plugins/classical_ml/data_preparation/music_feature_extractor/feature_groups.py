@@ -17,8 +17,14 @@
 import math
 from typing import Any, Mapping
 
+from .event_features import (
+    EVENT_GROUP_ORDER,
+    EVENT_GROUP_SCHEMAS,
+    EVENT_GROUP_WARNING_MESSAGES,
+)
 from .utils import clamp01, mean, safe_int, std
 
+# groups computed by the format parsers, always present in the payload
 GROUP_ORDER = (
     "pitch_stats",
     "intervals",
@@ -108,25 +114,35 @@ GROUP_SCHEMAS = {
 
 GROUP_WARNING_MESSAGES = {
     "pitch_stats": (
-        "PitchStats enabled but no pitched notes were found; filled with 0.0 values."
+        "PitchStats enabled but no pitched notes were found. Filled with 0.0 values."
     ),
     "intervals": (
-        "Intervals enabled but no successive pitched onsets were found; filled with 0.0 values."
+        "Intervals enabled but no successive pitched onsets were found. Filled with 0.0 values."
     ),
     "rhythm": "Rhythm enabled but no note durations were found; filled with 0.0 values.",
     "meter_tempo": (
-        "MeterTempo enabled but no meter or tempo data was found; filled with 0.0 values."
+        "MeterTempo enabled but no meter or tempo data was found. Filled with 0.0 values."
     ),
     "texture": (
-        "Texture enabled but no note onset events were found; filled with 0.0 values."
+        "Texture enabled but no note onset events were found. Filled with 0.0 values."
     ),
     "dynamics": (
-        "Dynamics enabled but no dynamics or velocity data was found; filled with 0.0 values."
+        "Dynamics enabled but no dynamics or velocity data was found. Filled with 0.0 values."
     ),
     "tonality": (
-        "Tonality enabled but no key-signature data was found; filled with 0.0 values."
+        "Tonality enabled but no key-signature data was found. Filled with 0.0 values."
     ),
-    "harmony": "Harmony enabled but no harmony data was found; filled with 0.0 values.",
+    "harmony": "Harmony enabled but no harmony data was found. Filled with 0.0 values.",
+}
+
+# All groups a user can select.
+# The note-event groups come last, so adding them never changes
+# the position of the parser-based dimensions in the vector.
+SELECTABLE_GROUP_ORDER = GROUP_ORDER + EVENT_GROUP_ORDER
+SELECTABLE_GROUP_SCHEMAS = {**GROUP_SCHEMAS, **EVENT_GROUP_SCHEMAS}
+SELECTABLE_GROUP_WARNING_MESSAGES = {
+    **GROUP_WARNING_MESSAGES,
+    **EVENT_GROUP_WARNING_MESSAGES,
 }
 
 
@@ -218,11 +234,11 @@ def compute_feature_groups(
 def normalize_feature_selection(
     selection: Mapping[str, bool] | None,
 ) -> dict[str, bool]:
-    normalized = {group: False for group in GROUP_ORDER}
+    normalized = {group: False for group in SELECTABLE_GROUP_ORDER}
     if selection is None:
         return normalized
 
-    for group in GROUP_ORDER:
+    for group in SELECTABLE_GROUP_ORDER:
         normalized[group] = bool(selection.get(group, False))
     return normalized
 
@@ -247,18 +263,20 @@ def build_feature_vector(
     schema = list(BASE_FEATURE_SCHEMA)
     groups = payload.get("computed", {}).get("feature_groups", {})
 
-    for group in GROUP_ORDER:
+    for group in SELECTABLE_GROUP_ORDER:
         if not selection.get(group, False):
             continue
 
-        group_schema = GROUP_SCHEMAS[group]
+        group_schema = SELECTABLE_GROUP_SCHEMAS[group]
         group_data = groups.get(group, {})
         values = group_data.get("values", {})
         vector.extend(float(values.get(name, 0.0)) for name in group_schema)
         schema.extend(group_schema)
 
         if not group_data.get("available", False):
-            warning = group_data.get("warning") or GROUP_WARNING_MESSAGES[group]
+            warning = (
+                group_data.get("warning") or SELECTABLE_GROUP_WARNING_MESSAGES[group]
+            )
             if warning and warning not in warnings:
                 warnings.append(warning)
 
