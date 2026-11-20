@@ -145,6 +145,9 @@
         { id: "include_dynamics", group: "dynamics" },
         { id: "include_tonality", group: "tonality" },
         { id: "include_harmony", group: "harmony" },
+        { id: "include_melodic_intervals", group: "melodic_intervals" },
+        { id: "include_melodic_summary", group: "melodic_summary" },
+        { id: "include_voice_activity", group: "voice_activity" },
     ];
 
     function moveMusicFeatureFields() {
@@ -170,6 +173,9 @@
             { id: "include_dynamics", target: featureTarget },
             { id: "include_tonality", target: featureTarget },
             { id: "include_harmony", target: featureTarget },
+            { id: "include_melodic_intervals", target: featureTarget },
+            { id: "include_melodic_summary", target: featureTarget },
+            { id: "include_voice_activity", target: featureTarget },
         ];
 
         fieldTargets.forEach(({ id, target }) => {
